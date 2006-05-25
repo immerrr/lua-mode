@@ -11,6 +11,9 @@
 ;;              Paul Du Bois <pld-lua@gelatinous.com> and
 ;;              Aaron Smith <aaron-lua@gelatinous.com>.
 
+(defconst lua-version "$Revision: 1.2 $"
+  "Lua Mode version number.")
+
 ;; Keywords: languages, processes, tools
 
 ;; This file is part of GNU Emacs.
@@ -999,18 +1002,9 @@ If `lua-process' is nil or dead, start a new process first."
 (defun lua-send-buffer ()
   "Send whole buffer to lua subprocess."
   (interactive)
-  (or (and lua-process
-           (comint-check-proc lua-process-buffer))
-      (lua-start-process lua-default-application lua-default-application))
-  (comint-simple-send lua-process
-		      (buffer-substring (point-min) (point-max)))
-  (if lua-always-show
-      (display-buffer lua-process-buffer)))
+  (lua-send-region (point-min) (point-max)))
 
 ;;}}}
-
-;;}}}
-
 ;;{{{ lua-restart-with-whole-file
 
 (defun lua-restart-with-whole-file ()
