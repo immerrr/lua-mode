@@ -11,7 +11,7 @@
 ;;              Paul Du Bois <pld-lua@gelatinous.com> and
 ;;              Aaron Smith <aaron-lua@gelatinous.com>.
 
-(defconst lua-version "$Revision: 1.2 $"
+(defconst lua-version "$Revision: 1.3 $"
   "Lua Mode version number.")
 
 ;; Keywords: languages, processes, tools
@@ -117,6 +117,12 @@ Should be a list of strings."
   :type 'string
   :group 'lua)
 
+(defcustom lua-prompt-regexp "^>+[\t ]+"
+  "Regexp which matches the Lua program's prompt."
+  :group 'lua
+  :type  'regexp
+  )
+
 (defvar lua-mode-hook nil
   "Hooks called when Lua mode fires up.")
 
@@ -214,6 +220,7 @@ The following keys are bound:
     (kill-all-local-variables)
     (setq major-mode 'lua-mode)
     (setq mode-name "Lua")
+    (setq comint-prompt-regexp lua-prompt-regexp)
     (set (make-local-variable 'lua-process) nil) ; The active Lua subprocess corresponding to current buffer
     (set (make-local-variable 'lua-process-buffer) nil)	; Buffer used for communication with Lua subprocess for current buffer.
     (make-local-variable 'lua-default-command-switches)
@@ -896,9 +903,11 @@ This function just searches for a `end' at the beginning of a line."
       (setq switches lua-default-command-switches))
   (setq lua-process-buffer (apply 'make-comint name program startfile switches))
   (setq lua-process (get-buffer-process lua-process-buffer))
-  (save-excursion
-    (set-buffer lua-process-buffer))
-  )
+  ;; wait for prompt
+  (save-excursion 
+    (set-buffer lua-process-buffer)
+    (while (not (lua-prompt-line))
+      (accept-process-output (get-buffer-process (current-buffer))))))
 
 ;;}}}
 ;;{{{ lua-kill-process
@@ -950,16 +959,40 @@ If `lua-process' is nil or dead, start a new process first."
 (defun lua-send-region (start end)
   "Send region to lua subprocess."
   (interactive "r")
-  (or (and lua-process
-           (comint-check-proc lua-process-buffer))
-      (lua-start-process lua-default-application lua-default-application))
-  (comint-simple-send lua-process
-                              (buffer-substring start end))
-  (if lua-always-show
-      (display-buffer lua-process-buffer)))
-
+  ;; make temporary lua file
+  (let ((tempfile (make-temp-file "lua-"))
+	(current-prompt nil))
+    (save-excursion
+      (write-region start end tempfile)
+      (or (and lua-process
+	       (comint-check-proc lua-process-buffer))
+	  (lua-start-process lua-default-application lua-default-application))
+      ;; kill lua process without query
+      (if (fboundp 'process-kill-without-query) 
+	  (process-kill-without-query lua-process)) 
+      ;; send dofile(tempfile)
+      (save-excursion 
+	(set-buffer lua-process-buffer)
+	(let ((current-prompt (comint-next-prompt 1)))
+	  (comint-simple-send (get-buffer-process (current-buffer)) (format "dofile(\"%s\")" tempfile))
+	  ;; wait for prompt 
+	  (while (or (= (comint-next-prompt 1) current-prompt)
+		     (not (lua-prompt-line)))
+	    (accept-process-output (get-buffer-process (current-buffer))))))
+      ;; remove temp. lua file
+      (delete-file tempfile)
+      (if lua-always-show
+	  (display-buffer lua-process-buffer)))))
 ;;}}}
+;;{{{ lua-prompt-line
+
+(defun lua-prompt-line ()
+  (save-excursion 
+    (forward-line 0)
+    (looking-at comint-prompt-regexp)))
+
 ;;{{{ lua-send-lua-region
+;;}}}
 
 (defun lua-send-lua-region ()
   "Send preset lua region to lua subprocess."
