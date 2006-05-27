@@ -28,7 +28,7 @@
 ;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 ;; MA 02110-1301, USA.
 
-(defconst lua-version "$Revision: 1.5 $"
+(defconst lua-version "$Revision: 1.6 $"
   "Lua Mode version number.")
 
 ;; Keywords: languages, processes, tools
@@ -962,13 +962,7 @@ If `lua-process' is nil or dead, start a new process first."
   (interactive)
   (let ((start (save-excursion (beginning-of-line) (point)))
         (end (save-excursion (end-of-line) (point))))
-    (or (and lua-process
-             (eq (process-status lua-process) 'run))
-        (lua-start-process lua-default-application lua-default-application))
-    (comint-simple-send lua-process (buffer-substring start end))
-    (forward-line 1)
-    (if lua-always-show
-        (display-buffer lua-process-buffer))))
+    (lua-send-region start end)))
 
 ;;}}}
 ;;{{{ lua-send-region
@@ -981,6 +975,7 @@ If `lua-process' is nil or dead, start a new process first."
 	(current-prompt nil)
 	(lua-stdin-line-offset (count-lines (point-min) start))
 	(lua-stdin-buffer (current-buffer))
+	current-prompt 
 	)
     (write-region start end tempfile)
     (or (and lua-process
@@ -992,28 +987,28 @@ If `lua-process' is nil or dead, start a new process first."
     ;; send dofile(tempfile)
     (save-excursion 
       (set-buffer lua-process-buffer)
-      (let ((current-prompt (comint-next-prompt 1)))
-	(comint-simple-send (get-buffer-process (current-buffer)) (format "dofile(\"%s\")" tempfile))
-	;; wait for prompt 
-	(while (or (= (comint-next-prompt 1) current-prompt)
-		   (not (lua-prompt-line)))
-	  (accept-process-output (get-buffer-process (current-buffer))))))
+      (setq current-prompt (comint-next-prompt 1))
+      (comint-simple-send (get-buffer-process (current-buffer)) (format "dofile(\"%s\")" tempfile))
+      ;; wait for prompt 
+      (while (or (= (comint-next-prompt 1) current-prompt)
+		 (not (lua-prompt-line)))
+	(accept-process-output (get-buffer-process (current-buffer)))))
     ;; remove temp. lua file
     (delete-file tempfile)
-    (lua-postprocess-output-buffer lua-process-buffer lua-stdin-line-offset)
+    (lua-postprocess-output-buffer lua-process-buffer current-prompt lua-stdin-line-offset)
     (if lua-always-show
 	(display-buffer lua-process-buffer))))
 ;;}}}
 ;;{{{ lua-prompt-line
 
-(defun lua-postprocess-output-buffer (buf &optional lua-stdin-line-offset)
+(defun lua-postprocess-output-buffer (buf start &optional lua-stdin-line-offset)
   "Highlight tracebacks found in buf. If an traceback occurred return
 t, otherwise return nil.  BUF must exist."
   (let ((lua-stdin-line-offset (or lua-stdin-line-offset 0))
 	line file bol err-p)
     (save-excursion
       (set-buffer buf)
-      (beginning-of-buffer)
+      (goto-char start)
       (while (re-search-forward lua-traceback-line-re nil t)
 	(setq file (match-string 1)
 	      line (string-to-int (match-string 2)))))
