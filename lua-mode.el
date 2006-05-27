@@ -28,7 +28,7 @@
 ;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 ;; MA 02110-1301, USA.
 
-(defconst lua-version "$Revision: 1.6 $"
+(defconst lua-version "$Revision: 1.7 $"
   "Lua Mode version number.")
 
 ;; Keywords: languages, processes, tools
@@ -109,6 +109,12 @@ Should be a list of strings."
   "*URL at which to search for documentation on a word"
   :type 'string
   :group 'lua)
+
+(defvar lua-process nil
+  "The active Lua subprocess")
+
+(defvar lua-process-buffer nil
+  "Buffer used for communication with Lua subprocess")
 
 (defvar lua-mode-map nil
   "Keymap used with lua-mode.")
@@ -238,8 +244,6 @@ The following keys are bound:
     (setq major-mode 'lua-mode)
     (setq mode-name "Lua")
     (setq comint-prompt-regexp lua-prompt-regexp)
-    (set (make-local-variable 'lua-process) nil) ; The active Lua subprocess corresponding to current buffer
-    (set (make-local-variable 'lua-process-buffer) nil)	; Buffer used for communication with Lua subprocess for current buffer.
     (make-local-variable 'lua-default-command-switches)
     (set (make-local-variable 'indent-line-function) 'lua-indent-line)
     (set (make-local-variable 'comment-start) "--")
@@ -995,9 +999,10 @@ If `lua-process' is nil or dead, start a new process first."
 	(accept-process-output (get-buffer-process (current-buffer)))))
     ;; remove temp. lua file
     (delete-file tempfile)
-    (lua-postprocess-output-buffer lua-process-buffer current-prompt lua-stdin-line-offset)
+    (lua-postprocess-output-buffer lua-process-buffer current-prompt lua-stdin-line-offset)    
     (if lua-always-show
 	(display-buffer lua-process-buffer))))
+
 ;;}}}
 ;;{{{ lua-prompt-line
 
@@ -1026,12 +1031,7 @@ t, otherwise return nil.  BUF must exist."
   (let ((buffer (cond ((or (string-equal file tempfile) (string-equal file "stdin"))
 		       (setq line (+ line lua-stdin-line-offset))
 		       lua-stdin-buffer)
-		      (find-file-noselect file)
-		      ;; could not figure out what file the traceback
-		      ;; is pointing to, so prompt for it
-		      (t (find-file (read-file-name "Traceback file: "
-						    nil
-						    file t))))))
+		      (t (find-file-noselect file)))))
     (pop-to-buffer buffer)
     ;; Force Lua mode
     (if (not (eq major-mode 'lua-mode))
