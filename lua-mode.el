@@ -28,7 +28,7 @@
 ;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 ;; MA 02110-1301, USA.
 
-(defconst lua-version "$Revision: 1.4 $"
+(defconst lua-version "$Revision: 1.5 $"
   "Lua Mode version number.")
 
 ;; Keywords: languages, processes, tools
@@ -122,6 +122,22 @@ Should be a list of strings."
   "Regexp which matches the Lua program's prompt."
   :group 'lua
   :type  'regexp
+  )
+
+(defcustom lua-traceback-line-re
+  "stack traceback:\n\\(?:[[:blank:]]+.*\n\\)*?[[:blank:]]+\\([^:]*\\):\\([[:digit:]]+\\):"
+  "Regular expression that describes tracebacks."
+  :group 'lua
+  :type  'regexp
+  )
+
+(defcustom lua-jump-on-traceback t
+  "*Jump to innermost traceback location in *lua* buffer.  When this
+variable is non-nil and a traceback occurs when running Lua code in a
+subprocess, jump immediately to the source code of the innermost
+traceback location."
+  :group 'lua
+  :type 'boolean
   )
 
 (defvar lua-mode-hook nil
@@ -962,28 +978,73 @@ If `lua-process' is nil or dead, start a new process first."
   (interactive "r")
   ;; make temporary lua file
   (let ((tempfile (make-temp-file "lua-"))
-	(current-prompt nil))
+	(current-prompt nil)
+	(lua-stdin-line-offset (count-lines (point-min) start))
+	(lua-stdin-buffer (current-buffer))
+	)
+    (write-region start end tempfile)
+    (or (and lua-process
+	     (comint-check-proc lua-process-buffer))
+	(lua-start-process lua-default-application lua-default-application))
+    ;; kill lua process without query
+    (if (fboundp 'process-kill-without-query) 
+	(process-kill-without-query lua-process)) 
+    ;; send dofile(tempfile)
+    (save-excursion 
+      (set-buffer lua-process-buffer)
+      (let ((current-prompt (comint-next-prompt 1)))
+	(comint-simple-send (get-buffer-process (current-buffer)) (format "dofile(\"%s\")" tempfile))
+	;; wait for prompt 
+	(while (or (= (comint-next-prompt 1) current-prompt)
+		   (not (lua-prompt-line)))
+	  (accept-process-output (get-buffer-process (current-buffer))))))
+    ;; remove temp. lua file
+    (delete-file tempfile)
+    (lua-postprocess-output-buffer lua-process-buffer lua-stdin-line-offset)
+    (if lua-always-show
+	(display-buffer lua-process-buffer))))
+;;}}}
+;;{{{ lua-prompt-line
+
+(defun lua-postprocess-output-buffer (buf &optional lua-stdin-line-offset)
+  "Highlight tracebacks found in buf. If an traceback occurred return
+t, otherwise return nil.  BUF must exist."
+  (let ((lua-stdin-line-offset (or lua-stdin-line-offset 0))
+	line file bol err-p)
     (save-excursion
-      (write-region start end tempfile)
-      (or (and lua-process
-	       (comint-check-proc lua-process-buffer))
-	  (lua-start-process lua-default-application lua-default-application))
-      ;; kill lua process without query
-      (if (fboundp 'process-kill-without-query) 
-	  (process-kill-without-query lua-process)) 
-      ;; send dofile(tempfile)
-      (save-excursion 
-	(set-buffer lua-process-buffer)
-	(let ((current-prompt (comint-next-prompt 1)))
-	  (comint-simple-send (get-buffer-process (current-buffer)) (format "dofile(\"%s\")" tempfile))
-	  ;; wait for prompt 
-	  (while (or (= (comint-next-prompt 1) current-prompt)
-		     (not (lua-prompt-line)))
-	    (accept-process-output (get-buffer-process (current-buffer))))))
-      ;; remove temp. lua file
-      (delete-file tempfile)
-      (if lua-always-show
-	  (display-buffer lua-process-buffer)))))
+      (set-buffer buf)
+      (beginning-of-buffer)
+      (while (re-search-forward lua-traceback-line-re nil t)
+	(setq file (match-string 1)
+	      line (string-to-int (match-string 2)))))
+    (when (and lua-jump-on-traceback line)
+      (beep)
+      (lua-jump-to-traceback file line lua-stdin-line-offset)
+      (setq err-p t))
+    err-p))
+  
+;;}}}
+;;{{{ lua-prompt-line
+
+(defun lua-jump-to-traceback (file line lua-stdin-line-offset)
+  "Jump to the Lua code in FILE at LINE."
+  (let ((buffer (cond ((or (string-equal file tempfile) (string-equal file "stdin"))
+		       (setq line (+ line lua-stdin-line-offset))
+		       lua-stdin-buffer)
+		      (find-file-noselect file)
+		      ;; could not figure out what file the traceback
+		      ;; is pointing to, so prompt for it
+		      (t (find-file (read-file-name "Traceback file: "
+						    nil
+						    file t))))))
+    (pop-to-buffer buffer)
+    ;; Force Lua mode
+    (if (not (eq major-mode 'lua-mode))
+	(lua-mode))
+    ;; TODO fix offset when executing region
+    (goto-line line)			
+    (message "Jumping to error in file %s on line %d" file line)))
+
 ;;}}}
 ;;{{{ lua-prompt-line
 
