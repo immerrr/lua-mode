@@ -28,7 +28,7 @@
 ;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 ;; MA 02110-1301, USA.
 
-(defconst lua-version "$Revision: 1.8 $"
+(defconst lua-version "20060528"
   "Lua Mode version number.")
 
 ;; Keywords: languages, processes, tools
@@ -1003,7 +1003,7 @@ If `lua-process' is nil or dead, start a new process first."
 	(display-buffer lua-process-buffer))))
 
 ;;}}}
-;;{{{ lua-prompt-line
+;;{{{ lua-postprocess-output-buffer
 
 (defun lua-postprocess-output-buffer (buf start &optional lua-stdin-line-offset)
   "Highlight tracebacks found in buf. If an traceback occurred return
@@ -1024,21 +1024,24 @@ t, otherwise return nil.  BUF must exist."
     err-p))
   
 ;;}}}
-;;{{{ lua-prompt-line
+;;{{{ lua-jump-to-tracebackw
 
 (defun lua-jump-to-traceback (file line lua-stdin-line-offset)
   "Jump to the Lua code in FILE at LINE."
-  (let ((buffer (cond ((or (string-equal file tempfile) (string-equal file "stdin"))
+  ;; sanity check: temporary-file-directory
+  (if (string= (substring file 0 3)  "...")
+      (message "Lua traceback output truncated: customize 'temporary-file-directory' or increase 'LUA_IDSIZE' in 'luaconf.h'.")
+    (let ((buffer (cond ((or (string-equal file tempfile) (string-equal file "stdin"))
 		       (setq line (+ line lua-stdin-line-offset))
 		       lua-stdin-buffer)
-		      (t (find-file-noselect file)))))
-    (pop-to-buffer buffer)
-    ;; Force Lua mode
-    (if (not (eq major-mode 'lua-mode))
-	(lua-mode))
-    ;; TODO fix offset when executing region
-    (goto-line line)			
-    (message "Jumping to error in file %s on line %d" file line)))
+			(t (find-file-noselect file)))))
+      (pop-to-buffer buffer)
+      ;; Force Lua mode
+      (if (not (eq major-mode 'lua-mode))
+	  (lua-mode))
+      ;; TODO fix offset when executing region
+      (goto-line line)			
+      (message "Jumping to error in file %s on line %d" file line))))
 
 ;;}}}
 ;;{{{ lua-prompt-line
