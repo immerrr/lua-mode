@@ -918,10 +918,11 @@ This function just searches for a `end' at the beginning of a line."
 
 ;;{{{ lua-start-process
 
-(defun lua-start-process (name program &optional startfile &rest switches)
+(defun lua-start-process (name &optional program startfile &rest switches)
   "Start a lua process named NAME, running PROGRAM."
   (or switches
       (setq switches lua-default-command-switches))
+  (setq program (or program name))
   (setq lua-process-buffer (apply 'make-comint name program startfile switches))
   (setq lua-process (get-buffer-process lua-process-buffer))
   ;; wait for prompt
@@ -983,7 +984,7 @@ If `lua-process' is nil or dead, start a new process first."
     (write-region start end tempfile)
     (or (and lua-process
 	     (comint-check-proc lua-process-buffer))
-	(lua-start-process lua-default-application lua-default-application))
+	(lua-start-process lua-default-application))
     ;; kill lua process without query
     (if (fboundp 'process-kill-without-query) 
 	(process-kill-without-query lua-process)) 
@@ -1061,7 +1062,7 @@ t, otherwise return nil.  BUF must exist."
       (error "lua-region not set"))
   (or (and lua-process
            (comint-check-proc lua-process-buffer))
-      (lua-start-process lua-default-application lua-default-application))
+      (lua-start-process lua-default-application))
   (comint-simple-send lua-process
                               (buffer-substring lua-region-start lua-region-end)
 )
@@ -1082,7 +1083,7 @@ t, otherwise return nil.  BUF must exist."
       (setq end (point)))
     (or (and lua-process
              (comint-check-proc lua-process-buffer))
-        (lua-start-process lua-default-application lua-default-application))
+        (lua-start-process lua-default-application))
     (comint-simple-send lua-process
                                 (buffer-substring beg end))
     (if lua-always-show
@@ -1104,7 +1105,7 @@ t, otherwise return nil.  BUF must exist."
   "Restart lua subprocess and send whole file as input."
   (interactive)
   (lua-kill-process)
-  (lua-start-process lua-default-application lua-default-application)
+  (lua-start-process lua-default-application)
   (lua-send-buffer))
 
 ;;}}}
