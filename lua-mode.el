@@ -28,7 +28,7 @@
 ;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 ;; MA 02110-1301, USA.
 
-(defconst lua-version "$Revision: 1.7 $"
+(defconst lua-version "$Revision: 1.8 $"
   "Lua Mode version number.")
 
 ;; Keywords: languages, processes, tools
@@ -979,8 +979,7 @@ If `lua-process' is nil or dead, start a new process first."
 	(current-prompt nil)
 	(lua-stdin-line-offset (count-lines (point-min) start))
 	(lua-stdin-buffer (current-buffer))
-	current-prompt 
-	)
+	current-prompt )
     (write-region start end tempfile)
     (or (and lua-process
 	     (comint-check-proc lua-process-buffer))
@@ -1019,6 +1018,7 @@ t, otherwise return nil.  BUF must exist."
 	      line (string-to-int (match-string 2)))))
     (when (and lua-jump-on-traceback line)
       (beep)
+      ;; TODO: highlight
       (lua-jump-to-traceback file line lua-stdin-line-offset)
       (setq err-p t))
     err-p))
