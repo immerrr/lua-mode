@@ -28,7 +28,7 @@
 ;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 ;; MA 02110-1301, USA.
 
-(defconst lua-version "20060528"
+(defconst lua-version "20060620"
   "Lua Mode version number.")
 
 ;; Keywords: languages, processes, tools
@@ -118,6 +118,11 @@ Should be a list of strings."
 
 (defvar lua-mode-map nil
   "Keymap used with lua-mode.")
+
+(defvar lua-electric-flag t
+"If t, electric actions (like automatic reindentation)  will happen when an electric
+ key like `{' is pressed") 
+(make-variable-buffer-local 'lua-electric-flag)
 
 (defcustom lua-prefix-key "\C-c"
   "Prefix for all lua-mode commands."
@@ -329,7 +334,8 @@ to `lua-mode-map', otherwise they are prefixed with `lua-prefix-key'."
   "Insert character and adjust indentation."
   (interactive "P")
   (insert-char last-command-char (prefix-numeric-value arg))
-  (lua-indent-line)
+  (if lua-electric-flag 
+      (lua-indent-line))
   (blink-matching-open))
 
 ;;}}}
@@ -1133,7 +1139,29 @@ t, otherwise return nil.  BUF must exist."
   (browse-url (concat lua-search-url-prefix (current-word t))))
 
 ;;}}}
+;;{{{ lua-calculate-state
 
+(defun lua-calculate-state (arg prevstate)
+  ;; Calculate the new state of PREVSTATE, t or nil, based on arg. If
+  ;; arg is nil or zero, toggle the state. If arg is negative, turn
+  ;; the state off, and if arg is positive, turn the state on
+  (if (or (not arg)
+	  (zerop (setq arg (prefix-numeric-value arg))))
+      (not prevstate)
+    (> arg 0)))
+
+;;}}}
+;;{{{ lua-toggle-electric-state
+
+(defun lua-toggle-electric-state (&optional arg)
+  "Toggle the electric indentation feature.
+Optional numeric ARG, if supplied, turns on electric indentation when
+positive, turns it off when negative, and just toggles it when zero or
+left out."
+  (interactive "P")
+  (setq lua-electric-flag (lua-calculate-state arg lua-electric-flag)))
+
+;;}}}
 ;;{{{ menu bar
 
 (define-key lua-mode-menu [restart-with-whole-file]
