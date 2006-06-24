@@ -94,7 +94,7 @@
   :type 'string
   :group 'lua)
 
-(defcustom lua-default-command-switches nil
+(defcustom lua-default-command-switches (list "-i")
   "Command switches for `lua-default-application'.
 Should be a list of strings."
   :type '(repeat string)
@@ -232,6 +232,20 @@ traceback location."
 
 (defconst lua-indent-whitespace " \t"
   "Character set that constitutes whitespace for indentation in lua.")
+
+;;}}}
+;;{{{ lua-make-temp-file
+
+(eval-and-compile
+  (defalias 'lua-make-temp-file
+    (if (fboundp 'make-temp-file)
+	'make-temp-file
+      (lambda (prefix &optional dir-flag) ;; Simple implementation
+	(expand-file-name
+	 (make-temp-name prefix)
+	 (if (fboundp 'temp-directory)
+	     (temp-directory)
+	   temporary-file-directory))))))
 
 ;;}}}
 ;;{{{ lua-mode
@@ -932,10 +946,10 @@ This function just searches for a `end' at the beginning of a line."
   (setq lua-process-buffer (apply 'make-comint name program startfile switches))
   (setq lua-process (get-buffer-process lua-process-buffer))
   ;; wait for prompt
-  (save-excursion 
-    (set-buffer lua-process-buffer)
+  (with-current-buffer lua-process-buffer
     (while (not (lua-prompt-line))
-      (accept-process-output (get-buffer-process (current-buffer))))))
+      (accept-process-output (get-buffer-process (current-buffer)))
+      (goto-char (point-max)))))
 
 ;;}}}
 ;;{{{ lua-kill-process
@@ -982,8 +996,9 @@ If `lua-process' is nil or dead, start a new process first."
   "Send region to lua subprocess."
   (interactive "r")
   ;; make temporary lua file
-  (let ((tempfile (make-temp-file "lua-"))
-	(current-prompt nil)
+  (let ((tempfile (lua-make-temp-file "lua-"))
+	(last-prompt nil)
+	(prompt-found nil)
 	(lua-stdin-line-offset (count-lines (point-min) start))
 	(lua-stdin-buffer (current-buffer))
 	current-prompt )
@@ -995,31 +1010,35 @@ If `lua-process' is nil or dead, start a new process first."
     (if (fboundp 'process-kill-without-query) 
 	(process-kill-without-query lua-process)) 
     ;; send dofile(tempfile)
-    (save-excursion 
-      (set-buffer lua-process-buffer)
-      (setq current-prompt (comint-next-prompt 1))
-      (comint-simple-send (get-buffer-process (current-buffer)) (format "dofile(\"%s\")" tempfile))
-      ;; wait for prompt 
-      (while (or (= (comint-next-prompt 1) current-prompt)
-		 (not (lua-prompt-line)))
-	(accept-process-output (get-buffer-process (current-buffer)))))
+    (with-current-buffer lua-process-buffer   
+      (goto-char (point-max))
+      (setq last-prompt (count-lines (point-min) (point-max)))
+      (comint-simple-send (get-buffer-process (current-buffer)) 
+			  (format "dofile(\"%s\")"  
+				  (replace-regexp-in-string 
+				   "\\\\" "\\\\\\\\" tempfile)))
+      ;; wait for prompt
+      (while (not prompt-found) 
+	(accept-process-output (get-buffer-process (current-buffer)))
+	(goto-char (point-max))
+	(setq prompt-found (and (lua-prompt-line) (not (= (count-lines (point-min) (point-max)) last-prompt)))))
     ;; remove temp. lua file
     (delete-file tempfile)
-    (lua-postprocess-output-buffer lua-process-buffer current-prompt lua-stdin-line-offset)    
+    (lua-postprocess-output-buffer lua-process-buffer last-prompt lua-stdin-line-offset)    
     (if lua-always-show
-	(display-buffer lua-process-buffer))))
+	(display-buffer lua-process-buffer)))))
 
 ;;}}}
 ;;{{{ lua-postprocess-output-buffer
 
-(defun lua-postprocess-output-buffer (buf start &optional lua-stdin-line-offset)
+(defun lua-postprocess-output-buffer (buf start-line &optional lua-stdin-line-offset)
   "Highlight tracebacks found in buf. If an traceback occurred return
 t, otherwise return nil.  BUF must exist."
   (let ((lua-stdin-line-offset (or lua-stdin-line-offset 0))
 	line file bol err-p)
     (save-excursion
       (set-buffer buf)
-      (goto-char start)
+      (goto-line start-line)
       (while (re-search-forward lua-traceback-line-re nil t)
 	(setq file (match-string 1)
 	      line (string-to-int (match-string 2)))))
