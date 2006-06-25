@@ -28,7 +28,7 @@
 ;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 ;; MA 02110-1301, USA.
 
-(defconst lua-version "20060620"
+(defconst lua-version "20060625"
   "Lua Mode version number.")
 
 ;; Keywords: languages, processes, tools
@@ -136,7 +136,7 @@ Should be a list of strings."
   )
 
 (defcustom lua-traceback-line-re
-  "\\(?:^[\t ]*\\|>[\t ]+\\)\\([^\n\t ]+\\):\\([0-9]+\\):"
+  "^\\(?:[\t ]*\\|.*>[\t ]+\\)\\([^\n\t ]+\\):\\([0-9]+\\):"
   "Regular expression that describes tracebacks and errors."
   :group 'lua
   :type  'regexp
@@ -246,6 +246,14 @@ traceback location."
 	 (if (fboundp 'temp-directory)
 	     (temp-directory)
 	   temporary-file-directory))))))
+
+;;}}}
+;;{{{ replace-in-string
+
+(eval-and-compile
+  (if (not (fboundp 'replace-in-string)) ;GNU emacs doesn't have it
+      (defun replace-in-string  (string regexp newtext &optional literal)
+	(replace-regexp-in-string regexp newtext string nil literal))))
 
 ;;}}}
 ;;{{{ lua-mode
@@ -1015,8 +1023,7 @@ If `lua-process' is nil or dead, start a new process first."
       (setq last-prompt (count-lines (point-min) (point-max)))
       (comint-simple-send (get-buffer-process (current-buffer)) 
 			  (format "dofile(\"%s\")"  
-				  (replace-regexp-in-string 
-				   "\\\\" "\\\\\\\\" tempfile)))
+				  (replace-in-string tempfile "\\\\" "\\\\\\\\" )))
       ;; wait for prompt
       (while (not prompt-found) 
 	(accept-process-output (get-buffer-process (current-buffer)))
