@@ -136,8 +136,8 @@ Should be a list of strings."
   )
 
 (defcustom lua-traceback-line-re
-  "stack traceback:\n\\(?:[[:blank:]]+.*\n\\)*?[[:blank:]]+\\([^:]*\\):\\([[:digit:]]+\\):"
-  "Regular expression that describes tracebacks."
+  "\\(?:^[\t ]*\\|>[\t ]+\\)\\([^\n\t ]+\\):\\([0-9]+\\):"
+  "Regular expression that describes tracebacks and errors."
   :group 'lua
   :type  'regexp
   )
@@ -1039,9 +1039,9 @@ t, otherwise return nil.  BUF must exist."
     (save-excursion
       (set-buffer buf)
       (goto-line start-line)
-      (while (re-search-forward lua-traceback-line-re nil t)
-	(setq file (match-string 1)
-	      line (string-to-int (match-string 2)))))
+      (if (re-search-forward lua-traceback-line-re nil t)
+	  (setq file (match-string 1)
+		line (string-to-int (match-string 2)))))
     (when (and lua-jump-on-traceback line)
       (beep)
       ;; TODO: highlight
