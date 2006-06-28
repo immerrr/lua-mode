@@ -45,6 +45,15 @@
 ;; This file was written with emacs using Jamie Lokier's folding mode
 ;; That's what the funny ;;{{{ marks are there for
 
+;;{{{ INSTALLATION:
+
+;; To install, just drop this file into a directory on your load-path (and
+;; byte-compile it).  To set up Emacs to automatically edit files ending in
+;; ".lua" using lua-mode add the following to your ~/.emacs file (GNU
+;; Emacs) or ~/.xemacs/init.el file (XEmacs):
+;;    (setq auto-mode-alist (cons '("\\.lua$" . lua-mode) auto-mode-alist))
+;;    (autoload 'lua-mode "lua-mode" "Lua editing mode." t)
+
 ;;{{{ Usage
 
 ;; Lua-mode supports c-mode style formatting and sending of
