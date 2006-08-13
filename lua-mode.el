@@ -199,6 +199,10 @@ traceback location."
      ;; Function name declarations.
      '("^[ \t]*\\<\\(\\(local[ \t]+\\)?function\\)\\>[ \t]+\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)"
        (1 font-lock-keyword-face) (3 font-lock-function-name-face nil t))
+     
+     ;; Handle function names in assignments
+     '("\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)[ \t]*=[ \t]*\\(function\\)\\>"
+       (1 font-lock-function-name-face nil t) (3 font-lock-keyword-face))
 
      ; Highlight multi-line comment blocks; since font-lock-mode doesn't
      ; claim to handle the highlighting of multi-line expressions elegantly
