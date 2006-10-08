@@ -328,6 +328,11 @@ The following keys are bound:
     (if (and lua-using-xemacs (boundp 'mode-popup-menu))
 	(setq mode-popup-menu
 	      (cons (concat mode-name " Mode Commands") lua-xemacs-menu)))
+
+    ;; hideshow setup
+    (unless (assq 'lua-mode hs-special-modes-alist)
+      (add-to-list 'hs-special-modes-alist
+		   '(lua-mode  "\\<\\(then\\|function\\|do\\)\\>" "\\<end\\>")))
     (run-hooks 'lua-mode-hook)))
 
 ;;;###autoload
@@ -1173,7 +1178,7 @@ t, otherwise return nil.  BUF must exist."
 ;;{{{ lua-search-documentation
 
 (defun lua-search-documentation ()
-  "Search LUA documentation for the word at the point."
+  "Search Lua documentation for the word at the point."
   (interactive)
   (browse-url (concat lua-search-url-prefix (current-word t))))
 
