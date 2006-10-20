@@ -43,7 +43,7 @@
 ;; Adam D. Moss <adam@gimp.org> <aspirin@icculus.org>
 
 ;; This file was written with emacs using Jamie Lokier's folding mode
-;; That's what the funny ;;{{{ marks are there for
+;; That's what the funny ;;{{{ ;;}}} marks are there for
 
 ;;{{{ INSTALLATION:
 
@@ -54,6 +54,7 @@
 ;;    (setq auto-mode-alist (cons '("\\.lua$" . lua-mode) auto-mode-alist))
 ;;    (autoload 'lua-mode "lua-mode" "Lua editing mode." t)
 
+;;}}}
 ;;{{{ Usage
 
 ;; Lua-mode supports c-mode style formatting and sending of
@@ -332,7 +333,7 @@ The following keys are bound:
     ;; hideshow setup
     (unless (assq 'lua-mode hs-special-modes-alist)
       (add-to-list 'hs-special-modes-alist
-		   '(lua-mode  "\\<\\(then\\|function\\|do\\)\\>" "\\<end\\>")))
+		   `(lua-mode  ,lua-block-regexp nil nil lua-forward-sexp)))
     (run-hooks 'lua-mode-hook)))
 
 ;;;###autoload
@@ -366,8 +367,6 @@ to `lua-mode-map', otherwise they are prefixed with `lua-prefix-key'."
          ))
 
 ;;}}}
-;;{{{ indentation
-
 ;;{{{ lua-electric-match
 
 (defun lua-electric-match (arg)
@@ -380,10 +379,12 @@ to `lua-mode-map', otherwise they are prefixed with `lua-prefix-key'."
 
 ;;}}}
 
+;;{{{ private functions
 (defun lua-syntax-status ()
   "Returns the syntactic status of the character after the point."
   (parse-partial-sexp (save-excursion (beginning-of-line) (point))
 		      (point)))
+
 
 (defun lua-string-p ()
   "Returns true if the point is in a string."
@@ -398,7 +399,7 @@ to `lua-mode-map', otherwise they are prefixed with `lua-prefix-key'."
   (let ((parse-result (lua-syntax-status)))
     (or (elt parse-result 3) (elt parse-result 4))))
 
-
+;;}}}
 ;;{{{ lua-indent-line
 
 (defun lua-indent-line ()
@@ -424,8 +425,7 @@ Return the amount the indentation changed by."
     indent))
 
 ;;}}}
-
-
+;;{{{ lua-find-regexp
 
 (defun lua-find-regexp (direction regexp &optional limit ignore-p)
   "Searches for a regular expression in the direction specified.
@@ -444,8 +444,16 @@ ignored, nil otherwise."
 	(if (not (funcall ignore-func))
 	    (throw 'found (point)))))))
 
-
+;;}}}
 ;;{{{ lua-backwards-to-block-begin-or-end
+
+(defun lua-backwards-to-block-begin-or-end ()
+  "Move backwards to nearest block begin or end.  Returns nil if not successful."
+  (interactive)
+  (lua-find-regexp 'backward lua-block-regexp))
+
+;;}}}
+;;{{{ var. constants
 
 (defconst lua-block-regexp
   (eval-when-compile
@@ -458,13 +466,6 @@ ignored, nil otherwise."
      (regexp-opt '("{" "(" "[" "]" ")" "}") t))
 
 	))
-
-(defun lua-backwards-to-block-begin-or-end ()
-  "Move backwards to nearest block begin or end.  Returns nil if not successful."
-  (interactive)
-  (lua-find-regexp 'backward lua-block-regexp))
-
-;;}}}
 
 (defconst lua-block-token-alist
   ;; The absence of "else" is deliberate. This construct in a way both
@@ -507,6 +508,8 @@ ignored, nil otherwise."
 
     )
 
+;;}}}
+;;{{{ lua-find-matching-token-word
 
 (defun lua-find-matching-token-word (token search-start)
   (let* ((token-info (assoc token lua-block-token-alist))
@@ -536,6 +539,8 @@ ignored, nil otherwise."
 		      (lua-find-matching-token-word found-token nil)))
 	      (throw 'found nil)))))))
 
+;;}}}
+;;{{{ lua-goto-matching-block-token 
 
 (defun lua-goto-matching-block-token (&optional search-start parse-start)
   "Find block begion/end token matching the one at the point.
@@ -549,6 +554,7 @@ the matching token if successful, nil otherwise."
 						      search-start)))
 	  (and position
 	       (goto-char position))))))
+
 
 ;; The following may be useful to speed up the search in the future.
 ;      (let ((token-type (char-syntax (string-to-char token-to-match)))
@@ -568,6 +574,8 @@ the matching token if successful, nil otherwise."
 ;	       (lua-goto-matching-token-word token-to-match search-start)))))))
 
 
+;;}}}
+;;{{{ lua-goto-matching-block
 
 (defun lua-goto-matching-block (&optional noreport)
   "Go to the keyword balancing the one under the point.
@@ -583,6 +591,8 @@ matching keyword that ends the block, and vice versa."
 	(error "Not on a block control keyword or brace.")
       position)))
 
+;;}}}
+;;{{{ lua-goto-nonblank-previous-line
 
 (defun lua-goto-nonblank-previous-line ()
   "Puts the point at the first previous line that is not blank.
@@ -598,6 +608,9 @@ Returns the point, or nil if it reached the beginning of the buffer"
 (eval-when-compile
   (defconst lua-operator-class
     "-+*/^.=<>~"))
+
+;;}}}
+;;{{{ var. constans
 
 (defconst lua-cont-eol-regexp
   (eval-when-compile
@@ -629,6 +642,9 @@ Returns the point, or nil if it reached the beginning of the buffer"
 
     ))
 
+;;}}}
+;;{{{ lua-last-token-continues-p
+
 (defun lua-last-token-continues-p ()
   "Returns true if the last token on this line is a continuation token."
   (let (line-begin
@@ -646,6 +662,9 @@ Returns the point, or nil if it reached the beginning of the buffer"
       (goto-char line-end)
       (re-search-backward lua-cont-eol-regexp line-begin t))))
 
+;;}}}
+;;{{{ lua-first-token-continues-p
+
 (defun lua-first-token-continues-p ()
   "Returns true if the first token on this line is a continuation token."
   (let (line-end)
@@ -655,6 +674,8 @@ Returns the point, or nil if it reached the beginning of the buffer"
       (beginning-of-line)
       (re-search-forward lua-cont-bol-regexp line-end t))))
 
+;;}}}
+;;{{{ lua-is-continuing-statement-p
 
 (defun lua-is-continuing-statement-p (&optional parse-start)
   "Return nonnil if the line continues a statement.
@@ -690,6 +711,8 @@ dosomething(d +
 		    (lua-last-token-continues-p)))
 	   (<= (lua-calculate-indentation-block-modifier prev-line) 0)))))
 
+;;}}}
+;;{{{ lua-make-indentation-info-pair
 
 (defun lua-make-indentation-info-pair ()
   "This is a helper function to lua-calculate-indentation-info. Don't
@@ -732,6 +755,9 @@ use standalone."
 			   (- lua-indent-level))))))
 
 
+;;}}}
+;;{{{ lua-calculate-indentation-info
+
 (defun lua-calculate-indentation-info (&optional parse-start parse-end)
   "For each block token on the line, computes how it affects the indentation.
 The effect of each token can be either a shift relative to the current
@@ -754,6 +780,8 @@ and relative each, and the shift/column to indent to."
 		(cons (lua-make-indentation-info-pair) indentation-info)))))
     indentation-info))
 
+;;}}}
+;;{{{ lua-accumulate-indentation-info
 
 (defun lua-accumulate-indentation-info (info)
   "Accumulates the indentation information previously calculated by
@@ -769,6 +797,9 @@ shift, or the absolute column to indent to."
 			 (+ accu (cdr x)))))
 	  info-list)
     (cons type accu)))
+
+;;}}}
+;;{{{ lua-calculate-indentation-block-modifier
 
 (defun lua-calculate-indentation-block-modifier (&optional parse-start
 							   parse-end)
@@ -786,6 +817,8 @@ one."
       (+ (lua-calculate-indentation-left-shift)
 	 (cdr indentation-info)
 	 (if (lua-is-continuing-statement-p) (- lua-indent-level) 0)))))
+;;}}}
+;;{{{ constants
 
 (defconst lua-left-shift-regexp-1
   (concat "\\("
@@ -822,6 +855,8 @@ one."
   (+ lua-left-shift-pos-2
      (regexp-opt-depth lua-left-shift-regexp-2)))
 
+;;}}} 
+;;{{{ lua-calculate-indentation-left-shift
 
 (defun lua-calculate-indentation-left-shift (&optional parse-start)
   "Return amount, by which this line should be shifted left.
@@ -851,7 +886,7 @@ to the left by the amount specified in lua-indent-level."
 		(forward-char (length (match-string 0))))))
       indentation-modifier)))
 
-
+;;}}}
 ;;{{{ lua-calculate-indentation
 
 (defun lua-calculate-indentation (&optional parse-start)
@@ -886,10 +921,6 @@ In usual case returns an integer: the column to indent to."
 	  (+ (current-indentation) shift-amt))))))
 
 ;;}}}
-
-;;}}}
-;;{{{ searching
-
 ;;{{{ lua-beginning-of-proc
 
 (defun lua-beginning-of-proc (&optional arg)
@@ -957,11 +988,6 @@ This function just searches for a `end' at the beginning of a line."
     ret))
 
 ;;}}}
-
-;;}}}
-
-;;{{{ communication with a inferior process via comint
-
 ;;{{{ lua-start-process
 
 (defun lua-start-process (name &optional program startfile &rest switches)
@@ -1003,8 +1029,6 @@ This function just searches for a `end' at the beginning of a line."
   (set-marker lua-region-end (or arg (point))))
 
 ;;}}}
-;;{{{ send line/region/buffer to lua-process
-
 ;;{{{ lua-send-current-line
 
 (defun lua-send-current-line ()
@@ -1204,6 +1228,14 @@ positive, turns it off when negative, and just toggles it when zero or
 left out."
   (interactive "P")
   (setq lua-electric-flag (lua-calculate-state arg lua-electric-flag)))
+
+;;}}}
+;;{{{ lua-forward-sexp
+
+(defun lua-forward-sexp ()
+  "Find end of Lua block."
+  (let ((case-fold-search t))
+    (re-search-forward "\\<end\\>" nil t)))
 
 ;;}}}
 ;;{{{ menu bar
