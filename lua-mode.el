@@ -36,6 +36,8 @@
 
 ;;; Commentary:
 
+;; Thanks to  Fabien <fleutot<at>gmail.com> for imenu patches.
+
 ;; Special Thanks to Simon Marshall <simonm@mail.esrin.esa.it> for
 ;; font-lock patches.
 
@@ -231,7 +233,7 @@ traceback location."
      "Default expressions to highlight in Lua mode.")))
 
 (defvar lua-imenu-generic-expression
-  '((nil "^[ \t]*function[ \t]+\\(\\(\\sw:\\|\\sw_\\|\\sw\\.\\|\\sw\\)+\\)" 1))
+  '((nil "^[ \t]*\\(?:local[ \t]+\\)?function[ \t]+\\(\\(\\sw:\\|\\sw_\\|\\sw\\.\\|\\sw\\)+\\)" 1))
   "Imenu generic expression for lua-mode.  See `imenu-generic-expression'.")
 
 (defvar lua-mode-abbrev-table nil
