@@ -213,8 +213,8 @@ traceback location."
      ; try (setq font-lock-support-mode 'lazy-lock-mode) in your ~/.emacs
 
      ;; Multi-line comment blocks.
-     `("--.*\\(\\[\\[\\(\\]?[^]]\\)*\\]\\]\\)"
-       (1 font-lock-comment-face t))
+     `("^[^-]*--\\[\\(=*\\)\\[\\(.\\|\n\\)*?--\\]\\1\\]"
+       (0 font-lock-comment-face t))
 
      ;;
      ;; Keywords.
@@ -335,7 +335,10 @@ The following keys are bound:
     ;; hideshow setup
     (unless (assq 'lua-mode hs-special-modes-alist)
       (add-to-list 'hs-special-modes-alist
-		   `(lua-mode  ,lua-block-regexp nil nil lua-forward-sexp)))
+		   `(lua-mode  
+		     ,(regexp-opt '("do" "function" "then") 'words) ;start
+		     ,(regexp-opt '("end") 'words) ;end
+		     nil lua-forward-sexp)))
     (run-hooks 'lua-mode-hook)))
 
 ;;;###autoload
@@ -1234,8 +1237,8 @@ left out."
 ;;}}}
 ;;{{{ lua-forward-sexp
 
-(defun lua-forward-sexp ()
-  "Find end of Lua block."
+(defun lua-forward-sexp (&optional count)
+  "Find begin and end of Lua block."
   (let ((case-fold-search t))
     (re-search-forward "\\<end\\>" nil t)))
 
