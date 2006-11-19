@@ -239,6 +239,10 @@ traceback location."
 (defvar lua-mode-abbrev-table nil
   "Abbreviation table used in lua-mode buffers.")
 
+(defvar lua-sexp-alist '(("then" . "end")
+                        ("function" . "end")
+                        ("do" . "end")))
+
 (define-abbrev-table 'lua-mode-abbrev-table
   '(
         ("end" "end" lua-indent-line 0)
@@ -336,8 +340,8 @@ The following keys are bound:
     (unless (assq 'lua-mode hs-special-modes-alist)
       (add-to-list 'hs-special-modes-alist
 		   `(lua-mode  
-		     ,(regexp-opt '("do" "function" "then") 'words) ;start
-		     ,(regexp-opt '("end") 'words) ;end
+		     ,(regexp-opt (mapcar 'car lua-sexp-alist) 'words);start
+		     ,(regexp-opt (mapcar 'cdr lua-sexp-alist) 'words) ;end
 		     nil lua-forward-sexp)))
     (run-hooks 'lua-mode-hook)))
 
@@ -1238,9 +1242,27 @@ left out."
 ;;{{{ lua-forward-sexp
 
 (defun lua-forward-sexp (&optional count)
-  "Find begin and end of Lua block."
-  (let ((case-fold-search t))
-    (re-search-forward "\\<end\\>" nil t)))
+ "Forward to block end"
+ (interactive "p")
+ (save-match-data
+ (let* ((count (or count 1))
+	(stackheight 0)
+	(block-start (mapcar 'car lua-sexp-alist))
+	(block-end (mapcar 'cdr lua-sexp-alist))
+	(block-regex (regexp-opt (append  block-start block-end) 'words))
+	current-exp
+	)
+   (while (> count 0)
+     ;; skip whitespace
+     (skip-chars-forward " \t\n")
+     (if (looking-at (regexp-opt block-start 'words)) 
+	 (let ((keyword (match-string 1)))
+	   (lua-find-matching-token-word keyword nil))
+       ;; If the current keyword is not a "begin" keyword, then just
+       ;; perform the normal forward-sexp.
+       (forward-sexp 1))
+     (setq count (1- count))))))
+
 
 ;;}}}
 ;;{{{ menu bar
