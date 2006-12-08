@@ -141,7 +141,7 @@ Should be a list of strings."
   :type 'string
   :group 'lua)
 
-(defcustom lua-prompt-regexp "^>+[\t ]+"
+(defcustom lua-prompt-regexp "[^\n]*\\(>[\t ]+\\)+$"
   "Regexp which matches the Lua program's prompt."
   :group 'lua
   :type  'regexp
@@ -1071,7 +1071,7 @@ If `lua-process' is nil or dead, start a new process first."
     ;; send dofile(tempfile)
     (with-current-buffer lua-process-buffer   
       (goto-char (point-max))
-      (setq last-prompt (count-lines (point-min) (point-max)))
+      (setq last-prompt (point-max))
       (comint-simple-send (get-buffer-process (current-buffer)) 
 			  (format "dofile(\"%s\")"  
 				  (replace-in-string tempfile "\\\\" "\\\\\\\\" )))
@@ -1079,7 +1079,7 @@ If `lua-process' is nil or dead, start a new process first."
       (while (not prompt-found) 
 	(accept-process-output (get-buffer-process (current-buffer)))
 	(goto-char (point-max))
-	(setq prompt-found (and (lua-prompt-line) (not (= (count-lines (point-min) (point-max)) last-prompt)))))
+	(setq prompt-found (and (lua-prompt-line) (< last-prompt (point-max)))))
     ;; remove temp. lua file
     (delete-file tempfile)
     (lua-postprocess-output-buffer lua-process-buffer last-prompt lua-stdin-line-offset)    
@@ -1132,8 +1132,10 @@ t, otherwise return nil.  BUF must exist."
 
 (defun lua-prompt-line ()
   (save-excursion 
-    (forward-line 0)
-    (looking-at comint-prompt-regexp)))
+    (save-match-data
+      (forward-line 0)
+      (if (looking-at comint-prompt-regexp)
+	  (match-end 0)))))
 
 ;;{{{ lua-send-lua-region
 ;;}}}
