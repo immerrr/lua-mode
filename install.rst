@@ -21,3 +21,7 @@ Emacs) or ``~/.xemacs/init.el`` file (XEmacs)::
 If you want colorization, turn on ``global-font-lock`` or add this::
 
 (add-hook 'lua-mode-hook 'turn-on-font-lock)
+
+If you want to use hideshow, turn on ``hs-minor-mode`` or add this::
+
+(add-hook 'lua-mode-hook 'hs-minor-mode)
