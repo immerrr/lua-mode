@@ -28,7 +28,7 @@
 ;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 ;; MA 02110-1301, USA.
 
-(defconst lua-version "20060625"
+(defconst lua-version "20061208"
   "Lua Mode version number.")
 
 ;; Keywords: languages, processes, tools
@@ -1089,14 +1089,15 @@ If `lua-process' is nil or dead, start a new process first."
 ;;}}}
 ;;{{{ lua-postprocess-output-buffer
 
-(defun lua-postprocess-output-buffer (buf start-line &optional lua-stdin-line-offset)
+(defun lua-postprocess-output-buffer (buf start &optional lua-stdin-line-offset)
   "Highlight tracebacks found in buf. If an traceback occurred return
 t, otherwise return nil.  BUF must exist."
   (let ((lua-stdin-line-offset (or lua-stdin-line-offset 0))
 	line file bol err-p)
     (save-excursion
       (set-buffer buf)
-      (goto-line start-line)
+      (goto-char start)
+      (beginning-of-line)
       (if (re-search-forward lua-traceback-line-re nil t)
 	  (setq file (match-string 1)
 		line (string-to-int (match-string 2)))))
