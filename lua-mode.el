@@ -733,7 +733,7 @@ use standalone."
 	 (cons 'absolute (+ (save-excursion (goto-char found-pos)
 					    (current-column))
 			    lua-indent-level)))
-	((string-equal found-token "(")
+	((or (string-equal found-token "(") (string-equal found-token "{"))
 	 ;; this is the location where we need to start searching for the
 	 ;; matching opening token, when we encounter the next closing token.
 	 ;; It is primarily an optimization to save some searchingt ime.
@@ -749,7 +749,7 @@ use standalone."
 			(lua-calculate-indentation-block-modifier
 			 nil (point))))
 	     (cons 'relative (- lua-indent-level)))))
-	((string-equal found-token ")")
+	((or (string-equal found-token ")") (string-equal found-token "}"))
 	 (save-excursion
 	   (lua-goto-matching-block-token nil found-pos)
 	   (cons 'absolute
