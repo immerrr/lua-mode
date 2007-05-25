@@ -1,6 +1,6 @@
 ;;; lua-mode.el --- a major-mode for editing Lua scripts
 
-;; Copyright (C) 1997, 2001, 2004, 2006 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 2001, 2004, 2006, 2007 Free Software Foundation, Inc.
 
 ;; Author: 2006 Juergen Hoetzel <juergen@hoetzel.info>
 ;;         2004 various (support for Lua 5 and byte compilation)
@@ -28,7 +28,7 @@
 ;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 ;; MA 02110-1301, USA.
 
-(defconst lua-version "20061208"
+(defconst lua-version "20070525"
   "Lua Mode version number.")
 
 ;; Keywords: languages, processes, tools
@@ -614,6 +614,20 @@ Returns the point, or nil if it reached the beginning of the buffer"
       (beginning-of-line)
       (if (not (looking-at "\\s *\\(--.*\\)?$")) (throw 'found (point))))))
 
+;;}}}
+;;{{{ lua-goto-nonblank-next-line
+
+(defun lua-goto-nonblank-next-line ()
+  "Puts the point at the first next line that is not blank.
+Returns the point, or nil if it reached the end of the buffer"
+  (catch 'found
+    (end-of-line)
+    (while t
+      (forward-line)
+      (if (eobp) (throw 'found nil))
+      (beginning-of-line)
+      (if (not (looking-at "\\s *\\(--.*\\)?$")) (throw 'found (point))))))
+
 (eval-when-compile
   (defconst lua-operator-class
     "-+*/^.=<>~"))
@@ -694,21 +708,7 @@ The criteria for a continuing statement are:
 * the last token of the previous line is a continuing op,
   OR the first token of the current line is a continuing op
 
-AND
-
-* the indentation modifier of the preceding line is nonpositive.
-
-The latter is sort of a hack, but it is easier to use this criterion, instead
-of reducing the indentation when a continued statement also starts a new
-block. This is for aesthetic reasons: the indentation should be
-
-dosomething(d +
-   e + f + g)
-
-not
-
-dosomething(d +
-      e + f + g)"
+"
   (let ((prev-line nil))
     (save-excursion
       (if parse-start (goto-char parse-start))
@@ -717,8 +717,7 @@ dosomething(d +
 	   (or (lua-first-token-continues-p)
 	       (and (goto-char prev-line)
 		    ;; check last token of previous nonblank line
-		    (lua-last-token-continues-p)))
-	   (<= (lua-calculate-indentation-block-modifier prev-line) 0)))))
+		    (lua-last-token-continues-p)))))))
 
 ;;}}}
 ;;{{{ lua-make-indentation-info-pair
@@ -822,7 +821,20 @@ one."
 	(indentation-info (lua-accumulate-indentation-info
 			   (lua-calculate-indentation-info nil parse-end))))
     (if (eq (car indentation-info) 'absolute)
-	(- (cdr indentation-info) (current-indentation))
+	(- (cdr indentation-info)
+	   (current-indentation)
+	   ;; reduce indentation if this line also starts new continued statement 
+	   ;; or next line cont. this line
+	   ;;This is for aesthetic reasons: the indentation should be
+	   ;;dosomething(d +
+	   ;;   e + f + g)
+	   ;;not
+	   ;;dosomething(d +
+	   ;;      e + f + g)"
+	   (save-excursion
+	     (or (and (lua-last-token-continues-p) lua-indent-level)
+		 (and (lua-goto-nonblank-next-line) (lua-first-token-continues-p) lua-indent-level)
+		 0)))
       (+ (lua-calculate-indentation-left-shift)
 	 (cdr indentation-info)
 	 (if (lua-is-continuing-statement-p) (- lua-indent-level) 0)))))
