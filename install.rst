@@ -25,3 +25,9 @@ If you want colorization, turn on ``global-font-lock`` or add this::
 If you want to use hideshow, turn on ``hs-minor-mode`` or add this::
 
 (add-hook 'lua-mode-hook 'hs-minor-mode)
+
+DOWNLOAD
+------------
+Lua-mode is available from the project_ page at LuaForge.
+
+.. _project: http://luaforge.net/projects/lua-mode/
