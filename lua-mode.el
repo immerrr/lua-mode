@@ -214,8 +214,8 @@ traceback location."
      ; try (setq font-lock-support-mode 'lazy-lock-mode) in your ~/.emacs
 
      ;; Multi-line comment blocks.
-     `("^[^-]*--\\[\\(=*\\)\\[\\(.\\|\n\\)*?--\\]\\1\\]"
-       (0 font-lock-comment-face t))
+     `("\\(?:^\\|[^-]\\)\\(--\\[\\(=*\\)\\[\\(?:.\\|\n\\)*?--\\]\\2\\]\\)"
+       (1 font-lock-comment-face t))
 
      ;;
      ;; Keywords.
