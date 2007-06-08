@@ -11,7 +11,7 @@
 ;;              Paul Du Bois <pld-lua@gelatinous.com> and
 ;;              Aaron Smith <aaron-lua@gelatinous.com>.
 ;; URL:		http://lua-mode.luaforge.net/
-;; Version:	20070525
+;; Version:	20070607
 ;; This file is NOT part of Emacs.
 ;;
 ;; This program is free software; you can redistribute it and/or
@@ -29,7 +29,7 @@
 ;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 ;; MA 02110-1301, USA.
 
-(defconst lua-version "20070525"
+(defconst lua-version "20070607"
   "Lua Mode version number.")
 
 ;; Keywords: languages, processes, tools
@@ -740,6 +740,14 @@ use standalone."
 	 (cons 'absolute (+ (save-excursion (goto-char found-pos)
 					    (current-column))
 			    1)))
+	((string-equal found-token "{")
+	 (save-excursion 
+	   ;; expression follows -> indent at start of next expression
+	   (if (and (not (search-forward-regexp "[[:space:]]--" (line-end-position) t))
+		    (search-forward-regexp "[^[:space:]]" (line-end-position) t))
+	       	 (cons 'absolute (1- (current-column)))
+	     	 (cons 'relative lua-indent-level))))
+	;; closing tokens follow
 	((string-equal found-token "end")
 	 (save-excursion
 	   (lua-goto-matching-block-token nil found-pos)
@@ -749,7 +757,8 @@ use standalone."
 			(lua-calculate-indentation-block-modifier
 			 nil (point))))
 	     (cons 'relative (- lua-indent-level)))))
-	((string-equal found-token ")")
+	((or (string-equal found-token ")")
+	     (string-equal found-token "}"))
 	 (save-excursion
 	   (lua-goto-matching-block-token nil found-pos)
 	   (cons 'absolute
