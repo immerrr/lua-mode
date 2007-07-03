@@ -11,7 +11,7 @@
 ;;              Paul Du Bois <pld-lua@gelatinous.com> and
 ;;              Aaron Smith <aaron-lua@gelatinous.com>.
 ;; URL:		http://lua-mode.luaforge.net/
-;; Version:	20070608
+;; Version:	20070703
 ;; This file is NOT part of Emacs.
 ;;
 ;; This program is free software; you can redistribute it and/or
@@ -29,7 +29,7 @@
 ;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 ;; MA 02110-1301, USA.
 
-(defconst lua-version "20070608"
+(defconst lua-version "20070703"
   "Lua Mode version number.")
 
 ;; Keywords: languages, processes, tools
@@ -214,7 +214,7 @@ traceback location."
      ; try (setq font-lock-support-mode 'lazy-lock-mode) in your ~/.emacs
 
      ;; Multi-line comment blocks.
-     `("\\(?:^\\|[^-]\\)\\(--\\[\\(=*\\)\\[\\(?:.\\|\n\\)*?--\\]\\2\\]\\)"
+     `("\\(?:^\\|[^-]\\)\\(--\\[\\(=*\\)\\[\\(?:.\\|\n\\)*?\\]\\2\\]\\)"
        (1 font-lock-comment-face t))
 
      ;;
