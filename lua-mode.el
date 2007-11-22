@@ -29,13 +29,16 @@
 ;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 ;; MA 02110-1301, USA.
 
-(defconst lua-version "20070703"
+(defconst lua-version "20071122"
   "Lua Mode version number.")
 
 ;; Keywords: languages, processes, tools
 
 
 ;;; Commentary:
+
+;; Thanks to Tobias Polzin <polzin<at>gmx.de> for function indenting
+;; patch: Indent "(" like "{"
 
 ;; Thanks to  Fabien <fleutot<at>gmail.com> for imenu patches.
 
@@ -733,14 +736,8 @@ use standalone."
 	 (cons 'absolute (+ (save-excursion (goto-char found-pos)
 					    (current-column))
 			    lua-indent-level)))
-	((string-equal found-token "(")
-	 ;; this is the location where we need to start searching for the
-	 ;; matching opening token, when we encounter the next closing token.
-	 ;; It is primarily an optimization to save some searchingt ime.
-	 (cons 'absolute (+ (save-excursion (goto-char found-pos)
-					    (current-column))
-			    1)))
-	((string-equal found-token "{")
+	((or (string-equal found-token "{")
+         (string-equal found-token "("))
 	 (save-excursion 
 	   ;; expression follows -> indent at start of next expression
 	   (if (and (not (search-forward-regexp "[[:space:]]--" (line-end-position) t))
