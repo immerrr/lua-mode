@@ -1,8 +1,9 @@
 ;;; lua-mode.el --- a major-mode for editing Lua scripts
 
-;; Copyright (C) 1997, 2001, 2004, 2006, 2007 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 2001, 2004, 2006, 2007, 2010 Free Software Foundation, Inc.
 
-;; Author: 2006 Juergen Hoetzel <juergen@hoetzel.info>
+;; Author: 2010 Reuben Thomas <rrt@sc3d.org>
+;;         2006 Juergen Hoetzel <juergen@hoetzel.info>
 ;;         2004 various (support for Lua 5 and byte compilation)
 ;;         2001 Christian Vogler <cvogler@gradient.cis.upenn.edu>
 ;;         1997 Bret Mogilefsky <mogul-lua@gelatinous.com> starting from
@@ -11,7 +12,6 @@
 ;;              Paul Du Bois <pld-lua@gelatinous.com> and
 ;;              Aaron Smith <aaron-lua@gelatinous.com>.
 ;; URL:		http://lua-mode.luaforge.net/
-;; Version:	20070703
 ;; This file is NOT part of Emacs.
 ;;
 ;; This program is free software; you can redistribute it and/or
@@ -29,7 +29,7 @@
 ;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 ;; MA 02110-1301, USA.
 
-(defconst lua-version "20071122"
+(defconst lua-version "20100318"
   "Lua Mode version number.")
 
 ;; Keywords: languages, processes, tools
@@ -136,7 +136,7 @@ Should be a list of strings."
   "Keymap used with lua-mode.")
 
 (defvar lua-electric-flag t
-"If t, electric actions (like automatic reindentation)  will happen when an electric
+"If t, electric actions (like automatic reindentation) will happen when an electric
  key like `{' is pressed") 
 (make-variable-buffer-local 'lua-electric-flag)
 
@@ -222,17 +222,12 @@ traceback location."
 
      ;;
      ;; Keywords.
-     ;; (concat "\\<"
-     ;;         (regexp-opt '("and" "break" "do" "else" "elseif" "end" "false"
-     ;;                       "for" "function" "if" "in" "local" "nil" "not"
-     ;;                       "or" "repeat" "return" "then" "true" "until"
-     ;;                       "while") t)
-     ;;         "\\>")
-
-     ; Insert expanded regexp-opt here for the benefit of those who
-     ; don't have regexp-opt available.
-
-     "\\<\\(and\\|break\\|do\\|e\\(lse\\(if\\)?\\|nd\\)\\|f\\(alse\\|or\\|unction\\)\\|i[fn]\\|local\\|n\\(il\\|ot\\)\\|or\\|re\\(peat\\|turn\\)\\|t\\(hen\\|rue\\)\\|until\\|while\\)\\>"
+     (concat "\\<"
+             (regexp-opt '("and" "break" "do" "else" "elseif" "end" "false"
+                           "for" "function" "if" "in" "local" "nil" "not"
+                           "or" "repeat" "return" "then" "true" "until"
+                           "while") t)
+             "\\>")
 
      "Default expressions to highlight in Lua mode.")))
 
@@ -344,7 +339,7 @@ The following keys are bound:
     (unless (assq 'lua-mode hs-special-modes-alist)
       (add-to-list 'hs-special-modes-alist
 		   `(lua-mode  
-		     ,(regexp-opt (mapcar 'car lua-sexp-alist) 'words);start
+		     ,(regexp-opt (mapcar 'car lua-sexp-alist) 'words) ;start
 		     ,(regexp-opt (mapcar 'cdr lua-sexp-alist) 'words) ;end
 		     nil lua-forward-sexp)))
     (run-hooks 'lua-mode-hook)))
@@ -365,14 +360,15 @@ to `lua-mode-map', otherwise they are prefixed with `lua-prefix-key'."
   (define-key lua-mode-map "}" 'lua-electric-match)
   (define-key lua-mode-map "]" 'lua-electric-match)
   (define-key lua-mode-map ")" 'lua-electric-match)
+  (define-key lua-mode-map (kbd "C-M-a") 'lua-beginning-of-proc)
+  (define-key lua-mode-map (kbd "C-M-e") 'lua-end-of-proc)
+  (define-key lua-mode-map (kbd "C-M-<home>") 'lua-beginning-of-proc)
+  (define-key lua-mode-map (kbd "C-M-<end>") 'lua-end-of-proc)
   (let ((map (if lua-prefix-key
                                           (make-sparse-keymap)
                                         lua-mode-map)))
 
          ;; communication
-         (define-key map "\M-[" 'lua-beginning-of-proc)
-         (define-key map "\M-]" 'lua-end-of-proc)
-         (define-key map "\C-c" 'comment-region)
 	 (define-key map "\C-l" 'lua-send-buffer)
 	 (define-key map "\C-f" 'lua-search-documentation)
          (if lua-prefix-key
@@ -637,7 +633,7 @@ Returns the point, or nil if it reached the end of the buffer"
     "-+*/^.=<>~"))
 
 ;;}}}
-;;{{{ var. constans
+;;{{{ var. constants
 
 (defconst lua-cont-eol-regexp
   (eval-when-compile
@@ -705,7 +701,7 @@ Returns the point, or nil if it reached the end of the buffer"
 ;;{{{ lua-is-continuing-statement-p
 
 (defun lua-is-continuing-statement-p (&optional parse-start)
-  "Return nonnil if the line continues a statement.
+  "Return non-nil if the line continues a statement.
 More specifically, return the point in the line that is continued.
 The criteria for a continuing statement are:
 
@@ -732,7 +728,7 @@ use standalone."
   (cond ((string-equal found-token "function")
 	 ;; this is the location where we need to start searching for the
 	 ;; matching opening token, when we encounter the next closing token.
-	 ;; It is primarily an optimization to save some searchingt ime.
+	 ;; It is primarily an optimization to save some searching time.
 	 (cons 'absolute (+ (save-excursion (goto-char found-pos)
 					    (current-column))
 			    lua-indent-level)))
@@ -1119,7 +1115,7 @@ t, otherwise return nil.  BUF must exist."
       (beginning-of-line)
       (if (re-search-forward lua-traceback-line-re nil t)
 	  (setq file (match-string 1)
-		line (string-to-int (match-string 2)))))
+		line (string-to-number (match-string 2)))))
     (when (and lua-jump-on-traceback line)
       (beep)
       ;; TODO: highlight
