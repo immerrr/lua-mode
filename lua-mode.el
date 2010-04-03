@@ -202,6 +202,12 @@ traceback location."
 (defvar lua-font-lock-keywords
   (eval-when-compile
     (list
+     ;; Handle variable names 
+     ;;  local blalba =
+     ;;        ^^^^^^
+     '("\\(local[ \t]+\\(\\sw+\\)[ \t]*=\\)"
+       (2 font-lock-variable-name-face))
+
      ;;
      ;; Function name declarations.
      '("^[ \t]*\\<\\(\\(local[ \t]+\\)?function\\)\\>[ \t]+\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)"
