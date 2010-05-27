@@ -35,16 +35,16 @@
 
 ;;; Commentary:
 
-;; Thanks to Tobias Polzin <polzin<at>gmx.de> for function indenting
+;; Thanks to Tobias Polzin <polzin@gmx.de> for function indenting
 ;; patch: Indent "(" like "{"
 
-;; Thanks to Fabien <fleutot<at>gmail.com> for imenu patches.
+;; Thanks to Fabien <fleutot@gmail.com> for imenu patches.
 
-;; Special Thanks to Simon Marshall <simonm@mail.esrin.esa.it> for
-;; font-lock patches.
+;; Thanks to Simon Marshall <simonm@mail.esrin.esa.it> and Olivier
+;; Andrieu <oandrieu@gmail.com> for font-lock patches.
 
 ;; Additional font-lock highlighting and indentation tweaks by
-;; Adam D. Moss <adam@gimp.org> <aspirin@icculus.org>
+;; Adam D. Moss <adam@gimp.org>.
 
 ;; INSTALLATION:
 
@@ -203,14 +203,6 @@ traceback location."
      '("\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)[ \t]*=[ \t]*\\(function\\)\\>"
        (1 font-lock-function-name-face nil t) (3 font-lock-keyword-face))
 
-     ;; Long comment blocks.
-     '("\\(?:^\\|[^-]\\)\\(--\\[\\(=*\\)\\[\\(?:.\\|\n\\)*?\\]\\2\\]\\)"
-       (1 font-lock-comment-face t))
-
-     ;; Long strings.
-     '("\\(?:^\\|[^[-]\\)\\(\\[\\(=*\\)\\[\\(?:.\\|\n\\)*?\\]\\2\\]\\)"
-       (1 font-lock-string-face t))
-
      ;; Keywords.
      (concat "\\<"
              (regexp-opt '("and" "break" "do" "else" "elseif" "end" "false"
@@ -220,6 +212,23 @@ traceback location."
              "\\>")
 
      "Default expressions to highlight in Lua mode.")))
+
+;; FIXME: Match the correct number of equals signs between open and close long brackets
+(defvar lua-fls-keywords
+  '(("\\(-\\)-\\[=*\\[\\|\\(\\[\\)=*\\[" (1 "|" t t) (2 "|" t t))
+    ("\\]=*\\(\\]\\)"   . (1 "|"))))
+
+(defun lua-fls-face-function (s)
+  (let ((in-string  (nth 3 s))
+        (start      (nth 8 s)))
+    (if in-string
+        (save-excursion
+          (goto-char start)
+          (if (looking-at "--\\[=*\\[")
+              'font-lock-comment-face
+            'font-lock-string-face))
+      'font-lock-comment-face)))
+
 
 (defvar lua-imenu-generic-expression
   '((nil "^[ \t]*\\(?:local[ \t]+\\)?function[ \t]+\\(\\(\\sw:\\|\\sw_\\|\\sw\\.\\|\\sw\\)+\\)" 1))
@@ -271,7 +280,10 @@ The following keys are bound:
     (set (make-local-variable 'comment-start) "--")
     (set (make-local-variable 'comment-start-skip) "--")
     (set (make-local-variable 'font-lock-defaults)
-                        '(lua-font-lock-keywords nil nil ((?_ . "w"))))
+                        '(lua-font-lock-keywords 
+                          nil nil ((?_ . "w")) nil
+                          (font-lock-syntactic-keywords      . lua-fls-keywords)
+                          (font-lock-syntactic-face-function . lua-fls-face-function)))
     (set (make-local-variable 'imenu-generic-expression)
                         lua-imenu-generic-expression)
          (setq local-abbrev-table lua-mode-abbrev-table)
