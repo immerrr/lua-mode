@@ -2,8 +2,8 @@
  Lua-mode
 =============================
 
-:Author: Jürgen Hötzel
-:Contact: juergen@hoetzel.info
+:Maintainer: Reuben Thomas
+:Contact: rrt@sc3d.org
 
 .. contents::
 
