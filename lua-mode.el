@@ -196,39 +196,22 @@ traceback location."
        (2 font-lock-variable-name-face))
 
      ;; Function name declarations.
-     '("^[ \t]*\\<\\(\\(local[ \t]+\\)?function\\)\\>[ \t]+\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)"
+     '("^[ \t]*\\_<\\(\\(local[ \t]+\\)?function\\)\\_>[ \t]+\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)"
        (1 font-lock-keyword-face) (3 font-lock-function-name-face nil t))
      
      ;; Handle function names in assignments
-     '("\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)[ \t]*=[ \t]*\\(function\\)\\>"
+     '("\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)[ \t]*=[ \t]*\\(function\\)\\_>"
        (1 font-lock-function-name-face nil t) (3 font-lock-keyword-face))
 
      ;; Keywords.
-     (concat "\\<"
+     (concat "\\_<"
              (regexp-opt '("and" "break" "do" "else" "elseif" "end" "false"
                            "for" "function" "if" "in" "local" "nil" "not"
                            "or" "repeat" "return" "then" "true" "until"
                            "while") t)
-             "\\>")
+             "\\_>")
 
      "Default expressions to highlight in Lua mode.")))
-
-;; FIXME: Match the correct number of equals signs between open and close long brackets
-(defvar lua-fls-keywords
-  '(("\\(-\\)-\\[=*\\[\\|\\(\\[\\)=*\\[" (1 "|" t t) (2 "|" t t))
-    ("\\]=*\\(\\]\\)"   . (1 "|"))))
-
-(defun lua-fls-face-function (s)
-  (let ((in-string  (nth 3 s))
-        (start      (nth 8 s)))
-    (if in-string
-        (save-excursion
-          (goto-char start)
-          (if (looking-at "--\\[=*\\[")
-              'font-lock-comment-face
-            'font-lock-string-face))
-      'font-lock-comment-face)))
-
 
 (defvar lua-imenu-generic-expression
   '((nil "^[ \t]*\\(?:local[ \t]+\\)?function[ \t]+\\(\\(\\sw:\\|\\sw_\\|\\sw\\.\\|\\sw\\)+\\)" 1))
@@ -281,9 +264,7 @@ The following keys are bound:
     (set (make-local-variable 'comment-start-skip) "--")
     (set (make-local-variable 'font-lock-defaults)
          '(lua-font-lock-keywords 
-           nil nil ((?_ . "w")) nil
-           (font-lock-syntactic-keywords      . lua-fls-keywords)
-           (font-lock-syntactic-face-function . lua-fls-face-function)))
+           nil nil ((?_ . "w"))))
     (set (make-local-variable 'imenu-generic-expression)
          lua-imenu-generic-expression)
     (setq local-abbrev-table lua-mode-abbrev-table)
@@ -308,9 +289,6 @@ The following keys are bound:
     (modify-syntax-entry ?\n ">")
     (modify-syntax-entry ?\' "\"")
     (modify-syntax-entry ?\" "\"")
-    ;; _ needs to be part of a word, or the regular expressions will
-    ;; incorrectly regognize end_ to be matched by "\\<end\\>"!
-    (modify-syntax-entry ?_ "w")
     (if (and (featurep 'menubar)
 	     current-menubar
 	     (not (assoc "Lua" current-menubar)))
@@ -433,12 +411,11 @@ ignored, nil otherwise."
 
 (defconst lua-block-regexp
   (eval-when-compile
-    ;; This is the code we used to generate the regexp:
     (concat
-     "\\(\\<"
+     "\\(\\_<"
      (regexp-opt '("do" "function" "repeat" "then"
 		   "else" "elseif" "end" "until") t)
-     "\\>\\)\\|"
+     "\\_>\\)\\|"
      (regexp-opt '("{" "(" "[" "]" ")" "}") t))
 
     ))
@@ -450,16 +427,16 @@ ignored, nil otherwise."
   ;; of "else", should we look backward for "then/elseif" or forward
   ;; for "end"?
   ;; Maybe later we will find a way to handle it.
-  '(("do"       "\\<end\\>"                                   open)
-    ("function" "\\<end\\>"                                   open)
-    ("repeat"   "\\<until\\>"                                 open)
-    ("then"     "\\<\\(e\\(lseif\\|nd\\)\\)\\>"               open)
+  '(("do"       "\\_<end\\_>"                                 open)
+    ("function" "\\_<end\\_>"                                 open)
+    ("repeat"   "\\_<until\\_>"                               open)
+    ("then"     "\\_<\\(e\\(lseif\\|nd\\)\\)\\_>"             open)
     ("{"        "}"                                           open)
     ("["        "]"                                           open)
     ("("        ")"                                           open)
-    ("elseif"   "\\<then\\>"                                  close)
-    ("end"      "\\<\\(do\\|function\\|then\\)\\>"            close)
-    ("until"    "\\<repeat\\>"                                close)
+    ("elseif"   "\\_<then\\_>"                                close)
+    ("end"      "\\_<\\(do\\|function\\|then\\)\\_>"          close)
+    ("until"    "\\_<repeat\\_>"                              close)
     ("}"        "{"                                           close)
     ("]"        "\\["                                         close)
     (")"        "("                                           close)))
@@ -469,16 +446,15 @@ ignored, nil otherwise."
   ;; The absence of else is deliberate, since it does not modify the
   ;; indentation level per se. It only may cause the line, in which the
   ;; else is, to be shifted to the left.
-  ;; This is the code we used to generate the regexp:
   (concat
-   "\\(\\<"
-                                        ; n.b. "local function" is a bit of a hack, allowing only a single space
+   "\\(\\_<"
+   ;; n.b. "local function" is a bit of a hack, allowing only a single space
    (regexp-opt '("do" "local function" "function" "repeat" "then") t)
-   "\\>\\|"
+   "\\_>\\|"
    (regexp-opt '("{" "(" "["))
-   "\\)\\|\\(\\<"
+   "\\)\\|\\(\\_<"
    (regexp-opt '("elseif" "end" "until") t)
-   "\\>\\|"
+   "\\_>\\|"
    (regexp-opt '("]" ")" "}"))
    "\\)")
 
@@ -532,7 +508,7 @@ matching keyword that ends the block, and vice versa."
   (interactive)
   ;; search backward to the beginning of the keyword if necessary
   (if (eq (char-syntax (following-char)) ?w)
-      (re-search-backward "\\<" nil t))
+      (re-search-backward "\\_<" nil t))
   (let ((position (lua-goto-matching-block-token)))
     (if (and (not position)
 	     (not noreport))
@@ -567,28 +543,25 @@ Returns the point, or nil if it reached the end of the buffer"
 
 (defconst lua-cont-eol-regexp
   (eval-when-compile
-    ;; expression used to generate the regexp
     (concat
-     "\\(\\<"
+     "\\(\\_<"
      (regexp-opt '("and" "or" "not" "in" "for" "while"
 		   "local" "function") t)
-     "\\>\\|"
+     "\\_>\\|"
      "\\(^\\|[^" lua-operator-class "]\\)"
      (regexp-opt '("+" "-" "*" "/" "^" ".." "==" "=" "<" ">" "<=" ">=" "~=") t)
      "\\)"
      "\\s *\\=")
-
     ))
 
 
 (defconst lua-cont-bol-regexp
   (eval-when-compile
-    ;; expression used to generate the regexp
     (concat
      "\\=\\s *"
-     "\\(\\<"
+     "\\(\\_<"
      (regexp-opt '("and" "or" "not") t)
-     "\\>\\|"
+     "\\_>\\|"
      (regexp-opt '("+" "-" "*" "/" "^" ".." "==" "=" "<" ">" "<=" ">=" "~=") t)
      "\\($\\|[^" lua-operator-class "]\\)"
      "\\)")
@@ -662,7 +635,7 @@ use standalone."
 	((string-equal found-token "end")
 	 (save-excursion
 	   (lua-goto-matching-block-token nil found-pos)
-	   (if (looking-at "\\<function\\>")
+	   (if (looking-at "\\_<function\\_>")
 	       (cons 'absolute
 		     (+ (current-indentation)
 			(lua-calculate-indentation-block-modifier
@@ -753,20 +726,19 @@ one."
 
 (defconst lua-left-shift-regexp-1
   (concat "\\("
-	  "\\(\\<" (regexp-opt '("else" "elseif" "until") t)
-	  "\\>\\)\\($\\|\\s +\\)"
+	  "\\(\\_<" (regexp-opt '("else" "elseif" "until") t)
+	  "\\_>\\)\\($\\|\\s +\\)"
 	  "\\)"))
 
 (defconst lua-left-shift-regexp-2
-  (concat "\\(\\<"
+  (concat "\\(\\_<"
 	  (regexp-opt '("end") t)
-	  "\\>\\)"))
+	  "\\_>\\)"))
 
 (defconst lua-left-shift-regexp
-  ;; This is the code we used to generate the regexp:
-  ;; ("else", "elseif", "until" followed by whitespace, or "end"/closing
+  ;; "else", "elseif", "until" followed by whitespace, or "end"/closing
   ;; brackets followed by
-  ;; whitespace, punctuation, or closing parentheses)
+  ;; whitespace, punctuation, or closing parentheses
   (concat lua-left-shift-regexp-1
 	  "\\|\\(\\("
 	  lua-left-shift-regexp-2
@@ -854,9 +826,6 @@ Returns t unless search stops due to beginning or end of buffer."
       (setq arg 1))
   (let ((found nil)
         (ret t))
-    (if (and (< arg 0)
-             (looking-at "^function[ \t]"))
-        (forward-char 1))
     (while (< arg 0)
       (if (re-search-forward "^function[ \t]" nil t)
           (setq arg (1+ arg)
@@ -865,6 +834,10 @@ Returns t unless search stops due to beginning or end of buffer."
               arg 0)))
     (if found
         (beginning-of-line))
+    (if (> arg 0)
+        (if (re-search-forward "^function[ \t]" nil t)
+            (setq arg (1+ arg))
+          (goto-char (point-max))))
     (while (> arg 0)
       (if (re-search-backward "^function[ \t]" nil t)
           (setq arg (1- arg))
@@ -1051,7 +1024,7 @@ t, otherwise return nil.  BUF must exist."
     (if lua-always-show
         (display-buffer lua-process-buffer))))
 
-                                        ; FIXME: This needs work... -Bret
+;; FIXME: This needs work... -Bret
 (defun lua-send-buffer ()
   "Send whole buffer to lua subprocess."
   (interactive)
