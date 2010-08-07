@@ -12,7 +12,7 @@
 ;;              Paul Du Bois <pld-lua@gelatinous.com> and
 ;;              Aaron Smith <aaron-lua@gelatinous.com>.
 ;; URL:		http://lua-mode.luaforge.net/
-;; Version:	20100404
+;; Version:	20100617
 ;; This file is NOT part of Emacs.
 ;;
 ;; This program is free software; you can redistribute it and/or
@@ -875,7 +875,9 @@ This function just searches for a `end' at the beginning of a line."
 	(setq ret nil
 	      arg 0)))
     (if found
-	(end-of-line))
+        (progn
+          (beginning-of-line)
+          (forward-line)))
     ret))
 
 (defun lua-start-process (name &optional program startfile &rest switches)
