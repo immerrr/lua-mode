@@ -1,27 +1,13 @@
-=============================
- Lua-mode
-=============================
+Lua-mode
+========
 
-:Maintainer: Reuben Thomas
-:Contact: rrt@sc3d.org
+Maintainer: Reuben Thomas <rrt@sc3d.org>
 
-.. contents::
+lua-mode is an Emacs major mode for editing Lua files. For
+documentation, including installation instructions, please see
+lua-mode.el.
 
-INSTALLATION
-------------
-To install, just drop ``lua-mode.el`` into a directory on your ``load-path`` (and optionally 
-byte-compile it).  
+Please send bug reports and suggestions to the maintainer, or use the
+trackers at github:
 
-To set up Emacs to automatically edit files ending in .lua using Lua-mode add the following to your ``~/.emacs`` file (GNU
-Emacs) or ``~/.xemacs/init.el`` file (XEmacs)::
-
-(setq auto-mode-alist (cons '("\\.lua$" . lua-mode) auto-mode-alist))
-(autoload 'lua-mode "lua-mode" "Lua editing mode." t)
-
-lua-mode works with Hide Show minor mode (see ``hs-minor-mode``).
-
-DOWNLOAD
-------------
-Lua-mode is available from the project_ page at LuaForge.
-
-.. _project: http://luaforge.net/projects/lua-mode/
+https://github.com/rrthomas/lua-mode
