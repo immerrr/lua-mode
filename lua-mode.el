@@ -1,8 +1,8 @@
 ;;; lua-mode.el --- a major-mode for editing Lua scripts
 
-;; Copyright (C) 1997, 2001, 2004, 2006, 2007, 2010 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 2001, 2004, 2006, 2007, 2010, 2011 Free Software Foundation, Inc.
 
-;; Author: 2010 Reuben Thomas <rrt@sc3d.org>
+;; Author: 2010-2011 Reuben Thomas <rrt@sc3d.org>
 ;;         2006 Juergen Hoetzel <juergen@hoetzel.info>
 ;;         2004 various (support for Lua 5 and byte compilation)
 ;;         2001 Christian Vogler <cvogler@gradient.cis.upenn.edu>
@@ -48,11 +48,14 @@
 
 ;; INSTALLATION:
 
-;; To install, just drop this file into a directory on your load-path (and
-;; byte-compile it).  To set up Emacs to automatically edit files ending in
-;; ".lua" using lua-mode add the following to your init file:
-;;    (setq auto-mode-alist (cons '("\\.lua$" . lua-mode) auto-mode-alist))
-;;    (autoload 'lua-mode "lua-mode" "Lua editing mode." t)
+;; To install, just copy this file into a directory on your load-path
+;; (and byte-compile it). To set up Emacs to automatically edit files
+;; ending in ".lua" or with a lua hash-bang line using lua-mode add
+;; the following to your init file:
+;;
+;; (autoload 'lua-mode "lua-mode" "Lua editing mode." t)
+;; (add-to-list 'auto-mode-alist '("\\.lua$" . lua-mode))
+;; (add-to-list 'interpreter-mode-alist '("lua" . lua-mode))
 
 ;; Usage
 
@@ -202,6 +205,10 @@ traceback location."
      ;; Handle function names in assignments
      '("\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)[ \t]*=[ \t]*\\(function\\)\\_>"
        (1 font-lock-function-name-face nil t) (3 font-lock-keyword-face))
+
+     ;; Multi-line string literals.
+     '("[^-]\\[=*\\[\\(\\([^]]\\|][^]]\\|]=+[^]]\\)*?\\)]=*]"
+       (1 font-lock-string-face t))
 
      ;; Keywords.
      (concat "\\_<"
