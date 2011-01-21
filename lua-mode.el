@@ -166,8 +166,10 @@ traceback location."
 (defvar lua-region-end (make-marker)
   "End of special region for Lua communication.")
 
-(defvar lua-indent-level 3
-  "Amount by which Lua subexpressions are indented.")
+(defcustom lua-indent-level 3
+  "Amount by which Lua subexpressions are indented."
+  :group 'lua
+  :type 'integer)
 
 (defvar lua-mode-menu (make-sparse-keymap "Lua")
   "Keymap for lua-mode's menu.")
