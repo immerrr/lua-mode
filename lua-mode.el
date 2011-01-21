@@ -137,25 +137,22 @@ Should be a list of strings."
 
 (defcustom lua-prompt-regexp "[^\n]*\\(>[\t ]+\\)+$"
   "Regexp which matches the Lua program's prompt."
-  :group 'lua
   :type  'regexp
-  )
+  :group 'lua)
 
 (defcustom lua-traceback-line-re
   "^\\(?:[\t ]*\\|.*>[\t ]+\\)\\([^\n\t ]+\\):\\([0-9]+\\):"
   "Regular expression that describes tracebacks and errors."
-  :group 'lua
   :type  'regexp
-  )
+  :group 'lua)
 
 (defcustom lua-jump-on-traceback t
   "*Jump to innermost traceback location in *lua* buffer.  When this
 variable is non-nil and a traceback occurs when running Lua code in a
 subprocess, jump immediately to the source code of the innermost
 traceback location."
-  :group 'lua
   :type 'boolean
-  )
+  :group 'lua)
 
 (defvar lua-mode-hook nil
   "Hooks called when Lua mode fires up.")
@@ -168,8 +165,8 @@ traceback location."
 
 (defcustom lua-indent-level 3
   "Amount by which Lua subexpressions are indented."
-  :group 'lua
-  :type 'integer)
+  :type 'integer
+  :group 'lua)
 
 (defvar lua-mode-menu (make-sparse-keymap "Lua")
   "Keymap for lua-mode's menu.")
