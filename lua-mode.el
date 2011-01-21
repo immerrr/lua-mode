@@ -95,6 +95,21 @@
   :prefix "lua-"
   :group 'languages)
 
+(defcustom lua-indent-level 3
+  "Amount by which Lua subexpressions are indented."
+  :type 'integer
+  :group 'lua)
+
+(defcustom lua-comment-start "-- "
+  "Default value of `comment-start'."
+  :type 'string
+  :group 'lua)
+
+(defcustom lua-comment-start-skip "-- "
+  "Default value of `comment-start-skip'."
+  :type 'string
+  :group 'lua)
+
 (defcustom lua-default-application "lua"
   "Default application to run in lua subprocess."
   :type 'string
@@ -143,7 +158,7 @@ Should be a list of strings."
 (defcustom lua-traceback-line-re
   "^\\(?:[\t ]*\\|.*>[\t ]+\\)\\([^\n\t ]+\\):\\([0-9]+\\):"
   "Regular expression that describes tracebacks and errors."
-  :type  'regexp
+  :type 'regexp
   :group 'lua)
 
 (defcustom lua-jump-on-traceback t
@@ -162,11 +177,6 @@ traceback location."
 
 (defvar lua-region-end (make-marker)
   "End of special region for Lua communication.")
-
-(defcustom lua-indent-level 3
-  "Amount by which Lua subexpressions are indented."
-  :type 'integer
-  :group 'lua)
 
 (defvar lua-mode-menu (make-sparse-keymap "Lua")
   "Keymap for lua-mode's menu.")
@@ -266,8 +276,8 @@ The following keys are bound:
     (setq comint-prompt-regexp lua-prompt-regexp)
     (make-local-variable 'lua-default-command-switches)
     (set (make-local-variable 'indent-line-function) 'lua-indent-line)
-    (set (make-local-variable 'comment-start) "--")
-    (set (make-local-variable 'comment-start-skip) "--")
+    (set (make-local-variable 'comment-start) lua-comment-start)
+    (set (make-local-variable 'comment-start-skip) lua-comment-start-skip)
     (set (make-local-variable 'font-lock-defaults)
          '(lua-font-lock-keywords 
            nil nil ((?_ . "w"))))
