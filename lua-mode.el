@@ -364,8 +364,7 @@ to `lua-mode-map', otherwise they are prefixed with `lua-prefix-key'."
 ;; private functions
 (defun lua-syntax-status ()
   "Returns the syntactic status of the character after the point."
-  (parse-partial-sexp (save-excursion (beginning-of-line) (point))
-                      (point)))
+  (parse-partial-sexp (line-beginning-position) (point)))
 
 
 (defun lua-string-p ()
@@ -586,13 +585,10 @@ Returns the point, or nil if it reached the end of the buffer"
 
 (defun lua-last-token-continues-p ()
   "Returns true if the last token on this line is a continuation token."
-  (let (line-begin
-        line-end)
+  (let ((line-begin (line-beginning-position))
+        (line-end (line-end-position)))
     (save-excursion
-      (beginning-of-line)
-      (setq line-begin (point))
       (end-of-line)
-      (setq line-end (point))
       ;; we need to check whether the line ends in a comment and
       ;; skip that one.
       (while (lua-find-regexp 'backward "-" line-begin 'lua-string-p)
@@ -603,10 +599,8 @@ Returns the point, or nil if it reached the end of the buffer"
 
 (defun lua-first-token-continues-p ()
   "Returns true if the first token on this line is a continuation token."
-  (let (line-end)
+  (let ((line-end (line-end-position)))
     (save-excursion
-      (end-of-line)
-      (setq line-end (point))
       (beginning-of-line)
       (re-search-forward lua-cont-bol-regexp line-end t))))
 
@@ -679,7 +673,7 @@ The effect of each token can be either a shift relative to the current
 indentation level, or indentation to some absolute column. This information
 is collected in a list of indentation info pairs, which denote absolute
 and relative each, and the shift/column to indent to."
-  (let* ((line-end (save-excursion (end-of-line) (point)))
+  (let* ((line-end (line-end-position))
          (search-stop (if parse-end (min parse-end line-end) line-end))
          (indentation-info nil))
     (if parse-start (goto-char parse-start))
@@ -929,9 +923,7 @@ This function just searches for a `end' at the beginning of a line."
   "Send current line to lua subprocess, found in `lua-process'.
 If `lua-process' is nil or dead, start a new process first."
   (interactive)
-  (let ((start (save-excursion (beginning-of-line) (point)))
-        (end (save-excursion (end-of-line) (point))))
-    (lua-send-region start end)))
+  (lua-send-region (line-beginning-position) (line-end-position)))
 
 (defun lua-send-region (start end)
   "Send region to lua subprocess."
