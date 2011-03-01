@@ -530,27 +530,20 @@ matching keyword that ends the block, and vice versa."
         (error "Not on a block control keyword or brace.")
       position)))
 
-(defun lua-goto-nonblank-previous-line ()
-  "Puts the point at the first previous line that is not blank.
-Returns the point, or nil if it reached the beginning of the buffer"
-  (catch 'found
-    (beginning-of-line)
-    (while t
-      (if (bobp) (throw 'found nil))
-      (forward-char -1)
-      (beginning-of-line)
-      (if (not (looking-at "\\s *\\(--.*\\)?$")) (throw 'found (point))))))
+(defun lua-forward-line-skip-blanks (&optional back)
+  "Move 1 line forward (back if BACK is non-nil) skipping blank lines.
 
-(defun lua-goto-nonblank-next-line ()
-  "Puts the point at the first next line that is not blank.
-Returns the point, or nil if it reached the end of the buffer"
+Moves point 1 line forward (or backward) skipping lines that contain
+no Lua code besides comments. The point is put to the beginning of
+the line.
+
+Returns final value of point as integer or nil if operation failed."
   (catch 'found
-    (end-of-line)
     (while t
-      (forward-line)
-      (if (eobp) (throw 'found nil))
-      (beginning-of-line)
-      (if (not (looking-at "\\s *\\(--.*\\)?$")) (throw 'found (point))))))
+      (unless (eql (forward-line (if back -1 1)) 0)    ;; 0 means success
+        (throw 'found nil))
+      (unless (looking-at "\\s *\\(--.*\\)?$")       ;; blank lua line
+        (throw 'found (point))))))
 
 (eval-when-compile
   (defconst lua-operator-class
@@ -616,7 +609,7 @@ The criteria for a continuing statement are:
   (let ((prev-line nil))
     (save-excursion
       (if parse-start (goto-char parse-start))
-      (save-excursion (setq prev-line (lua-goto-nonblank-previous-line)))
+      (save-excursion (setq prev-line (lua-forward-line-skip-blanks 'back)))
       (and prev-line
            (or (lua-first-token-continues-p)
                (and (goto-char prev-line)
@@ -728,7 +721,7 @@ one."
            ;;      e + f + g)"
            (save-excursion
              (or (and (lua-last-token-continues-p) lua-indent-level)
-                 (and (lua-goto-nonblank-next-line) (lua-first-token-continues-p) lua-indent-level)
+                 (and (lua-forward-line-skip-blanks) (lua-first-token-continues-p) lua-indent-level)
                  0)))
       (+ (lua-calculate-indentation-left-shift)
          (cdr indentation-info)
