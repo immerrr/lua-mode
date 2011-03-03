@@ -1055,29 +1055,24 @@ t, otherwise return nil.  BUF must exist."
   (interactive)
   (browse-url (concat lua-search-url-prefix (current-word t))))
 
-(defun lua-calculate-state (arg prevstate)
-  ;; Calculate the new state of PREVSTATE, t or nil, based on arg. If
-  ;; arg is nil or zero, toggle the state. If arg is negative, turn
-  ;; the state off, and if arg is positive, turn the state on
-  (if (or (not arg)
-          (zerop (setq arg (prefix-numeric-value arg))))
-      (not prevstate)
-    (> arg 0)))
-
 (defun lua-toggle-electric-state (&optional arg)
   "Toggle the electric indentation feature.
 Optional numeric ARG, if supplied, turns on electric indentation when
 positive, turns it off when negative, and just toggles it when zero or
 left out."
   (interactive "P")
-  (setq lua-electric-flag (lua-calculate-state arg lua-electric-flag)))
+  (let ((num_arg (prefix-numeric-value arg)))
+    (setq lua-electric-flag (cond ((or (null arg)
+                                       (zerop num_arg)) (not lua-electric-flag))
+                                  ((< num_arg 0) nil)
+                                  ((> num_arg 0) t))))
+  (message "%S" lua-electric-flag))
 
 (defun lua-forward-sexp (&optional count)
   "Forward to block end"
   (interactive "p")
   (save-match-data
     (let* ((count (or count 1))
-           (stackheight 0)
            (block-start (mapcar 'car lua-sexp-alist))
            (block-end (mapcar 'cdr lua-sexp-alist))
            (block-regex (regexp-opt (append  block-start block-end) 'words))
