@@ -619,45 +619,50 @@ The criteria for a continuing statement are:
 (defun lua-make-indentation-info-pair ()
   "This is a helper function to lua-calculate-indentation-info. Don't
 use standalone."
-  (cond ((string-equal found-token "function")
-         ;; this is the location where we need to start searching for the
-         ;; matching opening token, when we encounter the next closing token.
-         ;; It is primarily an optimization to save some searching time.
-         (cons 'absolute (+ (save-excursion (goto-char found-pos)
-                                            (current-column))
-                            lua-indent-level)))
-        ((or (string-equal found-token "{")
-             (string-equal found-token "("))
-         (save-excursion
-           ;; expression follows -> indent at start of next expression
-           (if (and (not (search-forward-regexp "[[:space:]]--" (line-end-position) t))
-                    (search-forward-regexp "[^[:space:]]" (line-end-position) t))
-               (cons 'absolute (1- (current-column)))
-             (cons 'relative lua-indent-level))))
-        ;; closing tokens follow
-        ((string-equal found-token "end")
-         (save-excursion
-           (lua-goto-matching-block-token nil found-pos)
-           (if (looking-at "\\_<function\\_>")
-               (cons 'absolute
-                     (+ (current-indentation)
-                        (lua-calculate-indentation-block-modifier
-                         nil (point))))
-             (cons 'relative (- lua-indent-level)))))
-        ((or (string-equal found-token ")")
-             (string-equal found-token "}"))
-         (save-excursion
-           (lua-goto-matching-block-token nil found-pos)
-           (cons 'absolute
-                 (+ (current-indentation)
-                    (lua-calculate-indentation-block-modifier
-                     nil (point))))))
-        (t
-         (cons 'relative (if (nth 2 (match-data))
-                             ;; beginning of a block matched
-                             lua-indent-level
-                           ;; end of a block matched
-                           (- lua-indent-level))))))
+  (cond
+   ((string-equal found-token "function")
+    ;; this is the location where we need to start searching for the
+    ;; matching opening token, when we encounter the next closing token.
+    ;; It is primarily an optimization to save some searching time.
+    (cons 'absolute (+ (save-excursion (goto-char found-pos)
+                                       (current-column))
+                       lua-indent-level)))
+
+   ((or (string-equal found-token "{")
+        (string-equal found-token "("))
+    (save-excursion
+      ;; expression follows -> indent at start of next expression
+      (if (and (not (search-forward-regexp "[[:space:]]--" (line-end-position) t))
+               (search-forward-regexp "[^[:space:]]" (line-end-position) t))
+          (cons 'absolute (1- (current-column)))
+        (cons 'relative lua-indent-level))))
+
+   ;; closing tokens follow
+   ((string-equal found-token "end")
+    (save-excursion
+      (lua-goto-matching-block-token nil found-pos)
+      (if (looking-at "\\_<function\\_>")
+          (cons 'absolute
+                (+ (current-indentation)
+                   (lua-calculate-indentation-block-modifier
+                    nil (point))))
+        (cons 'relative (- lua-indent-level)))))
+
+   ((or (string-equal found-token ")")
+        (string-equal found-token "}"))
+    (save-excursion
+      (lua-goto-matching-block-token nil found-pos)
+      (cons 'absolute
+            (+ (current-indentation)
+               (lua-calculate-indentation-block-modifier
+                nil (point))))))
+
+   ('other-indentation-modifier
+    (cons 'relative (if (nth 2 (match-data))
+                        ;; beginning of a block matched
+                        lua-indent-level
+                      ;; end of a block matched
+                      (- lua-indent-level))))))
 
 
 (defun lua-calculate-indentation-info (&optional parse-start parse-end)
