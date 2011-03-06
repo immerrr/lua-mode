@@ -137,18 +137,57 @@ Should be a list of strings."
 (defvar lua-process-buffer nil
   "Buffer used for communication with Lua subprocess")
 
-(defvar lua-mode-map nil
-  "Keymap used with lua-mode.")
+(defcustom lua-prefix-key "\C-c"
+  "Prefix for all lua-mode commands."
+  :type 'string
+  :group 'lua)
+
+(defvar lua-mode-menu (make-sparse-keymap "Lua")
+  "Keymap for lua-mode's menu.")
+
+(defvar lua-prefix-mode-map
+  (eval-when-compile
+    (let ((result-map (make-sparse-keymap)))
+      (mapc (lambda (key_defn)
+              (define-key result-map (read-kbd-macro (car key_defn)) (cdr key_defn)))
+            '(("C-l" . lua-send-buffer)
+              ("C-f" . lua-search-documentation)))
+      result-map))
+  "Keymap that is used to define keys accessible by `lua-prefix-key'.
+
+If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
+
+(defvar lua-mode-map
+  (eval-when-compile
+    (let ((result-map (make-sparse-keymap))
+          (prefix-key (if (boundp 'lua-prefix-key) lua-prefix-key)))
+      (mapc (lambda (key_defn)
+              (define-key result-map (read-kbd-macro (car key_defn)) (cdr key_defn)))
+            ;; here go all the default bindings
+            ;; backquote enables evaluating certain symbols by comma
+            `(("}" . lua-electric-match)
+              ("]" . lua-electric-match)
+              (")" . lua-electric-match)
+              ("C-M-a" . lua-beginning-of-proc)
+              ("C-M-e" . lua-end-of-proc)
+              ("C-M-<home>" . lua-beginning-of-proc)
+              ("C-M-<end>" . lua-end-of-proc)))
+      (define-key result-map [menu-bar lua-mode] (cons "Lua" lua-mode-menu))
+
+      ;; handle prefix-keyed bindings:
+      ;; * if no prefix, set prefix-map as parent, i.e.
+      ;;      if key is not defined look it up in prefix-map
+      ;; * if prefix is set, bind the prefix-map to that key
+      (if lua-prefix-key
+          (define-key result-map lua-prefix-key lua-prefix-mode-map)
+        (set-keymap-parent result-map lua-prefix-mode-map))
+      result-map))
+  "Keymap used in lua-mode buffers.")
 
 (defvar lua-electric-flag t
   "If t, electric actions (like automatic reindentation) will happen when an electric
  key like `{' is pressed")
 (make-variable-buffer-local 'lua-electric-flag)
-
-(defcustom lua-prefix-key "\C-c"
-  "Prefix for all lua-mode commands."
-  :type 'string
-  :group 'lua)
 
 (defcustom lua-prompt-regexp "[^\n]*\\(>[\t ]+\\)+$"
   "Regexp which matches the Lua program's prompt."
@@ -177,9 +216,6 @@ traceback location."
 
 (defvar lua-region-end (make-marker)
   "End of special region for Lua communication.")
-
-(defvar lua-mode-menu (make-sparse-keymap "Lua")
-  "Keymap for lua-mode's menu.")
 
 (defvar lua-emacs-menu
   '(["Restart With Whole File" lua-restart-with-whole-file t]
@@ -283,7 +319,6 @@ The following keys are bound:
     (setq local-abbrev-table lua-mode-abbrev-table)
     (abbrev-mode 1)
     (make-local-variable 'lua-default-eval)
-    (unless lua-mode-map (setq lua-mode-map (lua-setup-keymap)))
     (use-local-map lua-mode-map)
     (set-syntax-table (copy-syntax-table))
     (modify-syntax-entry ?+ ".")
@@ -324,28 +359,6 @@ The following keys are bound:
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.lua$" . lua-mode))
 
-(defun lua-setup-keymap ()
-  "Set up keymap for Lua mode.
-
-If the variable `lua-prefix-key' is nil, the bindings go directly
-to `lua-mode-map', otherwise they are prefixed with `lua-prefix-key'."
-  (let ((result-map (make-sparse-keymap))
-        (prefix-key (if (boundp 'lua-prefix-key) lua-prefix-key)))
-    (mapc (lambda (key_defn)
-            (define-key result-map (read-kbd-macro (car key_defn)) (cdr key_defn)))
-          ;; here go all the default bindings
-          ;; backquote enables evaluating certain symbols by comma
-          `(("}" . lua-electric-match)
-            ("]" . lua-electric-match)
-            (")" . lua-electric-match)
-            ("C-M-a" . lua-beginning-of-proc)
-            ("C-M-e" . lua-end-of-proc)
-            ("C-M-<home>" . lua-beginning-of-proc)
-            ("C-M-<end>" . lua-end-of-proc)
-            (,(concat prefix-key " C-l") . lua-send-buffer)
-            (,(concat prefix-key " C-f") . lua-search-documentation)))
-    (define-key result-map [menu-bar lua-mode] (cons "Lua" lua-mode-menu))
-    result-map))
 
 (defun lua-electric-match (arg)
   "Insert character and adjust indentation."
