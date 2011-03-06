@@ -247,9 +247,6 @@ traceback location."
     ("elseif" "elseif" lua-indent-line 0)
     ))
 
-(defconst lua-indent-whitespace " \t"
-  "Character set that constitutes whitespace for indentation in lua.")
-
 (eval-and-compile
   (defalias 'lua-make-temp-file
     (if (fboundp 'make-temp-file)
@@ -382,12 +379,11 @@ to `lua-mode-map', otherwise they are prefixed with `lua-prefix-key'."
 Return the amount the indentation changed by."
   (let ((indent (max 0 (- (lua-calculate-indentation nil)
                           (lua-calculate-indentation-left-shift))))
-        beg shift-amt
+        (beg line-beginning-position)
+        shift-amt
         (case-fold-search nil)
         (pos (- (point-max) (point))))
-    (beginning-of-line)
-    (setq beg (point))
-    (skip-chars-forward lua-indent-whitespace)
+    (back-to-indentation)
     (setq shift-amt (- indent (current-column)))
     (when (not (zerop shift-amt))
       (delete-region beg (point))
@@ -778,16 +774,14 @@ one."
 Look for an uninterrupted sequence of block-closing tokens that starts
 at the beginning of the line. For each of these tokens, shift indentation
 to the left by the amount specified in lua-indent-level."
-  (let (line-begin
+  (let ((line-begin (line-beginning-position))
         (indentation-modifier 0)
         (case-fold-search nil)
         (block-token nil))
     (save-excursion
       (if parse-start (goto-char parse-start))
-      (beginning-of-line)
-      (setq line-begin (point))
+      (back-to-indentation)
       ;; Look for the block-closing token sequence
-      (skip-chars-forward lua-indent-whitespace)
       (catch 'stop
         (while (and (looking-at lua-left-shift-regexp)
                     (not (lua-comment-or-string-p)))
