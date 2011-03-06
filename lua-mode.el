@@ -379,7 +379,7 @@ to `lua-mode-map', otherwise they are prefixed with `lua-prefix-key'."
 Return the amount the indentation changed by."
   (let ((indent (max 0 (- (lua-calculate-indentation nil)
                           (lua-calculate-indentation-left-shift))))
-        (beg line-beginning-position)
+        (beg (line-beginning-position))
         shift-amt
         (case-fold-search nil)
         (pos (- (point-max) (point))))
