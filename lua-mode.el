@@ -80,8 +80,6 @@
 
 ;; You can customise the keybindings either by setting `lua-prefix-key'
 ;; or by putting the following in your .emacs
-;;      (setq lua-mode-map (make-sparse-keymap))
-;; and
 ;;      (define-key lua-mode-map <your-key> <function>)
 ;; for all the functions you need.
 
