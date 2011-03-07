@@ -811,30 +811,37 @@ In usual case returns an integer: the column to indent to."
   (let ((pos (point))
         shift-amt)
     (save-excursion
-      (if parse-start (setq pos (goto-char parse-start)))
-      (beginning-of-line)
-      (setq shift-amt (if (lua-is-continuing-statement-p) lua-indent-level 0))
-      (if (bobp)          ; If we're at the beginning of the buffer, no change.
-          (+ (current-indentation) shift-amt)
-        ;; This code here searches backwards for a "block beginning/end"
-        ;; It snarfs the indentation of that, plus whatever amount the
-        ;; line was shifted left by, because of block end tokens. It
-        ;; then adds the indentation modifier of that line to obtain the
-        ;; final level of indentation.
-        ;; Finally, if this line continues a statement from the
-        ;; previous line, add another level of indentation.
-        (if (lua-backwards-to-block-begin-or-end)
-            ;; now we're at the line with block beginning or end.
-            (max (+ (current-indentation)
-                    (lua-calculate-indentation-block-modifier)
-                    shift-amt)
-                 0)
-          ;; Failed to find a block begin/end.
-          ;; Just use the previous line's indent.
-          (goto-char pos)
-          (beginning-of-line)
-          (forward-line -1)
-          (+ (current-indentation) shift-amt))))))
+      (catch 'indent
+        (if parse-start (setq pos (goto-char parse-start)))
+        (beginning-of-line)
+
+        ;; if bol is inside a string, suppress any indentation
+        ;; or all of the whitespace will go into the literal
+        (when (lua-string-p)
+          (throw 'indent 0))
+
+        (setq shift-amt (if (lua-is-continuing-statement-p) lua-indent-level 0))
+        (if (bobp)          ; If we're at the beginning of the buffer, no change.
+            (+ (current-indentation) shift-amt)
+          ;; This code here searches backwards for a "block beginning/end"
+          ;; It snarfs the indentation of that, plus whatever amount the
+          ;; line was shifted left by, because of block end tokens. It
+          ;; then adds the indentation modifier of that line to obtain the
+          ;; final level of indentation.
+          ;; Finally, if this line continues a statement from the
+          ;; previous line, add another level of indentation.
+          (if (lua-backwards-to-block-begin-or-end)
+              ;; now we're at the line with block beginning or end.
+              (max (+ (current-indentation)
+                      (lua-calculate-indentation-block-modifier)
+                      shift-amt)
+                   0)
+            ;; Failed to find a block begin/end.
+            ;; Just use the previous line's indent.
+            (goto-char pos)
+            (beginning-of-line)
+            (forward-line -1)
+            (+ (current-indentation) shift-amt)))))))
 
 (defun lua-beginning-of-proc (&optional arg)
   "Move backward to the beginning of a lua proc (or similar).
