@@ -1,0 +1,14 @@
+* Add docs about lua-prefix-key machinery
+* Support line-continuation with commas, e.g.
+   x,y = long_value,
+         other_long_value
+
+* Support line-continuation commas in `for ... do ' operators
+* Fix braces/parens that reduce indent by const offset
+   this causes wrong behavior when indented block was
+   anchored to first line, e.g.
+   my_func( hello,
+            world
+         )
+
+* Redo syntax engine using semantic/wisent
