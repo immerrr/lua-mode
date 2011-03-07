@@ -784,38 +784,10 @@ one."
          (cdr indentation-info)
          (if (lua-is-continuing-statement-p) (- lua-indent-level) 0)))))
 
-(defconst lua-left-shift-regexp-1
-  (concat "\\("
-          "\\(\\_<" (regexp-opt '("else" "elseif" "until") t)
-          "\\_>\\)\\($\\|\\s +\\)"
-          "\\)"))
-
-(defconst lua-left-shift-regexp-2
-  (concat "\\(\\_<"
-          (regexp-opt '("end") t)
-          "\\_>\\)"))
-
-(defconst lua-left-shift-regexp
-  ;; "else", "elseif", "until" followed by whitespace, or "end"/closing
-  ;; brackets followed by
-  ;; whitespace, punctuation, or closing parentheses
-  (concat lua-left-shift-regexp-1
-          "\\|\\(\\("
-          lua-left-shift-regexp-2
-          "\\|\\("
-          (regexp-opt '("]" "}" ")"))
-          "\\)\\)\\($\\|\\(\\s \\|\\s.\\)*\\)"
-          "\\)"))
-
-(defconst lua-left-shift-pos-1
-  2)
-
-(defconst lua-left-shift-pos-2
-  (+ 3 (regexp-opt-depth lua-left-shift-regexp-1)))
-
-(defconst lua-left-shift-pos-3
-  (+ lua-left-shift-pos-2
-     (regexp-opt-depth lua-left-shift-regexp-2)))
+(defconst lua-unindentation-regexp
+  (concat "\\s *" ;; else/elseif/until/end/"]"/"}"/")"
+          "\\(?1:\\_<" (regexp-opt '("else" "elseif" "until" "end")) "\\_>"
+          "\\|" (regexp-opt '("]" "}" ")")) "\\)"))
 
 (defun lua-calculate-indentation-left-shift (&optional parse-start)
   "Return amount, by which this line should be shifted left.
@@ -833,9 +805,7 @@ to the left by the amount specified in lua-indent-level."
       (catch 'stop
         (while (and (looking-at lua-left-shift-regexp)
                     (not (lua-comment-or-string-p)))
-          (let ((last-token (or (match-string lua-left-shift-pos-1)
-                                (match-string lua-left-shift-pos-2)
-                                (match-string lua-left-shift-pos-3))))
+          (let ((last-token (or (match-string 1) (match-string 2))))
             (if (not block-token) (setq block-token last-token))
             (if (not (string-equal block-token last-token)) (throw 'stop nil))
             (setq indentation-modifier (+ indentation-modifier
