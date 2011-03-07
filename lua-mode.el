@@ -421,7 +421,7 @@ This function replaces previous prefix-key binding with a new one."
   "Indent current line for Lua mode.
 Return the amount the indentation changed by."
   (let ((indent (max 0 (- (lua-calculate-indentation nil)
-                          (lua-calculate-indentation-left-shift))))
+                          (lua-calculate-unindentation))))
         (beg (line-beginning-position))
         shift-amt
         (case-fold-search nil)
@@ -775,7 +775,7 @@ one."
              (or (and (lua-last-token-continues-p) lua-indent-level)
                  (and (lua-forward-line-skip-blanks) (lua-first-token-continues-p) lua-indent-level)
                  0)))
-      (+ (lua-calculate-indentation-left-shift)
+      (+ (lua-calculate-unindentation)
          (cdr indentation-info)
          (if (lua-is-continuing-statement-p) (- lua-indent-level) 0)))))
 
@@ -784,13 +784,12 @@ one."
           "\\(?1:\\_<" (regexp-opt '("else" "elseif" "until" "end")) "\\_>"
           "\\|" (regexp-opt '("]" "}" ")")) "\\)"))
 
-(defun lua-calculate-indentation-left-shift (&optional parse-start)
+(defun lua-calculate-unindentation (&optional parse-start)
   "Return amount, by which this line should be shifted left.
 Look for an uninterrupted sequence of block-closing tokens that starts
 at the beginning of the line. For each of these tokens, shift indentation
 to the left by the amount specified in lua-indent-level."
-  (let ((line-begin (line-beginning-position))
-        (indentation-modifier 0)
+  (let ((indentation-modifier 0)
         (case-fold-search nil)
         (block-token nil))
     (save-excursion
@@ -798,11 +797,9 @@ to the left by the amount specified in lua-indent-level."
       (back-to-indentation)
       ;; Look for the block-closing token sequence
       (catch 'stop
-        (while (and (looking-at lua-left-shift-regexp)
+        (while (and (looking-at lua-unindentation-regexp)
                     (not (lua-comment-or-string-p)))
-          (let ((last-token (or (match-string 1) (match-string 2))))
-            (if (not block-token) (setq block-token last-token))
-            (if (not (string-equal block-token last-token)) (throw 'stop nil))
+          (let ((last-token (match-string 1)))
             (setq indentation-modifier (+ indentation-modifier
                                           lua-indent-level))
             (forward-char (length (match-string 0))))))
