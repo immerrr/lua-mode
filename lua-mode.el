@@ -404,22 +404,17 @@ This function replaces previous prefix-key binding with a new one."
   (lua--customize-set-prefix-key 'lua-prefix-key new-key-str)
   (lua-prefix-key-update-bindings))
 
-(defun lua-syntax-status ()
-  "Returns the syntactic status of the character after the point."
-  (parse-partial-sexp (line-beginning-position) (point)))
-
-
 (defun lua-string-p ()
   "Returns true if the point is in a string."
-  (elt (lua-syntax-status) 3))
+  (elt (syntax-ppss) 3))
 
 (defun lua-comment-p ()
   "Returns true if the point is in a comment."
-  (elt (lua-syntax-status) 4))
+  (elt (syntax-ppss) 4))
 
 (defun lua-comment-or-string-p ()
   "Returns true if the point is in a comment or string."
-  (let ((parse-result (lua-syntax-status)))
+  (let ((parse-result (syntax-ppss)))
     (or (elt parse-result 3) (elt parse-result 4))))
 
 (defun lua-indent-line ()
