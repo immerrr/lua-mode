@@ -780,7 +780,7 @@ one."
          (if (lua-is-continuing-statement-p) (- lua-indent-level) 0)))))
 
 (defconst lua-unindentation-regexp
-  (concat "\\s *" ;; else/elseif/until/end/"]"/"}"/")"
+  (concat "[\\s ;]*"
           "\\(?1:\\_<" (regexp-opt '("else" "elseif" "until" "end")) "\\_>"
           "\\|" (regexp-opt '("]" "}" ")")) "\\)"))
 
