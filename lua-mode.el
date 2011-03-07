@@ -145,7 +145,7 @@ Should be a list of strings."
                           ;; in both cases (elt x 0) is ok
                           (elt (read-kbd-macro prefix-key-val) 0)))
   (lua-prefix-key-update-bindings)
-  (message "prefix key set to %S"  prefix-key-sym))
+  (message "prefix key set to %S"  (single-key-description (eval prefix-key-sym))))
 
 (defcustom lua-prefix-key "\C-c"
   "Prefix for all lua-mode commands."
