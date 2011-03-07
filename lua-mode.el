@@ -780,30 +780,49 @@ one."
          (if (lua-is-continuing-statement-p) (- lua-indent-level) 0)))))
 
 (defconst lua-unindentation-regexp
+  ;; Compare the following situations:
+  ;; {               {
+  ;;    a,              a,
+  ;;    b,              b,
+  ;; }                  c}
+  ;;
+  ;; Basically, if close-token is prepended with some expression, such
+  ;; expression  should still  be indented  and thus  any close-tokens
+  ;; after an  expression doesn't  unindent the line.
+  ;;
+  ;; Whitespace and semicolons aren't an expression and may be skipped
+  ;; (technically, multiline  comment --[[ ]] ending on  the same line
+  ;; might also be skipped, but it's not handled properly right now).
+  ;;
+  ;; skip whitespaces and semicolons, closing keywords/parentheses
   (concat "[\\s ;]*"
           "\\(?1:\\_<" (regexp-opt '("else" "elseif" "until" "end")) "\\_>"
           "\\|" (regexp-opt '("]" "}" ")")) "\\)"))
 
 (defun lua-calculate-unindentation (&optional parse-start)
-  "Return amount, by which this line should be shifted left.
-Look for an uninterrupted sequence of block-closing tokens that starts
-at the beginning of the line. For each of these tokens, shift indentation
-to the left by the amount specified in lua-indent-level."
-  (let ((indentation-modifier 0)
+  "Return amount, by which this line should be unindented.
+
+Starting  from the  beginning of  the line,  look for  an  sequence of
+block-closing tokens with  only whitespace/semicolons in between them.
+For each of these tokens, shift  indentation to the left by the amount
+specified in lua-indent-level.
+
+If PARSE-START is  not nil, start from the beginning  of the line that
+contains position PARSE-START."
+  (let ((unindentation-accumulator 0)
         (case-fold-search nil)
         (block-token nil))
     (save-excursion
       (if parse-start (goto-char parse-start))
       (back-to-indentation)
-      ;; Look for the block-closing token sequence
-      (catch 'stop
-        (while (and (looking-at lua-unindentation-regexp)
-                    (not (lua-comment-or-string-p)))
-          (let ((last-token (match-string 1)))
-            (setq indentation-modifier (+ indentation-modifier
-                                          lua-indent-level))
-            (forward-char (length (match-string 0))))))
-      indentation-modifier)))
+
+      (while (and (looking-at lua-unindentation-regexp)
+                  (not (lua-comment-or-string-p)))
+        (let ((last-token (match-string 1)))
+          (setq unindentation-accumulator (+ unindentation-accumulator
+                                             lua-indent-level))
+          (forward-char (length (match-string 0)))))
+      unindentation-accumulator)))
 
 (defun lua-calculate-indentation (&optional parse-start)
   "Return appropriate indentation for current line as Lua code.
