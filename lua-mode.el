@@ -135,10 +135,25 @@ Should be a list of strings."
 (defvar lua-process-buffer nil
   "Buffer used for communication with Lua subprocess")
 
+;; defined later on, for now - nothing to update anyways
+(defun lua-prefix-key-update-bindings ()
+  )
+
+(defun lua--customize-set-prefix-key (prefix-key-sym prefix-key-val)
+  (set prefix-key-sym (if (and prefix-key-val (> (length prefix-key-val) 0))
+                          ;; read-kbd-macro returns a string or a vector
+                          ;; in both cases (elt x 0) is ok
+                          (elt (read-kbd-macro prefix-key-val) 0)))
+  (lua-prefix-key-update-bindings)
+  (message "prefix key set to %S"  prefix-key-sym))
+
 (defcustom lua-prefix-key "\C-c"
   "Prefix for all lua-mode commands."
   :type 'string
-  :group 'lua)
+  :group 'lua
+  :set 'lua--customize-set-prefix-key
+  :get '(lambda (sym)
+          (let ((val (eval sym))) (if val (single-key-description (eval sym)) ""))))
 
 (defvar lua-mode-menu (make-sparse-keymap "Lua")
   "Keymap for lua-mode's menu.")
@@ -158,7 +173,7 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
 (defvar lua-mode-map
   (eval-when-compile
     (let ((result-map (make-sparse-keymap))
-          (prefix-key (if (boundp 'lua-prefix-key) lua-prefix-key)))
+          prefix-key)
       (mapc (lambda (key_defn)
               (define-key result-map (read-kbd-macro (car key_defn)) (cdr key_defn)))
             ;; here go all the default bindings
@@ -176,8 +191,8 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
       ;; * if no prefix, set prefix-map as parent, i.e.
       ;;      if key is not defined look it up in prefix-map
       ;; * if prefix is set, bind the prefix-map to that key
-      (if lua-prefix-key
-          (define-key result-map lua-prefix-key lua-prefix-mode-map)
+      (if (boundp 'lua-prefix-key)
+          (define-key result-map (vector lua-prefix-key) lua-prefix-mode-map)
         (set-keymap-parent result-map lua-prefix-mode-map))
       result-map))
   "Keymap used in lua-mode buffers.")
@@ -367,6 +382,28 @@ The following keys are bound:
   (blink-matching-open))
 
 ;; private functions
+
+(defun lua-prefix-key-update-bindings ()
+  (let (old-cons)
+    (if (eq lua-prefix-mode-map (keymap-parent lua-mode-map))
+        ;; if prefix-map is a parent, delete the parent
+        (set-keymap-parent lua-mode-map nil)
+      ;; otherwise, look for it among children
+      (if (setq old-cons (rassoc lua-prefix-mode-map lua-mode-map))
+          (delq old-cons lua-mode-map)))
+
+    (if (null lua-prefix-key)
+        (set-keymap-parent lua-mode-map lua-prefix-mode-map)
+      (define-key lua-mode-map (vector lua-prefix-key) lua-prefix-mode-map))))
+
+(defun lua-set-prefix-key (new-key-str)
+  "Changes `lua-prefix-key' properly and updates keymaps
+
+This function replaces previous prefix-key binding with a new one."
+  (interactive "sNew prefix key (empty string means no key): ")
+  (lua--customize-set-prefix-key 'lua-prefix-key new-key-str)
+  (lua-prefix-key-update-bindings))
+
 (defun lua-syntax-status ()
   "Returns the syntactic status of the character after the point."
   (parse-partial-sexp (line-beginning-position) (point)))
