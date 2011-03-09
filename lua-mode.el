@@ -420,23 +420,27 @@ This function replaces previous prefix-key binding with a new one."
 (defun lua-indent-line ()
   "Indent current line for Lua mode.
 Return the amount the indentation changed by."
-  (let ((indent (max 0 (- (lua-calculate-indentation nil)
-                          (lua-calculate-unindentation))))
-        (beg (line-beginning-position))
+  (let (indent
         shift-amt
         (case-fold-search nil)
+        ;; save point as a distance to eob - it's invariant w.r.t indentation
         (pos (- (point-max) (point))))
     (back-to-indentation)
-    (setq shift-amt (- indent (current-column)))
-    (when (not (zerop shift-amt))
-      (delete-region beg (point))
-      (indent-to indent))
-    ;; If initial point was within line's indentation,
-    ;; position after the indentation.  Else stay at same point in text.
-    (if (> (- (point-max) pos) (point))
-        (goto-char (- (point-max) pos)))
-    shift-amt
-    indent))
+    (if (lua-string-p)  ;; don't indent if inside multiline string literal
+        (goto-char (- (point-max) pos)) ;; just restore point position
+
+      (setq indent (max 0 (- (lua-calculate-indentation nil)
+                             (lua-calculate-unindentation))))
+      (setq shift-amt (- indent (current-column)))
+      (when (not (zerop shift-amt))
+        (delete-region (line-beginning-position) (point))
+        (indent-to indent))
+      ;; If initial point was within line's indentation,
+      ;; position after the indentation.  Else stay at same point in text.
+      (if (> (- (point-max) pos) (point))
+          (goto-char (- (point-max) pos)))
+      shift-amt
+      indent)))
 
 (defun lua-find-regexp (direction regexp &optional limit ignore-p)
   "Searches for a regular expression in the direction specified.
