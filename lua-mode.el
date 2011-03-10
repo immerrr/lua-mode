@@ -421,7 +421,6 @@ This function replaces previous prefix-key binding with a new one."
   "Indent current line for Lua mode.
 Return the amount the indentation changed by."
   (let (indent
-        shift-amt
         (case-fold-search nil)
         ;; save point as a distance to eob - it's invariant w.r.t indentation
         (pos (- (point-max) (point))))
@@ -431,15 +430,13 @@ Return the amount the indentation changed by."
 
       (setq indent (max 0 (- (lua-calculate-indentation nil)
                              (lua-calculate-unindentation))))
-      (setq shift-amt (- indent (current-column)))
-      (when (not (zerop shift-amt))
+      (when (not (equal indent (current-column)))
         (delete-region (line-beginning-position) (point))
         (indent-to indent))
       ;; If initial point was within line's indentation,
       ;; position after the indentation.  Else stay at same point in text.
       (if (> (- (point-max) pos) (point))
           (goto-char (- (point-max) pos)))
-      shift-amt
       indent)))
 
 (defun lua-find-regexp (direction regexp &optional limit ignore-p)
