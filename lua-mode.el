@@ -1184,7 +1184,10 @@ left out."
 
 If TYPE is string, mark char  as string delimiter. If TYPE is comment,
 mark char as comment delimiter.  Otherwise, remove the mark if any."
-  (lua-put-char-syntax-table pos (lua-get-multiline-delim-syntax type)))
+  (let ((old-modified-p (buffer-modified-p)))
+    (unwind-protect
+        (lua-put-char-syntax-table pos (lua-get-multiline-delim-syntax type))
+      (set-buffer-modified-p old-modified-p))))
 
 (defun lua-clear-multiline-delims (&optional begin end)
   "Clears all Lua multiline construct markers in region
@@ -1192,7 +1195,10 @@ mark char as comment delimiter.  Otherwise, remove the mark if any."
 If BEGIN is nil, start from `beginning-of-buffer'.
 If END is nil, stop at `end-of-buffer'."
   (interactive)
-  (remove-text-properties (or begin 1) (or end (buffer-size)) '(syntax-table ()))
+  (let ((old-modified-p (buffer-modified-p)))
+    (unwind-protect
+        (remove-text-properties (or begin 1) (or end (buffer-size)) '(syntax-table ()))
+      (set-buffer-modified-p old-modified-p)))
   (font-lock-fontify-buffer))
 
 (defun lua-mark-all-multiline-literals (&optional begin end)
