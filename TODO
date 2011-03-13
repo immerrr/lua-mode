@@ -1,14 +1,30 @@
-* Add docs about lua-prefix-key machinery
-* Support line-continuation with commas, e.g.
-   x,y = long_value,
-         other_long_value
+# -*- mode: org -*-
 
-* Support line-continuation commas in `for ... do ' operators
-* Fix braces/parens that reduce indent by const offset
+* TODO Improve lua-prefix-key machinery [0/2]
+  - [ ] add docs
+  - [ ] improve setting prefix-key
+    Currently, prefix-key is parsed from a macro string (which may
+    contain more than one key) and all keys but the first one are
+    silently removed. Maybe there's a better way to do it.
+
+* TODO Support line-continuation with commas [0/2]
+  - [ ]  assignments
+    x,y = long_value,
+          other_long_value
+  - [ ] `for ... do' operators
+* TODO Fix braces/parens that reduce indent by const offset
    this causes wrong behavior when indented block was
    anchored to first line, e.g.
    my_func( hello,
             world
          )
+
+* TODO lua-mark-all-multiline-literals [2/5]
+  - [ ] process --[[ as multiline comment
+  - [ ] process ---[[ as single-line comment
+    distinguish by syntax state of last dash before square bracket
+  - [X] don't recognize [[ in comments or literals
+  - [ ] extend region backwards if BEGIN is inside multiline literal
+  - [X] don't change buffer-modified-p state
 
 * Redo syntax engine using semantic/wisent
