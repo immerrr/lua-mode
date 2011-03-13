@@ -264,10 +264,6 @@ traceback location."
      '("\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)[ \t]*=[ \t]*\\(function\\)\\_>"
        (1 font-lock-function-name-face nil t) (3 font-lock-keyword-face))
 
-     ;; Multi-line string literals.
-     '("[^-]\\[=*\\[\\(\\([^]]\\|][^]]\\|]=+[^]]\\)*?\\)]=*]"
-       (1 font-lock-string-face t))
-
      ;; Keywords.
      (concat "\\_<"
              (regexp-opt '("and" "break" "do" "else" "elseif" "end" "false"
