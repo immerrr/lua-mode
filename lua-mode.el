@@ -1195,6 +1195,23 @@ If END is nil, stop at `end-of-buffer'."
   (remove-text-properties (or begin 1) (or end (buffer-size)) '(syntax-table ()))
   (font-lock-fontify-buffer))
 
+(defun lua-mark-all-multiline-literals (&optional begin end)
+  "Marks all Lua multiline constructs in region
+
+If BEGIN is nil, start from `beginning-of-buffer'.
+If END is nil, stop at `end-of-buffer'."
+  (interactive)
+  (lua-clear-multiline-delims begin end)
+  (save-excursion
+    (if begin (goto-char begin))
+    (while (re-search-forward "\\[\\(=*\\)\\[" end 'noerror)
+      (unless (lua-comment-or-string-p)
+        (message "found %s" (match-string 0))
+        (lua-mark-char-multiline-delim (match-beginning 0) 'string)
+        (when (re-search-forward (format "\\]%s\\]" (or (match-string 1) "")) end 'noerror)
+          (message "found match %s" (match-string 0))
+          (lua-mark-char-multiline-delim (1- (match-end 0)) 'string))))))
+
 (provide 'lua-mode)
 
 
