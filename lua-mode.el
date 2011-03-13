@@ -363,11 +363,12 @@ The following keys are bound:
                      ,(regexp-opt (mapcar 'car lua-sexp-alist) 'words) ;start
                      ,(regexp-opt (mapcar 'cdr lua-sexp-alist) 'words) ;end
                      nil lua-forward-sexp)))
+
+    (set (make-local-variable 'parse-sexp-lookup-properties) t)
     (run-hooks 'lua-mode-hook)))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.lua$" . lua-mode))
-
 
 (defun lua-electric-match (arg)
   "Insert character and adjust indentation."
@@ -1164,6 +1165,35 @@ left out."
   '("Send Buffer" . lua-send-buffer))
 (define-key lua-mode-menu [search-documentation]
   '("Search Documentation" . lua-search-documentation))
+
+(defsubst lua-put-char-property (pos property value &optional object)
+  (if value
+      (put-text-property pos (1+ pos) property value object)
+    (remove-text-properties pos (1+ pos) (list property nil))))
+
+(defsubst lua-put-char-syntax-table (pos value &optional object)
+  (lua-put-char-property pos 'syntax-table value object))
+
+(defsubst lua-get-multiline-delim-syntax (type)
+  (cond ((eq type 'string) '(15))
+        ((eq type 'comment) '(14))
+        (nil)))
+
+(defun lua-mark-char-multiline-delim (pos type)
+  "Mark character as a delimiter of Lua multiline construct
+
+If TYPE is string, mark char  as string delimiter. If TYPE is comment,
+mark char as comment delimiter.  Otherwise, remove the mark if any."
+  (lua-put-char-syntax-table pos (lua-get-multiline-delim-syntax type)))
+
+(defun lua-clear-multiline-delims (&optional begin end)
+  "Clears all Lua multiline construct markers in region
+
+If BEGIN is nil, start from `beginning-of-buffer'.
+If END is nil, stop at `end-of-buffer'."
+  (interactive)
+  (remove-text-properties (or begin 1) (or end (buffer-size)) '(syntax-table ()))
+  (font-lock-fontify-buffer))
 
 (provide 'lua-mode)
 
