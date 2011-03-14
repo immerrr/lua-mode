@@ -1209,14 +1209,28 @@ If END is nil, stop at `end-of-buffer'."
   (interactive)
   (lua-clear-multiline-delims begin end)
   (save-excursion
-    (if begin (goto-char begin))
-    (while (re-search-forward "\\[\\(=*\\)\\[" end 'noerror)
-      (unless (lua-comment-or-string-p)
-        (message "found %s" (match-string 0))
-        (lua-mark-char-multiline-delim (match-beginning 0) 'string)
-        (when (re-search-forward (format "\\]%s\\]" (or (match-string 1) "")) end 'noerror)
-          (message "found match %s" (match-string 0))
-          (lua-mark-char-multiline-delim (1- (match-end 0)) 'string))))))
+    (goto-char (or begin 1))
+    ;; look for
+    ;; 1. (optional) two or more dashes followed by
+    ;; 2. lua multiline delimiter [[
+
+    (while (re-search-forward "\\(?2:--\\)?\\[\\(?1:=*\\)\\[" end 'noerror)
+      ;; match-start + 1 is considered instead of match-start, because
+      ;; such  approach  handles  '---[[' situation  correctly:  Emacs
+      ;; thinks 2nd dash (i.e.  match-start) is not yet a comment, but
+      ;; the third one is, hence the +1.  In all the other situations,
+      ;; '+1'  is safe  to use  because  it bears  the same  syntactic
+      ;; properties, i.e.  if match-start is inside string-or-comment,
+      ;; then '+1' is too and vice versa.
+      ;;
+      ;; PS. ping me if you find a situation in which this is not true
+      (unless (lua-comment-or-string-p (1+ (match-beginning 0)))
+        (let ((type (if (match-beginning 2) 'comment 'string)))
+          (message "found %s" (match-string 0))
+          (lua-mark-char-multiline-delim (match-beginning 0) type)
+          (when (re-search-forward (format "\\]%s\\]" (or (match-string 1) "")) end 'noerror)
+            (message "found match %s" (match-string 0))
+            (lua-mark-char-multiline-delim (1- (match-end 0)) type)))))))
 
 (provide 'lua-mode)
 
