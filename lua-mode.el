@@ -401,17 +401,17 @@ This function replaces previous prefix-key binding with a new one."
   (lua--customize-set-prefix-key 'lua-prefix-key new-key-str)
   (lua-prefix-key-update-bindings))
 
-(defun lua-string-p ()
+(defun lua-string-p (&optional pos)
   "Returns true if the point is in a string."
-  (elt (syntax-ppss) 3))
+  (elt (syntax-ppss pos) 3))
 
-(defun lua-comment-p ()
+(defun lua-comment-p (&optional pos)
   "Returns true if the point is in a comment."
-  (elt (syntax-ppss) 4))
+  (elt (syntax-ppss pos) 4))
 
-(defun lua-comment-or-string-p ()
+(defun lua-comment-or-string-p (&optional pos)
   "Returns true if the point is in a comment or string."
-  (let ((parse-result (syntax-ppss)))
+  (let ((parse-result (syntax-ppss pos)))
     (or (elt parse-result 3) (elt parse-result 4))))
 
 (defun lua-indent-line ()
