@@ -1201,6 +1201,12 @@ If END is nil, stop at `end-of-buffer'."
       (set-buffer-modified-p old-modified-p)))
   (font-lock-fontify-buffer))
 
+(defun lua-mark-multiline-region (begin end)
+  (let ((type (if (eq ?- (char-after begin)) 'comment 'string)))
+  (lua-mark-char-multiline-delim begin type)
+  (when end
+    (lua-mark-char-multiline-delim (1- end) type))))
+
 (defun lua-mark-all-multiline-literals (&optional begin end)
   "Marks all Lua multiline constructs in region
 
@@ -1235,12 +1241,12 @@ If END is nil, stop at `end-of-buffer'."
       ;;
       ;; PS. ping me if you find a situation in which this is not true
       (unless (lua-comment-or-string-p (1+ (match-beginning 0)))
-        (let ((type (if (match-beginning 2) 'comment 'string)))
-          (message "found %s" (match-string 0))
-          (lua-mark-char-multiline-delim (match-beginning 0) type)
+        (let (ml-begin ml-end)
+          (setq ml-begin (match-beginning 0))
           (when (re-search-forward (format "\\]%s\\]" (or (match-string 1) "")) nil 'noerror)
             (message "found match %s" (match-string 0))
-            (lua-mark-char-multiline-delim (1- (match-end 0)) type)))))))
+            (setq ml-end (match-end 0)))
+          (lua-mark-multiline-region ml-begin ml-end))))))
 
 (provide 'lua-mode)
 
