@@ -1215,11 +1215,16 @@ If END is nil, stop at `end-of-buffer'."
   (lua-clear-multiline-delims begin end)
   (save-excursion
     (goto-char (or begin 1))
-    ;; look for
-    ;; 1. (optional) two or more dashes followed by
-    ;; 2. lua multiline delimiter [[
 
-    (while (re-search-forward "\\(?2:--\\)?\\[\\(?1:=*\\)\\[" end 'noerror)
+    (while (and
+            ;; must check  for point range,  because matching previous
+            ;; multiline  end might  move  point beyond  end and  this
+            ;; drives `re-search-forward' crazy
+            (if end (< (point) end) t)
+            ;; look for
+            ;; 1. (optional) two or more dashes followed by
+            ;; 2. lua multiline delimiter [[
+            (re-search-forward "\\(?2:--\\)?\\[\\(?1:=*\\)\\[" end 'noerror))
       ;; match-start + 1 is considered instead of match-start, because
       ;; such  approach  handles  '---[[' situation  correctly:  Emacs
       ;; thinks 2nd dash (i.e.  match-start) is not yet a comment, but
@@ -1233,7 +1238,7 @@ If END is nil, stop at `end-of-buffer'."
         (let ((type (if (match-beginning 2) 'comment 'string)))
           (message "found %s" (match-string 0))
           (lua-mark-char-multiline-delim (match-beginning 0) type)
-          (when (re-search-forward (format "\\]%s\\]" (or (match-string 1) "")) end 'noerror)
+          (when (re-search-forward (format "\\]%s\\]" (or (match-string 1) "")) nil 'noerror)
             (message "found match %s" (match-string 0))
             (lua-mark-char-multiline-delim (1- (match-end 0)) type)))))))
 
