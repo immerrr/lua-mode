@@ -19,12 +19,19 @@
             world
          )
 
-* TODO lua-mark-all-multiline-literals [2/5]
-  - [ ] process --[[ as multiline comment
-  - [ ] process ---[[ as single-line comment
+* TODO lua-mark-all-multiline-literals [4/5]
+  - [X] process --[[ as multiline comment
+  - [X] process ---[[ as single-line comment
     distinguish by syntax state of last dash before square bracket
   - [X] don't recognize [[ in comments or literals
   - [ ] extend region backwards if BEGIN is inside multiline literal
   - [X] don't change buffer-modified-p state
+
+* TODO lua-mark-multiline-region [0/2]
+  - [ ] handle all pre-existing  multiline markers inside the region
+    If region contains multiline beginning markers, delete them along
+    with their counterparts.
+  - [ ] mark the whole multiline region with a property
+    It might be easier to track region modifications on-fly this way
 
 * Redo syntax engine using semantic/wisent
