@@ -1207,6 +1207,11 @@ If END is nil, stop at `end-of-buffer'."
 If BEGIN is nil, start from `beginning-of-buffer'.
 If END is nil, stop at `end-of-buffer'."
   (interactive)
+
+  (if (and (called-interactively-p 'any) (use-region-p))
+      (setq begin (region-beginning)
+            end (region-end)))
+
   (lua-clear-multiline-delims begin end)
   (save-excursion
     (goto-char (or begin 1))
