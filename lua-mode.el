@@ -366,6 +366,7 @@ The following keys are bound:
                      nil lua-forward-sexp)))
 
     (set (make-local-variable 'parse-sexp-lookup-properties) t)
+    (lua-mark-all-multiline-literals)
     (run-hooks 'lua-mode-hook)))
 
 ;;;###autoload
