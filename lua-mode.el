@@ -164,7 +164,8 @@ Should be a list of strings."
       (mapc (lambda (key_defn)
               (define-key result-map (read-kbd-macro (car key_defn)) (cdr key_defn)))
             '(("C-l" . lua-send-buffer)
-              ("C-f" . lua-search-documentation)))
+              ("C-f" . lua-search-documentation)
+              ("C-;" . lua-mark-all-multiline-literals)))
       result-map))
   "Keymap that is used to define keys accessible by `lua-prefix-key'.
 
