@@ -1,6 +1,6 @@
 # Makefile for lua-mode
 
-VERSION=$(shell grep "^;; Version:" lua-mode.el | cut -f 2)
+VERSION="$(shell sed -nre '/^;; Version:/ { s/^;; Version:[ \t]+//; p }' lua-mode.el)"
 DISTFILE = lua-mode-$(VERSION).zip
 
 default:

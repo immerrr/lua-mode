@@ -12,8 +12,9 @@
 ;;              with tons of assistance from
 ;;              Paul Du Bois <pld-lua@gelatinous.com> and
 ;;              Aaron Smith <aaron-lua@gelatinous.com>.
-;; URL:		http://lua-mode.luaforge.net/
-;; Version:	20110315
+;;
+;; URL:         http://lua-mode.luaforge.net/
+;; Version:     20110121
 ;; This file is NOT part of Emacs.
 ;;
 ;; This program is free software; you can redistribute it and/or
