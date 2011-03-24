@@ -3,12 +3,19 @@
 VERSION="$(shell sed -nre '/^;; Version:/ { s/^;; Version:[ \t]+//; p }' lua-mode.el)"
 DISTFILE = lua-mode-$(VERSION).zip
 
+DIST_CONTENTS = \
+	lua-mode.el \
+	README \
+	README.md \
+	TODO \
+	Makefile
+
 default:
 	@echo version is $(VERSION)
 
 dist:
 	rm -f $(DISTFILE) && \
-	zip $(DISTFILE) -r . -x ".git/*" "*.gitignore" "*.zip"
+	zip $(DISTFILE) -r $(DIST_CONTENTS)
 
 release:
 	git diff --exit-code && \
