@@ -1191,6 +1191,16 @@ mark char as comment delimiter.  Otherwise, remove the mark if any."
         (lua-put-char-syntax-table pos (lua-get-multiline-delim-syntax type))
       (set-buffer-modified-p old-modified-p))))
 
+(defsubst lua-inside-multiline-p (&optional pos)
+  (let ((status (syntax-ppss pos)))
+    (or (eq (elt status 3) t)                ;; inside generic string
+        (eq (elt status 7) 'syntax-table)))) ;; inside generic comment
+
+(defun lua-get-multiline-start (&optional pos)
+  (interactive)
+  (when (lua-inside-multiline-p pos) ;; return string/comment start
+    (elt (syntax-ppss pos) 8)))
+
 (defun lua-unmark-multiline-literals (&optional begin end)
   "Clears all Lua multiline construct markers in region
 
