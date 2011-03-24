@@ -27,10 +27,13 @@
   - [ ] extend region backwards if BEGIN is inside multiline literal
   - [X] don't change buffer-modified-p state
 
-* TODO lua-mark-multiline-region [0/2]
+* TODO lua-mark-multiline-region [0/3]
   - [ ] handle all pre-existing  multiline markers inside the region
     If region contains multiline beginning markers, delete them along
     with their counterparts.
+  - [ ] mark-up regions that become unmarked during last operation
+    Specifically, there might be a problem when unmarked region spans
+    further than the original one (maybe, need to recurse the call)
   - [ ] mark the whole multiline region with a property
     It might be easier to track region modifications on-fly this way
 
