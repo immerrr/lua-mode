@@ -3,6 +3,9 @@
 VERSION=$(shell grep "^;; Version:" lua-mode.el | cut -f 2)
 DISTFILE = lua-mode-$(VERSION).zip
 
+default:
+	@echo version is $(VERSION)
+
 dist:
 	rm -f $(DISTFILE) && \
 	zip $(DISTFILE) -r . -x ".git/*" "*.gitignore" "*.zip"
