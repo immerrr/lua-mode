@@ -1191,7 +1191,7 @@ mark char as comment delimiter.  Otherwise, remove the mark if any."
         (lua-put-char-syntax-table pos (lua-get-multiline-delim-syntax type))
       (set-buffer-modified-p old-modified-p))))
 
-(defun lua-clear-multiline-delims (&optional begin end)
+(defun lua-unmark-multiline-literals (&optional begin end)
   "Clears all Lua multiline construct markers in region
 
 If BEGIN is nil, start from `beginning-of-buffer'.
