@@ -342,7 +342,7 @@ The following keys are bound:
     (modify-syntax-entry ?^ ".")
     ;; This might be better as punctuation, as for C, but this way you
     ;; can treat table index as symbol.
-    (modify-syntax-entry ?. "_")	; e.g. `io.string'
+    (modify-syntax-entry ?. "_")        ; e.g. `io.string'
     (modify-syntax-entry ?> ".")
     (modify-syntax-entry ?< ".")
     (modify-syntax-entry ?= ".")
@@ -565,7 +565,7 @@ matching keyword that ends the block, and vice versa."
   (let ((position (lua-goto-matching-block-token)))
     (if (and (not position)
              (not noreport))
-        (error "Not on a block control keyword or brace.")
+        (error "Not on a block control keyword or brace")
       position)))
 
 (defun lua-forward-line-skip-blanks (&optional back)
