@@ -1230,7 +1230,7 @@ If END is nil, stop at `end-of-buffer'."
       (setq begin (region-beginning)
             end (region-end)))
 
-  (lua-clear-multiline-delims begin end)
+  (lua-unmark-multiline-literals begin end)
   (save-excursion
     (goto-char (or begin 1))
 
