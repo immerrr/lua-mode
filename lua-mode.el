@@ -182,11 +182,7 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
             ;; backquote enables evaluating certain symbols by comma
             `(("}" . lua-electric-match)
               ("]" . lua-electric-match)
-              (")" . lua-electric-match)
-              ("C-M-a" . lua-beginning-of-proc)
-              ("C-M-e" . lua-end-of-proc)
-              ("C-M-<home>" . lua-beginning-of-proc)
-              ("C-M-<end>" . lua-end-of-proc)))
+              (")" . lua-electric-match)))
       (define-key result-map [menu-bar lua-mode] (cons "Lua" lua-mode-menu))
 
       ;; handle prefix-keyed bindings:
@@ -323,6 +319,9 @@ The following keys are bound:
     (setq mode-name "Lua")
     (setq comint-prompt-regexp lua-prompt-regexp)
     (make-local-variable 'lua-default-command-switches)
+    (set (make-local-variable 'beginning-of-defun-function)
+         'lua-beginning-of-proc)
+    (set (make-local-variable 'end-of-defun-function) 'lua-end-of-proc)
     (set (make-local-variable 'indent-line-function) 'lua-indent-line)
     (set (make-local-variable 'comment-start) lua-comment-start)
     (set (make-local-variable 'comment-start-skip) lua-comment-start-skip)
