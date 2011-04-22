@@ -1010,8 +1010,7 @@ If `lua-process' is nil or dead, start a new process first."
 t, otherwise return nil.  BUF must exist."
   (let ((lua-stdin-line-offset (or lua-stdin-line-offset 0))
         line file bol err-p)
-    (save-excursion
-      (set-buffer buf)
+    (with-current-buffer buf
       (goto-char start)
       (beginning-of-line)
       (if (re-search-forward lua-traceback-line-re nil t)
