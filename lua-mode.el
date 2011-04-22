@@ -173,26 +173,25 @@ Should be a list of strings."
 If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
 
 (defvar lua-mode-map
-  (eval-when-compile
-    (let ((result-map (make-sparse-keymap))
-          prefix-key)
-      (mapc (lambda (key_defn)
-              (define-key result-map (read-kbd-macro (car key_defn)) (cdr key_defn)))
-            ;; here go all the default bindings
-            ;; backquote enables evaluating certain symbols by comma
-            `(("}" . lua-electric-match)
-              ("]" . lua-electric-match)
-              (")" . lua-electric-match)))
-      (define-key result-map [menu-bar lua-mode] (cons "Lua" lua-mode-menu))
+  (let ((result-map (make-sparse-keymap))
+        prefix-key)
+    (mapc (lambda (key_defn)
+            (define-key result-map (read-kbd-macro (car key_defn)) (cdr key_defn)))
+          ;; here go all the default bindings
+          ;; backquote enables evaluating certain symbols by comma
+          `(("}" . lua-electric-match)
+            ("]" . lua-electric-match)
+            (")" . lua-electric-match)))
+    (define-key result-map [menu-bar lua-mode] (cons "Lua" lua-mode-menu))
 
-      ;; handle prefix-keyed bindings:
-      ;; * if no prefix, set prefix-map as parent, i.e.
-      ;;      if key is not defined look it up in prefix-map
-      ;; * if prefix is set, bind the prefix-map to that key
-      (if (boundp 'lua-prefix-key)
-          (define-key result-map (vector lua-prefix-key) lua-prefix-mode-map)
-        (set-keymap-parent result-map lua-prefix-mode-map))
-      result-map))
+    ;; handle prefix-keyed bindings:
+    ;; * if no prefix, set prefix-map as parent, i.e.
+    ;;      if key is not defined look it up in prefix-map
+    ;; * if prefix is set, bind the prefix-map to that key
+    (if (boundp 'lua-prefix-key)
+        (define-key result-map (vector lua-prefix-key) lua-prefix-mode-map)
+      (set-keymap-parent result-map lua-prefix-mode-map))
+    result-map)
   "Keymap used in lua-mode buffers.")
 
 (defvar lua-electric-flag t
