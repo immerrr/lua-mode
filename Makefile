@@ -3,8 +3,14 @@
 VERSION="$(shell sed -nre '/^;; Version:/ { s/^;; Version:[ \t]+//; p }' lua-mode.el)"
 DISTFILE = lua-mode-$(VERSION).zip
 
+# EMACS value may be overridden
+EMACS?=emacs
+
 default:
 	@echo version is $(VERSION)
+
+compile:
+	$(EMACS) --batch --no-site-file -f batch-byte-compile lua-mode.el
 
 dist:
 	rm -f $(DISTFILE) && \
