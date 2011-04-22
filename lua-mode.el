@@ -349,8 +349,9 @@ The following keys are bound:
     (modify-syntax-entry ?\n ">")
     (modify-syntax-entry ?\' "\"")
     (modify-syntax-entry ?\" "\"")
+    ;; setup menu bar entry (XEmacs style)
     (if (and (featurep 'menubar)
-             current-menubar
+             (boundp 'current-menubar)
              (not (assoc "Lua" current-menubar)))
         (progn
           (set-buffer-menubar (copy-sequence current-menubar))
