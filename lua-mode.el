@@ -137,16 +137,15 @@ Should be a list of strings."
 (defvar lua-process-buffer nil
   "Buffer used for communication with Lua subprocess")
 
-;; defined later on, for now - nothing to update anyways
-(defun lua-prefix-key-update-bindings ()
-  )
-
 (defun lua--customize-set-prefix-key (prefix-key-sym prefix-key-val)
+  ;; FIXME: enable assertion, it requires 'cl and I'm not sure of its availability
+  ;; (assert (eq prefix-key-sym 'lua-prefix-key))
   (set prefix-key-sym (if (and prefix-key-val (> (length prefix-key-val) 0))
                           ;; read-kbd-macro returns a string or a vector
                           ;; in both cases (elt x 0) is ok
                           (elt (read-kbd-macro prefix-key-val) 0)))
-  (lua-prefix-key-update-bindings)
+  (if (fboundp 'lua-prefix-key-update-bindings)
+      (lua-prefix-key-update-bindings))
   (message "prefix key set to %S"  (single-key-description (eval prefix-key-sym))))
 
 (defcustom lua-prefix-key "\C-c"
@@ -184,6 +183,7 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
             (")" . lua-electric-match)))
     (define-key result-map [menu-bar lua-mode] (cons "Lua" lua-mode-menu))
 
+    ;; FIXME: see if the declared logic actually works
     ;; handle prefix-keyed bindings:
     ;; * if no prefix, set prefix-map as parent, i.e.
     ;;      if key is not defined look it up in prefix-map
@@ -352,6 +352,8 @@ The following keys are bound:
     ;; setup menu bar entry (XEmacs style)
     (if (and (featurep 'menubar)
              (boundp 'current-menubar)
+             (fboundp 'set-buffer-menubar)
+             (fboundp 'add-menu)
              (not (assoc "Lua" current-menubar)))
         (progn
           (set-buffer-menubar (copy-sequence current-menubar))
@@ -377,7 +379,7 @@ The following keys are bound:
 (defun lua-electric-match (arg)
   "Insert character and adjust indentation."
   (interactive "P")
-  (insert-char last-command-char (prefix-numeric-value arg))
+  (insert-char last-command-event (prefix-numeric-value arg))
   (if lua-electric-flag
       (lua-indent-line))
   (blink-matching-open))
@@ -457,11 +459,6 @@ ignored, nil otherwise."
         (if (not (funcall ignore-func))
             (throw 'found (point)))))))
 
-(defun lua-backwards-to-block-begin-or-end ()
-  "Move backwards to nearest block begin or end.  Returns nil if not successful."
-  (interactive)
-  (lua-find-regexp 'backward lua-block-regexp))
-
 (defconst lua-block-regexp
   (eval-when-compile
     (concat
@@ -469,9 +466,7 @@ ignored, nil otherwise."
      (regexp-opt '("do" "function" "repeat" "then"
                    "else" "elseif" "end" "until") t)
      "\\_>\\)\\|"
-     (regexp-opt '("{" "(" "[" "]" ")" "}") t))
-
-    ))
+     (regexp-opt '("{" "(" "[" "]" ")" "}") t))))
 
 (defconst lua-block-token-alist
   ;; The absence of "else" is deliberate. This construct in a way both
@@ -510,8 +505,12 @@ ignored, nil otherwise."
    "\\_>\\|"
    (regexp-opt '("]" ")" "}"))
    "\\)")
-
   )
+
+(defun lua-backwards-to-block-begin-or-end ()
+  "Move backwards to nearest block begin or end.  Returns nil if not successful."
+  (interactive)
+  (lua-find-regexp 'backward lua-block-regexp))
 
 (defun lua-find-matching-token-word (token search-start)
   (let* ((token-info (assoc token lua-block-token-alist))
@@ -665,7 +664,7 @@ The criteria for a continuing statement are:
                     ;; check last token of previous nonblank line
                     (lua-last-token-continues-p)))))))
 
-(defun lua-make-indentation-info-pair ()
+(defun lua-make-indentation-info-pair (found-token found-pos)
   "This is a helper function to lua-calculate-indentation-info. Don't
 use standalone."
   (cond
@@ -733,7 +732,7 @@ and relative each, and the shift/column to indent to."
               (found-end (match-end 0))
               (data (match-data)))
           (setq indentation-info
-                (cons (lua-make-indentation-info-pair) indentation-info)))))
+                (cons (lua-make-indentation-info-pair found-token found-pos) indentation-info)))))
     indentation-info))
 
 (defun lua-accumulate-indentation-info (info)
@@ -743,12 +742,12 @@ shift, or the absolute column to indent to."
   (let ((info-list (reverse info))
         (type 'relative)
         (accu 0))
-    (mapcar (lambda (x)
-              (setq accu (if (eq 'absolute (car x))
-                             (progn (setq type 'absolute)
-                                    (cdr x))
-                           (+ accu (cdr x)))))
-            info-list)
+    (mapc (lambda (x)
+            (setq accu (if (eq 'absolute (car x))
+                           (progn (setq type 'absolute)
+                                  (cdr x))
+                         (+ accu (cdr x)))))
+          info-list)
     (cons type accu)))
 
 (defun lua-calculate-indentation-block-modifier (&optional parse-start
