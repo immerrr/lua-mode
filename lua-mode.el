@@ -165,7 +165,8 @@ Should be a list of strings."
       (mapc (lambda (key_defn)
               (define-key result-map (read-kbd-macro (car key_defn)) (cdr key_defn)))
             '(("C-l" . lua-send-buffer)
-              ("C-f" . lua-search-documentation)))
+              ("C-f" . lua-search-documentation)
+              ("C-;" . lua-mark-all-multiline-literals)))
       result-map))
   "Keymap that is used to define keys accessible by `lua-prefix-key'.
 
@@ -260,10 +261,6 @@ traceback location."
      ;; Handle function names in assignments
      '("\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)[ \t]*=[ \t]*\\(function\\)\\_>"
        (1 font-lock-function-name-face nil t) (3 font-lock-keyword-face))
-
-     ;; Multi-line string literals.
-     '("[^-]\\[=*\\[\\(\\([^]]\\|][^]]\\|]=+[^]]\\)*?\\)]=*]"
-       (1 font-lock-string-face t))
 
      ;; Keywords.
      (concat "\\_<"
@@ -370,11 +367,13 @@ The following keys are bound:
                      ,(regexp-opt (mapcar 'car lua-sexp-alist) 'words) ;start
                      ,(regexp-opt (mapcar 'cdr lua-sexp-alist) 'words) ;end
                      nil lua-forward-sexp)))
+
+    (set (make-local-variable 'parse-sexp-lookup-properties) t)
+    (lua-mark-all-multiline-literals)
     (run-hooks 'lua-mode-hook)))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.lua$" . lua-mode))
-
 
 (defun lua-electric-match (arg)
   "Insert character and adjust indentation."
@@ -407,17 +406,17 @@ This function replaces previous prefix-key binding with a new one."
   (lua--customize-set-prefix-key 'lua-prefix-key new-key-str)
   (lua-prefix-key-update-bindings))
 
-(defun lua-string-p ()
+(defun lua-string-p (&optional pos)
   "Returns true if the point is in a string."
-  (elt (syntax-ppss) 3))
+  (elt (syntax-ppss pos) 3))
 
-(defun lua-comment-p ()
+(defun lua-comment-p (&optional pos)
   "Returns true if the point is in a comment."
-  (elt (syntax-ppss) 4))
+  (elt (syntax-ppss pos) 4))
 
-(defun lua-comment-or-string-p ()
+(defun lua-comment-or-string-p (&optional pos)
   "Returns true if the point is in a comment or string."
-  (let ((parse-result (syntax-ppss)))
+  (let ((parse-result (syntax-ppss pos)))
     (or (elt parse-result 3) (elt parse-result 4))))
 
 (defun lua-indent-line ()
@@ -1174,6 +1173,98 @@ left out."
   '("Send Buffer" . lua-send-buffer))
 (define-key lua-mode-menu [search-documentation]
   '("Search Documentation" . lua-search-documentation))
+
+(defsubst lua-put-char-property (pos property value &optional object)
+  (if value
+      (put-text-property pos (1+ pos) property value object)
+    (remove-text-properties pos (1+ pos) (list property nil))))
+
+(defsubst lua-put-char-syntax-table (pos value &optional object)
+  (lua-put-char-property pos 'syntax-table value object))
+
+(defsubst lua-get-multiline-delim-syntax (type)
+  (cond ((eq type 'string) '(15))
+        ((eq type 'comment) '(14))
+        (nil)))
+
+(defun lua-mark-char-multiline-delim (pos type)
+  "Mark character as a delimiter of Lua multiline construct
+
+If TYPE is string, mark char  as string delimiter. If TYPE is comment,
+mark char as comment delimiter.  Otherwise, remove the mark if any."
+  (let ((old-modified-p (buffer-modified-p)))
+    (unwind-protect
+        (lua-put-char-syntax-table pos (lua-get-multiline-delim-syntax type))
+      (set-buffer-modified-p old-modified-p))))
+
+(defsubst lua-inside-multiline-p (&optional pos)
+  (let ((status (syntax-ppss pos)))
+    (or (eq (elt status 3) t)                ;; inside generic string
+        (eq (elt status 7) 'syntax-table)))) ;; inside generic comment
+
+(defun lua-get-multiline-start (&optional pos)
+  (interactive)
+  (when (lua-inside-multiline-p pos) ;; return string/comment start
+    (elt (syntax-ppss pos) 8)))
+
+(defun lua-unmark-multiline-literals (&optional begin end)
+  "Clears all Lua multiline construct markers in region
+
+If BEGIN is nil, start from `beginning-of-buffer'.
+If END is nil, stop at `end-of-buffer'."
+  (interactive)
+  (let ((old-modified-p (buffer-modified-p)))
+    (unwind-protect
+        (remove-text-properties (or begin 1) (or end (buffer-size)) '(syntax-table ()))
+      (set-buffer-modified-p old-modified-p)))
+  (font-lock-fontify-buffer))
+
+(defun lua-mark-multiline-region (begin end)
+  (let ((type (if (eq ?- (char-after begin)) 'comment 'string)))
+  (lua-mark-char-multiline-delim begin type)
+  (when end
+    (lua-mark-char-multiline-delim (1- end) type))))
+
+(defun lua-mark-all-multiline-literals (&optional begin end)
+  "Marks all Lua multiline constructs in region
+
+If BEGIN is nil, start from `beginning-of-buffer'.
+If END is nil, stop at `end-of-buffer'."
+  (interactive)
+
+  (if (and (called-interactively-p 'any) (use-region-p))
+      (setq begin (region-beginning)
+            end (region-end)))
+
+  (lua-unmark-multiline-literals begin end)
+  (save-excursion
+    (goto-char (or begin 1))
+
+    (while (and
+            ;; must check  for point range,  because matching previous
+            ;; multiline  end might  move  point beyond  end and  this
+            ;; drives `re-search-forward' crazy
+            (if end (< (point) end) t)
+            ;; look for
+            ;; 1. (optional) two or more dashes followed by
+            ;; 2. lua multiline delimiter [[
+            (re-search-forward "\\(?2:--\\)?\\[\\(?1:=*\\)\\[" end 'noerror))
+      ;; match-start + 1 is considered instead of match-start, because
+      ;; such  approach  handles  '---[[' situation  correctly:  Emacs
+      ;; thinks 2nd dash (i.e.  match-start) is not yet a comment, but
+      ;; the third one is, hence the +1.  In all the other situations,
+      ;; '+1'  is safe  to use  because  it bears  the same  syntactic
+      ;; properties, i.e.  if match-start is inside string-or-comment,
+      ;; then '+1' is too and vice versa.
+      ;;
+      ;; PS. ping me if you find a situation in which this is not true
+      (unless (lua-comment-or-string-p (1+ (match-beginning 0)))
+        (let (ml-begin ml-end)
+          (setq ml-begin (match-beginning 0))
+          (when (re-search-forward (format "\\]%s\\]" (or (match-string 1) "")) nil 'noerror)
+            (message "found match %s" (match-string 0))
+            (setq ml-end (match-end 0)))
+          (lua-mark-multiline-region ml-begin ml-end))))))
 
 (provide 'lua-mode)
 
