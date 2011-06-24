@@ -1215,7 +1215,7 @@ If END is nil, stop at `end-of-buffer'."
   (interactive)
   (let ((old-modified-p (buffer-modified-p)))
     (unwind-protect
-        (remove-text-properties (or begin 1) (or end (buffer-size)) '(syntax-table ()))
+        (remove-text-properties (or begin (point-min)) (or end (point-max)) '(syntax-table ()))
       (set-buffer-modified-p old-modified-p)))
   (font-lock-fontify-buffer))
 
@@ -1238,7 +1238,7 @@ If END is nil, stop at `end-of-buffer'."
 
   (lua-unmark-multiline-literals begin end)
   (save-excursion
-    (goto-char (or begin 1))
+    (goto-char (or begin (point-min)))
 
     (while (and
             ;; must check  for point range,  because matching previous
