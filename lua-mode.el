@@ -1262,7 +1262,7 @@ If END is nil, stop at `end-of-buffer'."
         (let (ml-begin ml-end)
           (setq ml-begin (match-beginning 0))
           (when (re-search-forward (format "\\]%s\\]" (or (match-string 1) "")) nil 'noerror)
-            (message "found match %s" (match-string 0))
+            ;; (message "found match %s" (match-string 0))
             (setq ml-end (match-end 0)))
           (lua-mark-multiline-region ml-begin ml-end))))))
 
