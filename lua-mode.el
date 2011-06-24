@@ -408,16 +408,16 @@ This function replaces previous prefix-key binding with a new one."
 
 (defun lua-string-p (&optional pos)
   "Returns true if the point is in a string."
-  (elt (syntax-ppss pos) 3))
+  (save-excursion (elt (syntax-ppss pos) 3)))
 
 (defun lua-comment-p (&optional pos)
   "Returns true if the point is in a comment."
-  (elt (syntax-ppss pos) 4))
+  (save-excursion (elt (syntax-ppss pos) 4)))
 
 (defun lua-comment-or-string-p (&optional pos)
   "Returns true if the point is in a comment or string."
-  (let ((parse-result (syntax-ppss pos)))
-    (or (elt parse-result 3) (elt parse-result 4))))
+  (save-excursion (let ((parse-result (syntax-ppss pos)))
+                    (or (elt parse-result 3) (elt parse-result 4)))))
 
 (defun lua-indent-line ()
   "Indent current line for Lua mode.
