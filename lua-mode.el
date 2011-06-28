@@ -375,6 +375,9 @@ The following keys are bound:
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.lua$" . lua-mode))
 
+;;;###autoload
+(add-to-list 'interpreter-mode-alist '("lua" . lua-mode))
+
 (defun lua-electric-match (arg)
   "Insert character and adjust indentation."
   (interactive "P")
