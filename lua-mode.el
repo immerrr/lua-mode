@@ -214,6 +214,12 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
   :type 'regexp
   :group 'lua)
 
+(defcustom lua-indent-string-contents nil
+  "If non-nil, contents of multiline string will be indented.
+Otherwise leading amount of whitespace on each line is preserved."
+  :group 'lua
+  :type 'boolean)
+
 (defcustom lua-jump-on-traceback t
   "*Jump to innermost traceback location in *lua* buffer.  When this
 variable is non-nil and a traceback occurs when running Lua code in a
@@ -434,7 +440,7 @@ Return the amount the indentation changed by."
         ;; save point as a distance to eob - it's invariant w.r.t indentation
         (pos (- (point-max) (point))))
     (back-to-indentation)
-    (if (lua-string-p)  ;; don't indent if inside multiline string literal
+    (if (and (not lua-indent-string-contents) (lua-string-p))
         (goto-char (- (point-max) pos)) ;; just restore point position
 
       (setq indent (max 0 (- (lua-calculate-indentation nil)
