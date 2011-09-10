@@ -1294,6 +1294,7 @@ If END is nil, stop at `end-of-buffer'."
 
 (defvar lua-automark-multiline-timer nil
   "Contains idle-timer object used for automatical multiline literal markup which must be cleaned up on exit.")
+(make-variable-buffer-local 'lua-automark-multiline-timer)
 
 (defvar lua-automark-multiline-start-pos nil
   "Contains position from which automark procedure should start.
@@ -1303,6 +1304,7 @@ made since last automark. Additionally, if such point is inside string or
 comment, rewind start position to its beginning.
 
 nil means automark is unnecessary because there were no updates.")
+(make-variable-buffer-local 'lua-automark-multiline-start-pos)
 
 (defun lua--automark-update-start-pos (change-begin change-end old-len)
   "Updates `lua-automark-multiline-start-pos' upon buffer modification."
