@@ -1289,13 +1289,17 @@ If END is nil, stop at `end-of-buffer'."
     (add-hook 'change-major-mode-hook 'lua--automark-multiline-cleanup nil 'local)
     (setq lua-automark-multiline-timer
           (run-with-idle-timer lua-automark-multiline-interval 'repeat
-                               'lua-mark-all-multiline-literals))))
+                               'lua--automark-multiline-run))))
 
 (defun lua--automark-multiline-cleanup ()
   "Disable automatical multiline construct marking"
   (unless (null lua-automark-multiline-timer)
     (cancel-timer lua-automark-multiline-timer)
     (setq lua-automark-multiline-timer nil)))
+
+(defun lua--automark-multiline-run ()
+  (when (<= (buffer-size) lua-automark-multiline-maxsize)
+    (lua-mark-all-multiline-literals)))
 
 (defun lua--customize-set-automark-multiline-interval (symbol value)
   (set symbol value)
@@ -1309,6 +1313,11 @@ If END is nil, stop at `end-of-buffer'."
   :group 'lua
   :type 'integer
   :set 'lua--customize-set-automark-multiline-interval)
+
+(defcustom lua-automark-multiline-maxsize 100000
+  "Maximum buffer size for which lua-mode will mark multiline literals automatically."
+  :group 'lua
+  :type 'integer)
 
 (provide 'lua-mode)
 
