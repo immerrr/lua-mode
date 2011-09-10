@@ -369,7 +369,7 @@ The following keys are bound:
                      nil lua-forward-sexp)))
 
     (set (make-local-variable 'parse-sexp-lookup-properties) t)
-    (lua-mark-all-multiline-literals)
+    (lua-automark-multiline 2)
     (run-hooks 'lua-mode-hook)))
 
 ;;;###autoload
@@ -1270,7 +1270,26 @@ If END is nil, stop at `end-of-buffer'."
             (setq ml-end (match-end 0)))
           (lua-mark-multiline-region ml-begin ml-end))))))
 
-(provide 'lua-mode)
+(defvar lua-automark-multiline-timer nil
+  "Contains idle-timer object used for automatical multiline literal markup which must be cleaneded up on exit")
 
+(defun lua-automark-multiline (secs)
+  "Initiate (or disable) automatical multiline construct marking
+
+If SECS is nil, disable automatical markup.
+Otherwise mark multiline constructs each time Emacs is SECS seconds idle."
+  (unless (null lua-automark-multiline-timer)    ;; reset timer unconditionally
+    (cancel-timer lua-automark-multiline-timer))
+  (when secs                                      ;; set to proper timeout if needed
+    (add-hook 'change-major-mode-hook 'lua-mode-cleanup nil 'local)
+    (setq lua-automark-multiline-timer
+              (run-with-idle-timer secs 'repeat 'lua-mark-all-multiline-literals))
+        (lua-mark-all-multiline-literals)))
+
+(defun lua-mode-cleanup ()
+  "This hook is to be run within change-major-mode-hook"
+  (lua-automark-multiline nil))
+
+(provide 'lua-mode)
 
 ;;; lua-mode.el ends here
