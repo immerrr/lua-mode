@@ -1218,7 +1218,7 @@ left out."
 
 If TYPE is string, mark char  as string delimiter. If TYPE is comment,
 mark char as comment delimiter.  Otherwise, remove the mark if any."
-  (let ((old-modified-p (buffer-modified-p)))
+  (let ((old-modified-p (buffer-modified-p)) (inhibit-modification-hooks t))
     (unwind-protect
         (lua-put-char-syntax-table pos (lua-get-multiline-delim-syntax type))
       (set-buffer-modified-p old-modified-p))))
@@ -1239,7 +1239,7 @@ mark char as comment delimiter.  Otherwise, remove the mark if any."
 If BEGIN is nil, start from `beginning-of-buffer'.
 If END is nil, stop at `end-of-buffer'."
   (interactive)
-  (let ((old-modified-p (buffer-modified-p)))
+  (let ((old-modified-p (buffer-modified-p)) (inhibit-modification-hooks t))
     (unwind-protect
         (remove-text-properties (or begin (point-min)) (or end (point-max)) '(syntax-table ()))
       (set-buffer-modified-p old-modified-p)))
