@@ -438,6 +438,12 @@ This function replaces previous prefix-key binding with a new one."
   (save-excursion (let ((parse-result (syntax-ppss pos)))
                     (or (elt parse-result 3) (elt parse-result 4)))))
 
+(defun lua-comment-or-string-start (&optional pos)
+  "Returns start position of string or comment which contains point.
+
+If point is not inside string or comment, return nil."
+  (save-excursion (elt (syntax-ppss pos) 8)))
+
 (defun lua-indent-line ()
   "Indent current line for Lua mode.
 Return the amount the indentation changed by."
@@ -1287,12 +1293,27 @@ If END is nil, stop at `end-of-buffer'."
           (lua-mark-multiline-region ml-begin ml-end))))))
 
 (defvar lua-automark-multiline-timer nil
-  "Contains idle-timer object used for automatical multiline literal markup which must be cleaneded up on exit")
+  "Contains idle-timer object used for automatical multiline literal markup which must be cleaned up on exit.")
+
+(defvar lua-automark-multiline-start-pos nil
+  "Contains position from which automark procedure should start.
+
+Automarking shall start at the point before which no modification has been
+made since last automark. Additionally, if such point is inside string or
+comment, rewind start position to its beginning.
+
+nil means automark is unnecessary because there were no updates.")
+
+(defun lua--automark-update-start-pos (change-begin change-end old-len)
+  "Updates `lua-automark-multiline-start-pos' upon buffer modification."
+  (setq lua-automark-multiline-start-pos
+        (or (lua-comment-or-string-start change-begin) change-begin)))
 
 (defun lua--automark-multiline-update-timer ()
   (lua--automark-multiline-cleanup)  ;; reset previous timer if it existed
   (when lua-automark-multiline-interval
     (add-hook 'change-major-mode-hook 'lua--automark-multiline-cleanup nil 'local)
+    (add-hook 'after-change-functions 'lua--automark-update-start-pos  nil 'local)
     (setq lua-automark-multiline-timer
           (run-with-idle-timer lua-automark-multiline-interval 'repeat
                                'lua--automark-multiline-run))))
@@ -1305,7 +1326,9 @@ If END is nil, stop at `end-of-buffer'."
 
 (defun lua--automark-multiline-run ()
   (when (<= (buffer-size) lua-automark-multiline-maxsize)
-    (lua-mark-all-multiline-literals)))
+    (when lua-automark-multiline-start-pos
+      (lua-mark-all-multiline-literals lua-automark-multiline-start-pos)
+      (setq lua-automark-multiline-start-pos nil))))
 
 (defun lua--customize-set-automark-multiline-interval (symbol value)
   (set symbol value)
