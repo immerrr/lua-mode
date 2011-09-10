@@ -37,6 +37,12 @@
 
 ;;; Commentary:
 
+;; Thanks to Rafael Sanchez <rafael@cornerdimension.com> for patch
+;; adding lua-mode to interpreter-mode-alist
+
+;; Thanks to Leonardo Etcheverry <leo@kalio.net> for enabling
+;; narrow-to-defun functionality
+
 ;; Thanks to Tobias Polzin <polzin@gmx.de> for function indenting
 ;; patch: Indent "(" like "{"
 
