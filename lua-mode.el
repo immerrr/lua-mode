@@ -87,6 +87,9 @@
 
 
 ;;; Code:
+(eval-when-compile
+  (require 'cl))
+
 (require 'comint)
 
 ;; Local variables
@@ -369,7 +372,8 @@ The following keys are bound:
                      nil lua-forward-sexp)))
 
     (set (make-local-variable 'parse-sexp-lookup-properties) t)
-    (lua-automark-multiline 2)
+    (lua-mark-all-multiline-literals)
+    (lua--automark-multiline-update-timer)
     (run-hooks 'lua-mode-hook)))
 
 ;;;###autoload
@@ -1273,22 +1277,32 @@ If END is nil, stop at `end-of-buffer'."
 (defvar lua-automark-multiline-timer nil
   "Contains idle-timer object used for automatical multiline literal markup which must be cleaneded up on exit")
 
-(defun lua-automark-multiline (secs)
-  "Initiate (or disable) automatical multiline construct marking
-
-If SECS is nil, disable automatical markup.
-Otherwise mark multiline constructs each time Emacs is SECS seconds idle."
-  (unless (null lua-automark-multiline-timer)    ;; reset timer unconditionally
-    (cancel-timer lua-automark-multiline-timer))
-  (when secs                                      ;; set to proper timeout if needed
-    (add-hook 'change-major-mode-hook 'lua-mode-cleanup nil 'local)
+(defun lua--automark-multiline-update-timer ()
+  (lua--automark-multiline-cleanup)  ;; reset previous timer if it existed
+  (when lua-automark-multiline-interval
+    (add-hook 'change-major-mode-hook 'lua--automark-multiline-cleanup nil 'local)
     (setq lua-automark-multiline-timer
-              (run-with-idle-timer secs 'repeat 'lua-mark-all-multiline-literals))
-        (lua-mark-all-multiline-literals)))
+          (run-with-idle-timer lua-automark-multiline-interval 'repeat
+                               'lua-mark-all-multiline-literals))))
 
-(defun lua-mode-cleanup ()
-  "This hook is to be run within change-major-mode-hook"
-  (lua-automark-multiline nil))
+(defun lua--automark-multiline-cleanup ()
+  "Disable automatical multiline construct marking"
+  (unless (null lua-automark-multiline-timer)
+    (cancel-timer lua-automark-multiline-timer)
+    (setq lua-automark-multiline-timer nil)))
+
+(defun lua--customize-set-automark-multiline-interval (symbol value)
+  (set symbol value)
+  (dolist (buf (buffer-list))
+    (with-current-buffer buf
+      (when (eq major-mode 'lua-mode)
+        (lua--automark-multiline-update-timer)))))
+
+(defcustom lua-automark-multiline-interval 1
+  "If not 0, specifies idle time in seconds after which lua-mode will mark multiline literals."
+  :group 'lua
+  :type 'integer
+  :set 'lua--customize-set-automark-multiline-interval)
 
 (provide 'lua-mode)
 
