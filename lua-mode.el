@@ -1308,8 +1308,10 @@ nil means automark is unnecessary because there were no updates.")
 
 (defun lua--automark-update-start-pos (change-begin change-end old-len)
   "Updates `lua-automark-multiline-start-pos' upon buffer modification."
-  (setq lua-automark-multiline-start-pos
-        (or (lua-comment-or-string-start change-begin) change-begin)))
+  (save-excursion
+    (goto-char change-begin)
+    (setq lua-automark-multiline-start-pos
+          (or (lua-comment-or-string-start) (line-beginning-position)))))
 
 (defun lua--automark-multiline-update-timer ()
   (lua--automark-multiline-cleanup)  ;; reset previous timer if it existed
