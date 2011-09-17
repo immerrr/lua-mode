@@ -291,19 +291,17 @@ traceback location."
   '((nil "^[ \t]*\\(?:local[ \t]+\\)?function[ \t]+\\(\\(\\sw:\\|\\sw_\\|\\sw\\.\\|\\sw\\)+\\)" 1))
   "Imenu generic expression for lua-mode.  See `imenu-generic-expression'.")
 
-(defvar lua-mode-abbrev-table nil
-  "Abbreviation table used in lua-mode buffers.")
-
 (defvar lua-sexp-alist '(("then" . "end")
                          ("function" . "end")
                          ("do" . "end")))
 
+(defvar lua-mode-abbrev-table nil
+  "Abbreviation table used in lua-mode buffers.")
+
 (define-abbrev-table 'lua-mode-abbrev-table
-  '(
-    ("end" "end" lua-indent-line 0)
-    ("else" "else" lua-indent-line 0)
-    ("elseif" "elseif" lua-indent-line 0)
-    ))
+  '(("end" "end" lua-indent-line :system t)
+    ("else" "else" lua-indent-line :system t)
+    ("elseif" "elseif" lua-indent-line :system t)))
 
 (eval-and-compile
   (defalias 'lua-make-temp-file
