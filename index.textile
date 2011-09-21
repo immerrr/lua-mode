@@ -1,0 +1,32 @@
+---
+layout: default
+title: Overview
+---
+
+h1. Lua-mode
+
+table{frame: void}.
+|Author|immerrr|
+|Contact| "immerrr+lua@gmail.com":mailto:immerrr+lua@gmail.com|
+
+*lua-mode* is an "Emacs":emacs major mode for editing "Lua":lua. The development has moved to "github":http://github.com/immerrr/lua-mode, so update your bookmarks if you still look for new releases at luaforge.
+
+If you have a problem or a suggestion about *lua-mode*, please, let me know about it via "issue tracker":tracker.
+
+h2. INSTALLATION
+
+To install, just copy @lua-mode.el@ into a directory on your @load-path@ (and optionally byte-compile it). To set up Emacs to automatically edit files ending in @.lua@ or with a lua hash-bang line using *lua-mode* add the following to your init file:
+
+bc.     (autoload 'lua-mode "lua-mode" "Lua editing mode." t)
+    (add-to-list 'auto-mode-alist '("\\.lua$" . lua-mode))
+    (add-to-list 'interpreter-mode-alist '("lua" . lua-mode))
+
+h2. USAGE
+
+*lua-mode* supports c-mode style formatting and sending of lines/regions/files to a Lua interpreter. An interpreter (see variable @lua-default-application@) will be started if you try to send some code and none is running. You can use the process-buffer (named after the application you chose) as if it were an interactive shell. See the documentation for @comint.el@ for details.
+
+Lua-mode also works with Hide Show minor mode (see @hs-minor-mode@).
+
+[emacs]http://www.gnu.org/software/emacs/
+[lua]http://www.lua.org
+[tracker]https://github.com/immerrr/lua-mode/issues
