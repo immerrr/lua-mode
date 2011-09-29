@@ -450,19 +450,31 @@ Return the amount the indentation changed by."
         ;; save point as a distance to eob - it's invariant w.r.t indentation
         (pos (- (point-max) (point))))
     (back-to-indentation)
-    (if (and (not lua-indent-string-contents) (lua-string-p))
-        (goto-char (- (point-max) pos)) ;; just restore point position
-
+    (if (lua-comment-or-string-p)
+        (setq indent (lua-calculate-string-or-comment-indentation)) ;; just restore point position
       (setq indent (max 0 (- (lua-calculate-indentation nil)
-                             (lua-calculate-unindentation))))
-      (when (not (equal indent (current-column)))
-        (delete-region (line-beginning-position) (point))
-        (indent-to indent))
-      ;; If initial point was within line's indentation,
-      ;; position after the indentation.  Else stay at same point in text.
-      (if (> (- (point-max) pos) (point))
-          (goto-char (- (point-max) pos)))
-      indent)))
+                             (lua-calculate-unindentation)))))
+
+    (when (not (equal indent (current-column)))
+      (delete-region (line-beginning-position) (point))
+      (indent-to indent))
+
+    ;; If initial point was within line's indentation,
+    ;; position after the indentation.  Else stay at same point in text.
+    (if (> (- (point-max) pos) (point))
+  (goto-char (- (point-max) pos)))
+
+    indent))
+
+(defun lua-calculate-string-or-comment-indentation ()
+  "This function should be run when point at (current-indentation) is inside string"
+  (if (and (lua-string-p) (not lua-indent-string-contents))
+      ;; if inside string and strings aren't to be indented, return current indentation
+      (current-indentation)
+    ;; otherwise indent by lua-indent-level relative to the line where literal starts
+    (save-excursion
+      (goto-char (lua-get-multiline-start))
+      (+ (current-indentation) lua-indent-level))))
 
 (defun lua-find-regexp (direction regexp &optional limit ignore-p)
   "Searches for a regular expression in the direction specified.
@@ -669,7 +681,7 @@ previous one even though it looked like an end-of-statement."
       ;; if first character of the line is inside string, it's a continuation
       ;; if strings aren't supposed to be indented, `lua-calculate-indentation' won't even let
       ;; the control inside this function
-      (or (lua-comment-or-string-p) (re-search-forward lua-cont-bol-regexp line-end t)))))
+      (re-search-forward lua-cont-bol-regexp line-end t))))
 
 (defun lua-is-continuing-statement-p (&optional parse-start)
   "Return non-nil if the line continues a statement.
