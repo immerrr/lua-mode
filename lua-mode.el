@@ -622,11 +622,6 @@ Returns final value of point as integer or nil if operation failed."
     "-+*/^.=<>~"))
 
 (defconst lua-cont-eol-regexp
-  "Regexp that matches the ending of a line that needs continuation
-
-This regexp starts from eol and looks for a binary operator or an unclosed
-block intro (i.e. 'for' without 'do' or 'if' without 'then') followed by
-an optional whitespace till the end of the line."
   (eval-when-compile
     (concat
      "\\(\\_<"
@@ -637,16 +632,14 @@ an optional whitespace till the end of the line."
      (regexp-opt '("+" "-" "*" "/" "^" ".." "==" "=" "<" ">" "<=" ">=" "~=") t)
      "\\)"
      "\\s *\\=")
-    ))
+    )
+  "Regexp that matches the ending of a line that needs continuation
 
+This regexp starts from eol and looks for a binary operator or an unclosed
+block intro (i.e. 'for' without 'do' or 'if' without 'then') followed by
+an optional whitespace till the end of the line.")
 
 (defconst lua-cont-bol-regexp
-  "Regexp that matches a line that continues previous one
-
-This regexp means, starting from point there is an optional whitespace followed
-by Lua binary operator. Lua is very liberal when it comes to continuation line,
-so we're safe to assume that every line that starts with a binop continues
-previous one even though it looked like an end-of-statement."
   (eval-when-compile
     (concat
      "\\=\\s *"
@@ -657,7 +650,13 @@ previous one even though it looked like an end-of-statement."
      "\\($\\|[^" lua-operator-class "]\\)"
      "\\)")
 
-    ))
+    )
+  "Regexp that matches a line that continues previous one
+
+This regexp means, starting from point there is an optional whitespace followed
+by Lua binary operator. Lua is very liberal when it comes to continuation line,
+so we're safe to assume that every line that starts with a binop continues
+previous one even though it looked like an end-of-statement.")
 
 (defun lua-last-token-continues-p ()
   "Returns true if the last token on this line is a continuation token."
