@@ -503,27 +503,30 @@ ignored, nil otherwise."
      (regexp-opt '("{" "(" "[" "]" ")" "}") t))))
 
 (defconst lua-block-token-alist
-  ;; FIXME: do is a really bad exception. It is sometimes an open, and sometimes
-  ;; a middle. Need a better model for it. As it stands, the end of do lines up
-  ;; agains the do itself, and not the beginning.
-  '(("do"       "\\<for\\|while\\|end\\>"                     middle-or-open)
-    ("function" "\\<end\\>"                                   open)
-    ("repeat"   "\\<until\\>"                                 open)
-    ("then"     "\\<if\\|\\(e\\(lse\\(if\\)?\\|nd\\)\\)\\>"   middle)
-    ("{"        "}"                                           open)
-    ("["        "]"                                           open)
-    ("("        ")"                                           open)
-    ("if"       "\\<then\\>"                                  open)
-    ("for"      "\\<do\\>"                                    open)
-    ("while"    "\\<do\\>"                                    open)
-    ("else"     "\\<then\\>"                                  middle)
-    ("elseif"   "\\<then\\>"                                  middle)
-    ("end"      "\\<\\(do\\|function\\|then\\|else\\)\\>"     close)
-    ("until"    "\\<repeat\\>"                                close)
-    ("}"        "{"                                           close)
-    ("]"        "\\["                                         close)
-    (")"        "("                                           close)))
-
+  '(("do"       "\\<end\\>"   "\\<for\\|while\\>"                       middle-or-open)
+    ("function" "\\<end\\>"   nil                                       open)
+    ("repeat"   "\\<until\\>" nil                                       open)
+    ("then"     "\\<\\(e\\(lse\\(if\\)?\\|nd\\)\\)\\>" "\\<\\(else\\)?if\\>" middle)
+    ("{"        "}"           nil                                       open)
+    ("["        "]"           nil                                       open)
+    ("("        ")"           nil                                       open)
+    ("if"       "\\<then\\>"  nil                                       open)
+    ("for"      "\\<do\\>"    nil                                       open)
+    ("while"    "\\<do\\>"    nil                                       open)
+    ("else"     "\\<end\\>"   "\\<then\\>"                              middle)
+    ("elseif"   "\\<then\\>"  "\\<then\\>"                              middle)
+    ("end"      nil           "\\<\\(do\\|function\\|then\\|else\\)\\>" close)
+    ("until"    nil           "\\<repeat\\>"                            close)
+    ("}"        nil           "{"                                       close)
+    ("]"        nil           "\\["                                     close)
+    (")"        nil           "("                                       close))
+  "This is a list of block token information blocks.
+Each token information entry is of the form:
+  KEYWORD FORWARD-MATCH-REGEXP BACKWARDS-MATCH-REGEXP TOKEN-TYPE
+KEYWORD is the token.
+FORWARD-MATCH-REGEXP is a regexp that matches all possble tokens when going forward.
+BACKWARDS-MATCH-REGEXP is a regexp that matches all possble tokens when going backwards.
+TOKEN-TYPE determines where the token occurs on a statement. open indicates that the token appears at start, close indicates that it appears at end, middle indicates that it is a middle type token, and middle-or-open indicates that it can appear both as a middle or an open type.")
 
 (defconst lua-indentation-modifier-regexp
   ;; The absence of else is deliberate, since it does not modify the
@@ -541,17 +544,38 @@ ignored, nil otherwise."
    "\\)")
   )
 
+(defun lua-get-block-token-info (token)
+  "Returns the block token info entry for TOKEN from lua-block-token-alist"
+  (assoc token lua-block-token-alist))
+
+(defun lua-get-token-match-re (token-info direction)
+  "Returns the relevant match regexp from token info"
+  (cond
+   ((eq direction 'forward) (cadr token-info))
+   ((eq direction 'backward) (caddr token-info))
+   (t nil)))
+
+(defun lua-get-token-type (token-info)
+  "Returns the relevant match regexp from token info"
+   (cadddr token-info))
+
 (defun lua-backwards-to-block-begin-or-end ()
   "Move backwards to nearest block begin or end.  Returns nil if not successful."
   (interactive)
   (lua-find-regexp 'backward lua-block-regexp))
 
 (defun lua-find-matching-token-word (token search-start &optional direction)
-  (let* ((token-info (assoc token lua-block-token-alist))
-         (match (car (cdr token-info)))
-         (match-type (car (cdr (cdr token-info))))
+  (let* ((token-info (lua-get-block-token-info token))
+         (match-type (lua-get-token-type token-info))
+         ;; If we are on a middle token, go backwards. If it is a middle or open,
+         ;; go forwards
          (search-direction (or direction
-                               (if (eq match-type 'open) 'forward 'backward)))
+                               (if (or (eq match-type 'open)
+                                       (eq match-type 'middle-or-open))
+                                   'forward
+                                 'backward)
+                               'backward))
+         (match (lua-get-token-match-re token-info search-direction))
          maybe-found-pos)
     ;; if we are searching forward from the token at the current point
     ;; (i.e. for a closing token), need to step one character forward
@@ -559,12 +583,22 @@ ignored, nil otherwise."
     (if (eq search-direction 'forward) (forward-char 1))
     (if search-start (goto-char search-start))
     (catch 'found
+      ;; If we are attempting to find a matching token for a terminating token
+      ;; (i.e. a token that starts a statement when searching back, or a token
+      ;; that ends a statement when searching forward), then we don't need to look
+      ;; any further.
+      (if (or (and (eq search-direction 'forward)
+                   (eq match-type 'close))
+              (and (eq search-direction 'backward)
+                   (eq match-type 'open)))
+          (throw 'found nil))
       (while (lua-find-regexp search-direction lua-indentation-modifier-regexp)
         ;; have we found a valid matching token?
         (let ((found-token (match-string 0))
               (found-pos (match-beginning 0)))
-          (let ((found-type (car (cdr (cdr (assoc found-token lua-block-token-alist))))))
-            (if (not (string-match match found-token))
+          (let ((found-type (lua-get-token-type
+                             (lua-get-block-token-info found-token))))
+            (if (not (and match (string-match match found-token)))
                 ;; no - then there is a nested block. If we were looking for
                 ;; a block begin token, found-token must be a block end
                 ;; token; likewise, if we were looking for a block end token,
@@ -593,10 +627,10 @@ ignored, nil otherwise."
               ;; Cannot use tail recursion. too much nesting on long chains of
               ;; if/elseif. Will reset variables instead.
               (setq token found-token)
-              (setq token-info (assoc token lua-block-token-alist))
-              (setq match (car (cdr token-info)))
-              (setq match-type (car (cdr (cdr token-info))))))))
-    maybe-found-pos)))
+              (setq token-info (lua-get-block-token-info token))
+              (setq match (lua-get-token-match-re token-info search-direction))
+              (setq match-type (lua-get-token-type token-info))))))
+      maybe-found-pos)))
 
 (defun lua-goto-matching-block-token (&optional search-start parse-start direction)
   "Find block begion/end token matching the one at the point.
@@ -759,7 +793,7 @@ use standalone."
    ((member found-token (list "until" "elseif"))
     (save-excursion
       (let ((line (line-number-at-pos)))
-        (if (and (lua-goto-matching-block-token nil found-pos)
+        (if (and (lua-goto-matching-block-token nil found-pos 'backward)
                  (= line (line-number-at-pos)))
             (cons 'remove-matching 0)
           (cons 'relative 0)))))
@@ -771,7 +805,7 @@ use standalone."
    ((string-equal found-token "else")
      (save-excursion
        (let ((line (line-number-at-pos)))
-         (if (and (lua-goto-matching-block-token nil found-pos)
+         (if (and (lua-goto-matching-block-token nil found-pos 'backward)
                   (= line (line-number-at-pos)))
              (cons 'replace-matching (cons 'relative lua-indent-level))
                    (cons 'relative lua-indent-level)))))
@@ -782,7 +816,7 @@ use standalone."
    ((member found-token (list ")" "}" "]" "end"))
     (save-excursion
       (let ((line (line-number-at-pos)))
-        (lua-goto-matching-block-token nil found-pos)
+        (lua-goto-matching-block-token nil found-pos 'backward)
         (if (/= line (line-number-at-pos))
             (cons 'absolute
                   (+ (current-indentation)
@@ -924,7 +958,7 @@ to the left by the amount specified in lua-indent-level."
       (back-to-indentation)
       (if (and (not (lua-comment-or-string-p))
                (looking-at lua-indentation-modifier-regexp)
-               (let ((token-info (assoc (match-string 0) lua-block-token-alist)))
+               (let ((token-info (lua-get-block-token-info (match-string 0))))
                  (and token-info
                       (not (eq 'open (caddr token-info))))))
           (when (lua-goto-matching-block-token nil nil 'backward)
