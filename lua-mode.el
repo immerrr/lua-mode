@@ -985,8 +985,16 @@ to the left by the amount specified in lua-indent-level."
         (indent-amt 0))
     (save-excursion
       (let ((continuing-p (lua-is-continuing-statement-p)))
-        (or (lua-calculate-indentation-override)
-            (when (lua-forward-line-skip-blanks 'back)
+        (or
+         ;; when calculating indentation, do the following:
+         ;; 1. check, if the line starts with indentation-modifier (open/close brace)
+         ;;    and if it should be indented/unindented in special way
+         (lua-calculate-indentation-override)
+
+         ;; 2. otherwise, use indentation modifiers from previous line + it's own indentation
+         ;; 3. if previous line doesn't contain indentation modifiers, additionally check
+         ;;    if current line is a continuation line and add lua-indent-level if it is
+         (when (lua-forward-line-skip-blanks 'back)
               ;; the order of function calls here is important. block modifier
               ;; call may change the point to another line
               (let ((modifier
@@ -995,7 +1003,9 @@ to the left by the amount specified in lua-indent-level."
                        lua-indent-level
                      modifier)
                    (current-indentation))))
-            0)))))
+
+         ;; 4. if there's no previous line, indentation is 0
+         0)))))
 
 (defun lua-beginning-of-proc (&optional arg)
   "Move backward to the beginning of a lua proc (or similar).
