@@ -310,7 +310,7 @@ traceback location."
         ("elseif" "elseif" lua-indent-line :system t))
     '(("end"    "end"      lua-indent-line nil 'system)
       ("else"   "else"     lua-indent-line nil 'system)
-      ("elseif" "elseif"   lua-indent-line nil 'system)))
+      ("elseif" "elseif"   lua-indent-line nil 'system))))
 
 (eval-and-compile
   (defalias 'lua-make-temp-file
