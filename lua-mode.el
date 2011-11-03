@@ -299,9 +299,18 @@ traceback location."
   "Abbreviation table used in lua-mode buffers.")
 
 (define-abbrev-table 'lua-mode-abbrev-table
-  '(("end" "end" lua-indent-line :system t)
-    ("else" "else" lua-indent-line :system t)
-    ("elseif" "elseif" lua-indent-line :system t)))
+  ;; Emacs 23 introduced :system property that prevents abbrev
+  ;; entries from being written to file specified by abbrev-file-name
+  ;;
+  ;; Emacs 22 and earlier had this functionality implemented
+  ;; by simple nil/non-nil flag as positional parameter
+  (if (>= emacs-major-version 23)
+      '(("end"    "end"    lua-indent-line :system t)
+        ("else"   "else"   lua-indent-line :system t)
+        ("elseif" "elseif" lua-indent-line :system t))
+    '(("end"    "end"      lua-indent-line nil 'system)
+      ("else"   "else"     lua-indent-line nil 'system)
+      ("elseif" "elseif"   lua-indent-line nil 'system)))
 
 (eval-and-compile
   (defalias 'lua-make-temp-file
