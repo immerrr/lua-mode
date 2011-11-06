@@ -981,31 +981,29 @@ to the left by the amount specified in lua-indent-level."
 
 (defun lua-calculate-indentation (&optional parse-start)
   "Return appropriate indentation for current line as Lua code."
-  (let ((pos (point))
-        (indent-amt 0))
-    (save-excursion
-      (let ((continuing-p (lua-is-continuing-statement-p)))
-        (or
-         ;; when calculating indentation, do the following:
-         ;; 1. check, if the line starts with indentation-modifier (open/close brace)
-         ;;    and if it should be indented/unindented in special way
-         (lua-calculate-indentation-override)
+  (save-excursion
+    (let ((continuing-p (lua-is-continuing-statement-p)))
+      (or
+       ;; when calculating indentation, do the following:
+       ;; 1. check, if the line starts with indentation-modifier (open/close brace)
+       ;;    and if it should be indented/unindented in special way
+       (lua-calculate-indentation-override)
 
-         ;; 2. otherwise, use indentation modifiers from previous line + it's own indentation
-         ;; 3. if previous line doesn't contain indentation modifiers, additionally check
-         ;;    if current line is a continuation line and add lua-indent-level if it is
-         (when (lua-forward-line-skip-blanks 'back)
-              ;; the order of function calls here is important. block modifier
-              ;; call may change the point to another line
-              (let ((modifier
-                     (lua-calculate-indentation-block-modifier nil (line-end-position))))
-                (+ (if (and continuing-p (= 0 modifier))
-                       lua-indent-level
-                     modifier)
-                   (current-indentation))))
+       ;; 2. otherwise, use indentation modifiers from previous line + it's own indentation
+       ;; 3. if previous line doesn't contain indentation modifiers, additionally check
+       ;;    if current line is a continuation line and add lua-indent-level if it is
+       (when (lua-forward-line-skip-blanks 'back)
+         ;; the order of function calls here is important. block modifier
+         ;; call may change the point to another line
+         (let ((modifier
+                (lua-calculate-indentation-block-modifier nil (line-end-position))))
+           (+ (if (and continuing-p (= 0 modifier))
+                  lua-indent-level
+                modifier)
+              (current-indentation))))
 
-         ;; 4. if there's no previous line, indentation is 0
-         0)))))
+       ;; 4. if there's no previous line, indentation is 0
+       0))))
 
 (defun lua-beginning-of-proc (&optional arg)
   "Move backward to the beginning of a lua proc (or similar).
