@@ -972,7 +972,7 @@ to the left by the amount specified in lua-indent-level."
                (looking-at lua-indentation-modifier-regexp)
                (let ((token-info (lua-get-block-token-info (match-string 0))))
                  (and token-info
-                      (not (eq 'open (caddr token-info))))))
+                      (not (eq 'open (lua-get-token-type token-info))))))
           (when (lua-goto-matching-block-token nil nil 'backward)
             ;; Exception cases: when the start of the line is an assignment,
             ;; go to the start of the assignment instead of the matching item
