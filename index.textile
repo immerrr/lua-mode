@@ -18,7 +18,7 @@ h2. INSTALLATION
 h3. MANUAL INSTALLATION
 
 1. Grab a zipball[1]:
-   * "last stable release":https://github.com/immerrr/lua-mode/zipball/rel-20110428
+   * "last stable release":https://github.com/immerrr/lua-mode/zipball/rel-20111107
    * "current development snapshot":https://github.com/immerrr/lua-mode/zipball/master
 
 To install, just copy @lua-mode.el@ into a directory on your @load-path@ (and optionally byte-compile it). To set up Emacs to automatically edit files ending in @.lua@ or with a lua hash-bang line using *lua-mode* add the following to your init file:
