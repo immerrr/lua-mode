@@ -37,6 +37,9 @@
 
 ;;; Commentary:
 
+;; Thanks to Vedat Hallac <github.com/vhallac> for sharing some of
+;; his fixes and updates to core indentation logics
+
 ;; Thanks to Rafael Sanchez <rafael@cornerdimension.com> for patch
 ;; adding lua-mode to interpreter-mode-alist
 
