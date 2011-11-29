@@ -301,17 +301,17 @@ traceback location."
     
 (eval-and-compile 
   (defvar lua-tablelib-regexp
-    (concat "\\_<\\(table\\)\\.?" (regexp-opt 
+    (concat "\\_<\\(table\\.\\)" (regexp-opt 
     '(  "concat"
         "insert"
         "remove"
         "maxn"
-        "sort") t) "?\\_>")
+        "sort") t) "\\_>")
     "Lua table lib"))
     
 (eval-and-compile 
   (defvar lua-stringlib-regexp
-    (concat "\\_<\\(string\\)\\.?" (regexp-opt 
+    (concat "\\_<\\(string\\.\\)" (regexp-opt 
     '(  "byte"
         "char"
         "dump"
@@ -325,25 +325,25 @@ traceback location."
         "rep"
         "reverse"
         "sub"
-        "upper") t) "?\\_>")
+        "upper") t) "\\_>")
     "Lua string lib"))
     
     
 (eval-and-compile 
   (defvar lua-coroutinelib-regexp
-    (concat "\\_<\\(coroutine\\)\\.?" (regexp-opt 
+    (concat "\\_<\\(coroutine\\.\\)" (regexp-opt 
     '(  "create"
         "resume"
         "running"
         "status"
         "wrap"
-        "yield") t) "?\\_>")
+        "yield") t) "\\_>")
     "Lua coroutine lib"))
     
 
 (eval-and-compile 
   (defvar lua-oslib-regexp
-    (concat "\\_<\\(os\\)\\.?" (regexp-opt 
+    (concat "\\_<\\(os\\.\\)" (regexp-opt 
     '(  "clock"
         "date"
         "difftime"
@@ -354,13 +354,13 @@ traceback location."
         "rename"
         "setlocale"
         "time"
-        "tmpname") t) "?\\_>")
+        "tmpname") t) "\\_>")
     "Lua os lib"))
 
 
 (eval-and-compile 
   (defvar lua-iolib-regexp
-    (concat "\\_<\\(io\\)\\.?" (regexp-opt 
+    (concat "\\_<\\(io\\.\\)" (regexp-opt 
     '(  "close"
         "flush"
         "input"
@@ -374,13 +374,13 @@ traceback location."
         "stdout"
         "tmpfile"
         "type"
-        "write") t) "?\\_>")
+        "write") t) "\\_>")
     "Lua io lib"))
 
 
 (eval-and-compile 
   (defvar lua-mathlib-regexp
-    (concat "\\_<\\(math\\)\\.?" (regexp-opt 
+    (concat "\\_<\\(math\\.\\)" (regexp-opt 
     '(  "abs"
         "acos"
         "asin"
@@ -410,7 +410,7 @@ traceback location."
         "sinh"
         "sqrt"
         "tan"
-        "tanh") t) "?\\_>")
+        "tanh") t) "\\_>")
     "Lua math lib"))
 
 
@@ -445,13 +445,13 @@ traceback location."
                            "while") t)
              "\\_>")
 
-     (list lua-builtins-regexp 1 'font-lock-builtin-face )
+     ;; (list lua-builtins-regexp 1 'font-lock-builtin-face )
      (list lua-tablelib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
-     (list lua-oslib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
-     (list lua-iolib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
-     (list lua-stringlib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
-     (list lua-mathlib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
-     (list lua-coroutinelib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
+     ;; (list lua-oslib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
+     ;; (list lua-iolib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
+     ;; (list lua-stringlib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
+     ;; (list lua-mathlib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
+     ;; (list lua-coroutinelib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
      (list lua-number-regexp 1 'font-lock-constant-face)
 
      "Default expressions to highlight in Lua mode.")))
