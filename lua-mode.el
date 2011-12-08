@@ -267,6 +267,8 @@ traceback location."
 (defvar lua-font-lock-keywords
   (eval-when-compile
     (list
+     ;; highlight the hash-bang line "#!/foo/bar/lua" as comment
+     '("^#!.*$" . font-lock-comment-face)
      ;; Handle variable names
      ;;  local blalba =
      ;;        ^^^^^^
