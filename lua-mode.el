@@ -977,13 +977,7 @@ to the left by the amount specified in lua-indent-level."
                  (and token-info
                       (not (eq 'open (lua-get-token-type token-info))))))
           (when (lua-goto-matching-block-token nil nil 'backward)
-            ;; Exception cases: when the start of the line is an assignment,
-            ;; go to the start of the assignment instead of the matching item
-            (let ((block-start-column (current-column))
-                  (block-start-point (point)))
-              (if (lua-point-is-after-left-shifter-p)
-                  (current-indentation)
-                block-start-column)))))))
+	    (current-indentation))))))
 
 (defun lua-calculate-indentation (&optional parse-start)
   "Return appropriate indentation for current line as Lua code."
