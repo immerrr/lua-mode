@@ -1323,10 +1323,29 @@ left out."
 (define-key lua-mode-menu [search-documentation]
   '("Search Documentation" . lua-search-documentation))
 
+;; Emacs 23.3 introduced with-silent-modifications macro
+;; use it if it's available, otherwise define a replacement for that
+(if (fboundp 'with-silent-modifications)
+    (defalias 'lua-with-silent-modifications 'with-silent-modifications)
+
+  (defmacro lua-with-silent-modifications (body)
+    "Execute BODY, pretending it does not modifies the buffer.
+
+This is a reimplementation of macro `with-silent-modifications'
+for Emacsen that doesn't contain one (pre-23.3)."
+    (let ((old-modified-p (buffer-modified-p))
+          (inhibit-modification-hooks t)
+          (buffer-undo-list t))
+
+      (unwind-protect
+          ,@body
+        (set-buffer-modified-p old-modified-p)))))
+
 (defsubst lua-put-char-property (pos property value &optional object)
-  (if value
-      (put-text-property pos (1+ pos) property value object)
-    (remove-text-properties pos (1+ pos) (list property nil))))
+  (lua-with-silent-modifications
+   (if value
+       (put-text-property pos (1+ pos) property value object)
+     (remove-text-properties pos (1+ pos) (list property nil)))))
 
 (defsubst lua-put-char-syntax-table (pos value &optional object)
   (lua-put-char-property pos 'syntax-table value object))
@@ -1341,10 +1360,7 @@ left out."
 
 If TYPE is string, mark char  as string delimiter. If TYPE is comment,
 mark char as comment delimiter.  Otherwise, remove the mark if any."
-  (let ((old-modified-p (buffer-modified-p)) (inhibit-modification-hooks t))
-    (unwind-protect
-        (lua-put-char-syntax-table pos (lua-get-multiline-delim-syntax type))
-      (set-buffer-modified-p old-modified-p))))
+   (lua-put-char-syntax-table pos (lua-get-multiline-delim-syntax type)))
 
 (defsubst lua-inside-multiline-p (&optional pos)
   (let ((status (syntax-ppss pos)))
@@ -1362,10 +1378,8 @@ mark char as comment delimiter.  Otherwise, remove the mark if any."
 If BEGIN is nil, start from `beginning-of-buffer'.
 If END is nil, stop at `end-of-buffer'."
   (interactive)
-  (let ((old-modified-p (buffer-modified-p)) (inhibit-modification-hooks t))
-    (unwind-protect
-        (remove-text-properties (or begin (point-min)) (or end (point-max)) '(syntax-table ()))
-      (set-buffer-modified-p old-modified-p)))
+  (lua-with-silent-modifications
+   (remove-text-properties (or begin (point-min)) (or end (point-max)) '(syntax-table ())))
   (font-lock-fontify-buffer))
 
 (defun lua-mark-multiline-region (begin end)
