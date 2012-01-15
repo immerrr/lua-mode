@@ -1343,9 +1343,16 @@ for Emacsen that doesn't contain one (pre-23.3)."
 
 (defsubst lua-put-char-property (pos property value &optional object)
   (lua-with-silent-modifications
+
    (if value
        (put-text-property pos (1+ pos) property value object)
-     (remove-text-properties pos (1+ pos) (list property nil)))))
+     (remove-text-properties pos (1+ pos) (list property nil))))
+
+  ;; `lua-with-silent-modifications' inhibits modification hooks, one of which
+  ;; is the hook that keeps `syntax-ppss' internal cache up-to-date. If this
+  ;; isn't done, the results of subsequent calls to `syntax-ppss' are
+  ;; invalid. To avoid such cache discrepancy, the hook must be run manually.
+  (syntax-ppss-flush-cache pos))
 
 (defsubst lua-put-char-syntax-table (pos value &optional object)
   (lua-put-char-property pos 'syntax-table value object))
@@ -1378,8 +1385,19 @@ mark char as comment delimiter.  Otherwise, remove the mark if any."
 If BEGIN is nil, start from `beginning-of-buffer'.
 If END is nil, stop at `end-of-buffer'."
   (interactive)
+
+  (setq begin (or begin (point-min))
+        end   (or end   (point-max)))
+
   (lua-with-silent-modifications
-   (remove-text-properties (or begin (point-min)) (or end (point-max)) '(syntax-table ())))
+   (remove-text-properties begin end '(syntax-table ())))
+
+  ;; `lua-with-silent-modifications' inhibits modification hooks, one of which
+  ;; is the hook that keeps `syntax-ppss' internal cache up-to-date. If this
+  ;; isn't done, the results of subsequent calls to `syntax-ppss' are
+  ;; invalid. To avoid such cache discrepancy, the hook must be run manually.
+  (syntax-ppss-flush-cache begin)
+
   (font-lock-fontify-buffer))
 
 (defun lua-mark-multiline-region (begin end)
