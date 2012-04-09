@@ -31,7 +31,9 @@ fn1. or pick any commit you like on "github":lua-mode-github
 
 h3. USING "EL-GET":el-get
 
-**TODO**
+Installing with el-get is as easy as
+
+bc.    (el-get-install 'lua-mode)
 
 h2. USAGE
 
