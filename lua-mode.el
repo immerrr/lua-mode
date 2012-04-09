@@ -1323,23 +1323,24 @@ left out."
 (define-key lua-mode-menu [search-documentation]
   '("Search Documentation" . lua-search-documentation))
 
-;; Emacs 23.3 introduced with-silent-modifications macro
-;; use it if it's available, otherwise define a replacement for that
-(if (fboundp 'with-silent-modifications)
-    (defalias 'lua-with-silent-modifications 'with-silent-modifications)
+(eval-and-compile
+  ;; Emacs 23.3 introduced with-silent-modifications macro
+  ;; use it if it's available, otherwise define a replacement for that
+  (if (fboundp 'with-silent-modifications)
+      (defalias 'lua-with-silent-modifications 'with-silent-modifications)
 
-  (defmacro lua-with-silent-modifications (body)
-    "Execute BODY, pretending it does not modifies the buffer.
+    (defmacro lua-with-silent-modifications (body)
+      "Execute BODY, pretending it does not modifies the buffer.
 
 This is a reimplementation of macro `with-silent-modifications'
 for Emacsen that doesn't contain one (pre-23.3)."
-    (let ((old-modified-p (buffer-modified-p))
-          (inhibit-modification-hooks t)
-          (buffer-undo-list t))
+      (let ((old-modified-p (buffer-modified-p))
+            (inhibit-modification-hooks t)
+            (buffer-undo-list t))
 
-      (unwind-protect
-          ,@body
-        (set-buffer-modified-p old-modified-p)))))
+        (unwind-protect
+            ,@body
+          (set-buffer-modified-p old-modified-p))))))
 
 (defsubst lua-put-char-property (pos property value &optional object)
   (lua-with-silent-modifications
