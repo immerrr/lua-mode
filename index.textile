@@ -3,7 +3,7 @@ layout: default
 title: Overview
 ---
 
-h1. Lua-mode
+h1. Overview
 
 table{frame: void}.
 |Author|immerrr|
@@ -17,23 +17,29 @@ h2. INSTALLATION
 
 h3. MANUAL INSTALLATION
 
-1. Grab a zipball[1]:
+1. Grab a zipball[1] or pick any commit you like on "github":lua-mode-github:
    * "last stable release":https://github.com/immerrr/lua-mode/zipball/rel-20111107
    * "current development snapshot":https://github.com/immerrr/lua-mode/zipball/master
 
-To install, just copy @lua-mode.el@ into a directory on your @load-path@ (and optionally byte-compile it). To set up Emacs to automatically edit files ending in @.lua@ or with a lua hash-bang line using *lua-mode* add the following to your init file:
+2. Add the following to your init-file:
+
+   * Make sure that @lua-mode.el@ is on your @load-path@
+
+bc.     (add-to-list 'load-path "/path/to/lua-mode")
+
+   * Load @lua-mode@ when visiting lua files automagically
 
 bc.     (autoload 'lua-mode "lua-mode" "Lua editing mode." t)
     (add-to-list 'auto-mode-alist '("\\.lua$" . lua-mode))
     (add-to-list 'interpreter-mode-alist '("lua" . lua-mode))
 
-fn1. or pick any commit you like on "github":lua-mode-github
+3. Byte-compile lua-mode if you like
 
 h3. USING "EL-GET":el-get
 
 Installing with el-get is as easy as
 
-bc.    (el-get-install 'lua-mode)
+bc.     (el-get-install 'lua-mode)
 
 h2. USAGE
 

@@ -1,27 +1,59 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!doctype html>
 <html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Lua-mode: {{ page.title }}</title>
-    <link rel="shortcut icon" href="/media/lua-96x96.png" />
-    <script type="text/javascript">
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1"/>
+    <title>Lua-mode</title>
+    <link rel="stylesheet" href="stylesheets/styles.css"/>
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css"/>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/respond.js"></script>
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="stylesheets/ie.css">
+      <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
 
-      var _gaq = _gaq || [];
-      _gaq.push(['_setAccount', 'UA-25856770-1']);
-      _gaq.push(['_trackPageview']);
-
-      (function() {
-      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-      })();
-
-    </script>
   </head>
   <body>
 
-    {{ content }}
+    <div id="header">
+      <nav>
+        <li class="fork"><a href="https://github.com/immerrr/lua-mode">Fork On GitHub</a></li>
+        <li class="downloads"><a href="https://github.com/immerrr/lua-mode/zipball/master">ZIP</a></li>
+        <li class="downloads"><a href="https://github.com/immerrr/lua-mode/tarball/master">TAR</a></li>
+        <li class="title">DOWNLOADS</li>
+      </nav>
+    </div><!-- end header -->
+
+    <div class="wrapper">
+      <section>
+        <div id="title">
+          <h1>Lua-mode</h1>
+          <p>Emacs major mode for editing Lua</p>
+          <hr/>
+          <span class="credits left">Project maintained by <a href="https://github.com/immerrr">immerrr</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="http://twitter.com/#!/michigangraham">mattgraham</a></span>
+        </div>
+
+        <hr/>
+        {{content}}
+      </section>
+
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><!--<![endif]-->
+    <script type="text/javascript">
+      var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+      document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+      try {
+      var pageTracker = _gat._getTracker("UA-25856770-1");
+      pageTracker._trackPageview();
+      } catch(err) {}
+    </script>
 
   </body>
 </html>
