@@ -849,31 +849,30 @@ use standalone."
                       ;; end of a block matched
                       (- lua-indent-level))))))
 
-(defun lua-cleanup-indentation-info (info)
-  "Cleanup the list of indentation information.
-There are two tokens that cause list cleanup: remove-matching,
-and replace matching. These tokens are considered cleanup tokens.
+(defun  lua-add-indentation-info-pair (pair info)
+  "Add the given indentation info pair to the list of indentation information.
+This function has special case handling for two tokens: remove-matching,
+and replace-matching. These two tokens are cleanup tokens that remove or
+alter the effect of a previously recorded indentation info.
 
-When a remove-matching token is found, the next non cleanup token
-is removed from list.
+When a remove-matching token is encountered, the last recorded info, i.e.
+the car of the list is removed. This is used to roll-back an indentation of a
+block opening statement when it is closed.
 
-When a replace-matching token is found, the next non-cleanup
-token is removed from the list, and the cdr of the
-replace-matching token is inserted in its place."
-  (let (value
-        (erase-count 0))
-    (dolist (elt info value)
-      (cond
-       ( (eq 'remove-matching (car elt))
-         (setq erase-count (1+ erase-count)))
-       ( (eq 'replace-matching (car elt))
-         (setq value (cons (cdr elt) value))
-         (setq erase-count (1+ erase-count)))
-       ( t
-         (if (= erase-count 0)
-             (setq value (cons elt value))
-           (setq erase-count (1- erase-count))))))
-    (reverse value)))
+When a replace-matching token is seen, the last recorded info is removed,
+and the cdr of the replace-matching info is added in its place. This is used
+when a middle-of the block (the only case is 'else') is seen on the same line
+the block is opened."
+  (cond
+   ( (eq 'remove-matching (car pair))
+     ; Remove head of list
+     (cdr info))
+   ( (eq 'replace-matching (car pair))
+     ; remove head of list, and add the cdr of pair instead
+     (cons (cdr pair) (cdr info)))
+   ( t
+     ; Just add the pair
+     (cons pair info))))
 
 (defun lua-calculate-indentation-info (&optional parse-start parse-end)
   "For each block token on the line, computes how it affects the indentation.
@@ -901,10 +900,11 @@ and relative each, and the shift/column to indent to."
                 (found-end (match-end 0))
                 (data (match-data)))
             (setq indentation-info
-                  (cons (lua-make-indentation-info-pair found-token found-pos) indentation-info))))
-
-        (or (and indentation-info (lua-cleanup-indentation-info indentation-info))
-            (list (cons 'absolute start-indentation)))))))
+		  (lua-add-indentation-info-pair
+		   (lua-make-indentation-info-pair found-token found-pos)
+		   indentation-info))))
+	(or indentation-info
+	    (list (cons 'absolute start-indentation)))))))
 
 (defun lua-accumulate-indentation-info (info)
   "Accumulates the indentation information previously calculated by
