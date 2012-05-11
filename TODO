@@ -3,10 +3,14 @@
 
 
 * TODO Support line-continuation with commas [0/2]
-  - [ ]  assignments
-    x,y = long_value,
-          other_long_value
-  - [ ] `for ... do' operators
+** comma is encountered in:
+    - assignment: var,var,var = expr,expr,expr
+    - for: for name = expr, expr, expr do <block> end
+    - for: for name,name,name = expr,expr,expr do <block> end
+    - funcall: <prefixexp> ( expr, expr, expr )
+    - function: function (name, name, name) <block> end
+    - tablector: { expr, expr, expr }
+    - tablector: { [expr] = expr, name = expr, expr }
 
 * TODO update site [0/2]
 ** TODO reuse section-aware template
