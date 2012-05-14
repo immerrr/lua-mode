@@ -238,8 +238,10 @@ traceback location."
   :type 'boolean
   :group 'lua)
 
-(defvar lua-mode-hook nil
-  "Hooks called when Lua mode fires up.")
+(defcustom lua-mode-hook nil
+  "Hooks called when Lua mode fires up."
+  :type 'hook
+  :group 'lua)
 
 (defvar lua-region-start (make-marker)
   "Start of special region for Lua communication.")
