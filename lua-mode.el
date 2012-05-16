@@ -266,6 +266,162 @@ traceback location."
     ["Search Documentation" lua-search-documentation t])
   "Emacs menu for Lua mode.")
 
+
+(eval-and-compile 
+  (defvar lua-builtins-regexp
+    (concat "\\_<" (regexp-opt 
+    '(  "_G"
+        "assert"
+        "collectgarbage"
+        "dofile"
+        "error"
+        "getfenv"
+        "getmetatable"
+        "ipairs"
+        "load"
+        "loadfile"
+        "loadstring"
+        "module"
+        "next"
+        "pairs"
+        "pcall"
+        "print"
+        "rawequal"
+        "rawget"
+        "rawset"
+        "require"
+        "select"
+        "setfenv"
+        "setmetatable"
+        "tonumber"
+        "tostring"
+        "type"
+        "unpack"
+        "xpcall") t) "\\_>")
+    "Lua builtins"))
+    
+    
+(eval-and-compile 
+  (defvar lua-tablelib-regexp
+    (concat "\\_<\\(table\\.\\)" (regexp-opt 
+    '(  "concat"
+        "insert"
+        "remove"
+        "maxn"
+        "sort") t) "\\_>")
+    "Lua table lib"))
+    
+(eval-and-compile 
+  (defvar lua-stringlib-regexp
+    (concat "\\_<\\(string\\.\\)" (regexp-opt 
+    '(  "byte"
+        "char"
+        "dump"
+        "find"
+        "format"
+        "gmatch"
+        "gsub"
+        "len"
+        "lower"
+        "match"
+        "rep"
+        "reverse"
+        "sub"
+        "upper") t) "\\_>")
+    "Lua string lib"))
+    
+    
+(eval-and-compile 
+  (defvar lua-coroutinelib-regexp
+    (concat "\\_<\\(coroutine\\.\\)" (regexp-opt 
+    '(  "create"
+        "resume"
+        "running"
+        "status"
+        "wrap"
+        "yield") t) "\\_>")
+    "Lua coroutine lib"))
+    
+
+(eval-and-compile 
+  (defvar lua-oslib-regexp
+    (concat "\\_<\\(os\\.\\)" (regexp-opt 
+    '(  "clock"
+        "date"
+        "difftime"
+        "execute"
+        "exit"
+        "getenv"
+        "remove"
+        "rename"
+        "setlocale"
+        "time"
+        "tmpname") t) "\\_>")
+    "Lua os lib"))
+
+
+(eval-and-compile 
+  (defvar lua-iolib-regexp
+    (concat "\\_<\\(io\\.\\)" (regexp-opt 
+    '(  "close"
+        "flush"
+        "input"
+        "lines"
+        "open"
+        "output"
+        "popen"
+        "read"
+        "stderr"
+        "stdin"
+        "stdout"
+        "tmpfile"
+        "type"
+        "write") t) "\\_>")
+    "Lua io lib"))
+
+
+(eval-and-compile 
+  (defvar lua-mathlib-regexp
+    (concat "\\_<\\(math\\.\\)" (regexp-opt 
+    '(  "abs"
+        "acos"
+        "asin"
+        "atan"
+        "atan2"
+        "ceil"
+        "cos"
+        "cosh"
+        "deg"
+        "exp"
+        "floor"
+        "fmod"
+        "frexp"
+        "huge"
+        "ldexp"
+        "log"
+        "log10"
+        "max"
+        "min"
+        "modf"
+        "pi"
+        "pow"
+        "rad"
+        "random"
+        "randomseed"
+        "sin"
+        "sinh"
+        "sqrt"
+        "tan"
+        "tanh") t) "\\_>")
+    "Lua math lib"))
+
+
+(eval-and-compile 
+  (defvar lua-number-regexp
+    "\\_<\\([0-9]*\\.?[0-9]*\\|0x[0-9a-fA-F]*\\)\\_>"
+    
+    "Lua number"))
+
 (defvar lua-font-lock-keywords
   (eval-when-compile
     (list
@@ -292,6 +448,15 @@ traceback location."
                            "or" "repeat" "return" "then" "true" "until"
                            "while") t)
              "\\_>")
+
+     (list lua-builtins-regexp 1 'font-lock-builtin-face )
+     (list lua-tablelib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
+     (list lua-oslib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
+     (list lua-iolib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
+     (list lua-stringlib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
+     (list lua-mathlib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
+     (list lua-coroutinelib-regexp (list 1 'font-lock-builtin-face) (list 2 'font-lock-builtin-face))
+     (list lua-number-regexp 1 'font-lock-constant-face)
 
      "Default expressions to highlight in Lua mode.")))
 
