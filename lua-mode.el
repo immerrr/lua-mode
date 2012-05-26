@@ -1420,12 +1420,12 @@ left out."
   (if (fboundp 'with-silent-modifications)
       (defalias 'lua-with-silent-modifications 'with-silent-modifications)
 
-    (defmacro lua-with-silent-modifications (body)
+    (defmacro lua-with-silent-modifications (&rest body)
       "Execute BODY, pretending it does not modifies the buffer.
 
 This is a reimplementation of macro `with-silent-modifications'
 for Emacsen that doesn't contain one (pre-23.3)."
-      (let ((old-modified-p (buffer-modified-p))
+      `(let ((old-modified-p (buffer-modified-p))
             (inhibit-modification-hooks t)
             (buffer-undo-list t))
 
