@@ -266,6 +266,65 @@ traceback location."
     ["Search Documentation" lua-search-documentation t])
   "Emacs menu for Lua mode.")
 
+(defconst
+  lua--builtins
+  (eval-and-compile
+    (let*
+        ((modules
+          '("_G" "_VERSION" "assert" "collectgarbage" "dofile" "error" "getfenv" "getmetatable"
+            "ipairs" "load" "loadfile" "loadstring" "module" "next" "pairs" "pcall" "print" 
+            "rawequal" "rawget" "rawlen" "rawset" "require" "select" "setfenv" "setmetatable"
+            "tonumber" "tostring" "type" "unpack" "xpcall"
+            ("bit32" . ("arshift" "band" "bnot" "bor" "btest" "bxor" "extract" "lrotate" "lshift"
+                        "replace" "rrotate" "rshift"))
+            ("coroutine" . ("create" "resume" "running" "status" "wrap" "yield"))
+            ("debug" . ("debug" "getfenv" "gethook" "getinfo" "getlocal" "getmetatable" 
+                        "getregistry" "getupvalue" "getuservalue" "setfenv" "sethook" "setlocal" 
+                        "setmetatable" "setupvalue" "setuservalue" "traceback" "upvalueid"
+                        "upvaluejoin"))
+            ("io" . ("close" "flush" "input" "lines" "open" "output" "popen" "read" "stderr" 
+                     "stdin" "stdout" "tmpfile" "type" "write"))
+            ("math" . ("abs" "acos" "asin" "atan" "atan2" "ceil" "cos" "cosh" "deg" "exp" "floor"
+                       "fmod" "frexp" "huge" "ldexp" "log" "log10" "max" "min" "modf" "pi" "pow"
+                       "rad" "random" "randomseed" "sin" "sinh" "sqrt" "tan" "tanh"))
+            ("os" . ("clock" "date" "difftime" "execute" "exit" "getenv" "remove" "rename"
+                     "setlocale" "time" "tmpname"))
+            ("package" . ("config" "cpath" "loaded" "loaders" "loadlib" "path" "preload"
+                          "searchers" "searchpath" "seeall"))
+            ("string" . ("byte" "char" "dump" "find" "format" "gmatch" "gsub" "len" "lower"
+                         "match" "rep" "reverse" "sub" "upper"))
+            ("table" . ("concat" "insert" "maxn" "pack" "remove" "sort" "unpack")))))
+
+      ;; This code uses \\< and \\> to delimit builtin symbols instead of \\_< and \\_>, because --
+      ;; a necessity -- '.' syntax class is hacked to 'symbol' and \\_> won't detect a symbol
+      ;; boundary in 'foo.bar' and -- sufficiency -- conveniently, underscore '_' is hacked to count
+      ;; as word constituent, but only for font-locking. Neither of these hacks makes sense to me,
+      ;; I'm going to wipe them out as soon as I'm sure that indentation won't get hurt. --immerrr
+      ;;
+      (flet ((module-name-re (x) (concat "\\(?1:\\<" (if (listp x) (car x) x) "\\>\\)"))
+             (module-members-re (x) (if (listp x)
+                                        (concat "\\(?:[ \t]*\\.[ \t]*\\<\\(?2:"
+                                                (regexp-opt (cdr x))
+                                                "\\)\\>\\)?")
+                                      "")))
+
+        (concat
+         ;; common prefix - beginning-of-line or neither of [ '.', ':' ] to exclude "foo.string.rep"
+         "\\(?:\\`\\|[^:. \n\t]\\)"
+         ;; optional whitespace
+         "[ \n\t]*"
+         "\\(?:"
+         ;; any of modules/functions
+         (mapconcat (lambda (x) (concat "\\(?:" (module-name-re x) (module-members-re x) "\\)"))
+                    modules
+                    "\\|")
+         "\\)"))))
+
+  "A regexp that matches lua builtin functions & variables.
+
+This is a compilation of 5.1 and 5.2 builtins taken from the
+index of respective Lua reference manuals.")
+
 (defvar lua-font-lock-keywords
   (eval-when-compile
     (list
@@ -280,6 +339,10 @@ traceback location."
      ;; Function name declarations.
      '("^[ \t]*\\_<\\(\\(local[ \t]+\\)?function\\)\\_>[ \t]+\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)"
        (1 font-lock-keyword-face) (3 font-lock-function-name-face nil t))
+
+     ;; Highlight lua builtin functions and variables
+     `(,lua--builtins
+           (1 font-lock-builtin-face) (2 font-lock-builtin-face nil noerror))
 
      ;; Handle function names in assignments
      '("\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)[ \t]*=[ \t]*\\(function\\)\\_>"
