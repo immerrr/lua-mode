@@ -1275,7 +1275,7 @@ t, otherwise return nil.  BUF must exist."
       (if (not (eq major-mode 'lua-mode))
           (lua-mode))
       ;; FIXME: fix offset when executing region
-      (goto-line line)
+      (goto-char (point-min)) (forward-line (1- line))
       (message "Jumping to error in file %s on line %d" file line))))
 
 (defun lua-prompt-line ()
