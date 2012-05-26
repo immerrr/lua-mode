@@ -38,6 +38,9 @@
 
 ;;; Commentary:
 
+;; Thanks to d87 <github.com/d87> for an idea of highlighting lua
+;; builtins/numbers
+
 ;; Thanks to Vedat Hallac <github.com/vhallac> for sharing some of
 ;; his fixes and updates to core indentation logics
 
@@ -295,27 +298,36 @@ traceback location."
                          "match" "rep" "reverse" "sub" "upper"))
             ("table" . ("concat" "insert" "maxn" "pack" "remove" "sort" "unpack")))))
 
-      ;; This code uses \\< and \\> to delimit builtin symbols instead of \\_< and \\_>, because --
-      ;; a necessity -- '.' syntax class is hacked to 'symbol' and \\_> won't detect a symbol
-      ;; boundary in 'foo.bar' and -- sufficiency -- conveniently, underscore '_' is hacked to count
-      ;; as word constituent, but only for font-locking. Neither of these hacks makes sense to me,
-      ;; I'm going to wipe them out as soon as I'm sure that indentation won't get hurt. --immerrr
+      ;; This code uses \\< and \\> to delimit builtin symbols instead of
+      ;; \\_< and \\_>, because -- a necessity -- '.' syntax class is hacked
+      ;; to 'symbol' and \\_> won't detect a symbol boundary in 'foo.bar' and
+      ;; -- sufficiency -- conveniently, underscore '_' is hacked to count as
+      ;; word constituent, but only for font-locking. Neither of these hacks
+      ;; makes sense to me, I'm going to wipe them out as soon as I'm sure
+      ;; that indentation won't get hurt. --immerrr
       ;;
-      (flet ((module-name-re (x) (concat "\\(?1:\\<" (if (listp x) (car x) x) "\\>\\)"))
-             (module-members-re (x) (if (listp x)
-                                        (concat "\\(?:[ \t]*\\.[ \t]*\\<\\(?2:"
-                                                (regexp-opt (cdr x))
-                                                "\\)\\>\\)?")
-                                      "")))
+      (flet
+          ((module-name-re (x)
+                           (concat "\\(?1:\\<"
+                                   (if (listp x) (car x) x)
+                                   "\\>\\)"))
+           (module-members-re (x) (if (listp x)
+                                      (concat "\\(?:[ \t]*\\.[ \t]*"
+                                              "\\<\\(?2:"
+                                              (regexp-opt (cdr x))
+                                              "\\)\\>\\)?")
+                                    "")))
 
         (concat
-         ;; common prefix - beginning-of-line or neither of [ '.', ':' ] to exclude "foo.string.rep"
+         ;; common prefix - beginning-of-line or neither of [ '.', ':' ] to
+         ;; exclude "foo.string.rep"
          "\\(?:\\`\\|[^:. \n\t]\\)"
          ;; optional whitespace
          "[ \n\t]*"
          "\\(?:"
          ;; any of modules/functions
-         (mapconcat (lambda (x) (concat "\\(?:" (module-name-re x) (module-members-re x) "\\)"))
+         (mapconcat (lambda (x) (concat (module-name-re x)
+                                        (module-members-re x)))
                     modules
                     "\\|")
          "\\)"))))
@@ -352,7 +364,14 @@ index of respective Lua reference manuals.")
      '("\\_<0x[[:xdigit:]]+\\_>" . font-lock-constant-face)
 
      ;; regular numbers
-     '("\\_<\\(?1:\\(?:\\(?:[0-9]+\\.?[0-9]*\\|[0-9]*\\.?[0-9]+\\)\\(?:[eE][+-]?[0-9]+\\)?\\)\\)\\_>"
+     ;;
+     ;; This regexp relies on '.' being symbol constituent. Whenever this
+     ;; changes, the regexp needs revisiting --immerrr
+     `(,(concat "\\_<\\(?1:"
+                ;; make a digit on either side of dot mandatory
+                "\\(?:[0-9]+\\.?[0-9]*\\|[0-9]*\\.?[0-9]+\\)"
+                "\\(?:[eE][+-]?[0-9]+\\)?"
+                "\\)\\_>")
        . font-lock-constant-face)
 
      ;; Keywords.
