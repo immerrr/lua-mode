@@ -348,6 +348,13 @@ index of respective Lua reference manuals.")
      '("\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)[ \t]*=[ \t]*\\(function\\)\\_>"
        (1 font-lock-function-name-face nil t) (3 font-lock-keyword-face))
 
+     ;; octal numbers
+     '("\\_<0x[[:xdigit:]]+\\_>" . font-lock-constant-face)
+
+     ;; regular numbers
+     '("\\_<\\(?1:\\(?:\\(?:[0-9]+\\.?[0-9]*\\|[0-9]*\\.?[0-9]+\\)\\(?:[eE][+-]?[0-9]+\\)?\\)\\)\\_>"
+       . font-lock-constant-face)
+
      ;; Keywords.
      (concat "\\_<"
              (regexp-opt '("and" "break" "do" "else" "elseif" "end" "false"
