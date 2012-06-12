@@ -269,9 +269,11 @@ traceback location."
     ["Search Documentation" lua-search-documentation t])
   "Emacs menu for Lua mode.")
 
-(defconst
-  lua--builtins
-  (eval-and-compile
+;; the whole defconst is inside eval-when-compile, because it's later referenced
+;; inside another eval-and-compile block
+(eval-and-compile
+  (defconst
+    lua--builtins
     (let*
         ((modules
           '("_G" "_VERSION" "assert" "collectgarbage" "dofile" "error" "getfenv" "getmetatable"
