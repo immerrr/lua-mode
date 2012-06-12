@@ -578,10 +578,21 @@ Return the amount the indentation changed by."
   (if (and (lua-string-p) (not lua-indent-string-contents))
       ;; if inside string and strings aren't to be indented, return current indentation
       (current-indentation)
-    ;; otherwise indent by lua-indent-level relative to the line where literal starts
+    ;; Otherwise, indent as a comment
     (save-excursion
-      (goto-char (lua-get-multiline-start))
-      (+ (current-indentation) lua-indent-level))))
+      (cond
+       ;; If it is the end of a multi-line comment, simply mirror the opening
+       ;; line's indent.
+       ((looking-at "\\s *\\(?:--\\)?\\]\\(?1:=*\\)\\]")
+        (re-search-backward (format "\\[%s\\["
+                                    (or (match-string-no-properties 1) ""))
+                            (lua-get-multiline-start)
+                            'noerror)
+        (current-indentation))
+       ;; otherwise indent by lua-indent-level relative to the line where literal starts
+       (t
+        (goto-char (lua-get-multiline-start)))
+       (+ (current-indentation) lua-indent-level)))))
 
 (defun lua-find-regexp (direction regexp &optional limit ignore-p)
   "Searches for a regular expression in the direction specified.
