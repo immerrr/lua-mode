@@ -591,8 +591,8 @@ Return the amount the indentation changed by."
         (current-indentation))
        ;; otherwise indent by lua-indent-level relative to the line where literal starts
        (t
-        (goto-char (lua-get-multiline-start)))
-       (+ (current-indentation) lua-indent-level)))))
+        (goto-char (lua-get-multiline-start))
+        (+ (current-indentation) lua-indent-level))))))
 
 (defun lua-find-regexp (direction regexp &optional limit ignore-p)
   "Searches for a regular expression in the direction specified.
