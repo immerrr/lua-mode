@@ -779,7 +779,8 @@ Returns final value of point as integer or nil if operation failed."
     (while t
       (unless (eql (forward-line (if back -1 1)) 0)    ;; 0 means success
         (throw 'found nil))
-      (unless (looking-at "\\s *\\(--.*\\)?$")       ;; blank lua line
+      (unless (or (looking-at "\\s *\\(--.*\\)?$")
+                  (lua-comment-or-string-p))
         (throw 'found (point))))))
 
 (eval-when-compile
