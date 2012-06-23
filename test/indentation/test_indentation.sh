@@ -8,7 +8,7 @@ declare -a PARAMS
 PARAMS=( "$@" )
 
 set ${EMACS=emacs}
-set ${LUA_MODE=$(dirname $0)/../lua-mode.el}
+set ${LUA_MODE=$(dirname $0)/../../lua-mode.el}
 
 if [ ${#PARAMS[@]} -eq 0 ]; then
     cat <<EOF
@@ -54,9 +54,16 @@ test_file_indentation() {
         --load $LUA_MODE \
         --eval "(setq make-backup-files nil)" \
         --eval "\
-(progn
-  (find-file \"$INPUT\")
+(with-temp-buffer
+  ;; lua-mode indents by 3s, that's not even a multiple of tab width (4/8)
+  (set-default 'indent-tabs-mode nil) \
+  (insert-file-contents \"$INPUT\")
   (lua-mode)
+
+  ;; permit unsafe (e.g. lua-*) local variables and read them
+  (setq enable-local-variables :all)
+  (hack-local-variables)
+
   (indent-region (point-min) (point-max))
   (write-file \"$OUTPUT\"))" \
       > $ERROR_LOG 2>&1 \

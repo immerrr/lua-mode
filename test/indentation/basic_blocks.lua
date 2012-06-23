@@ -1,0 +1,45 @@
+do
+a = 2
+c = 5
+end
+
+if good then
+do_good()
+elseif bad then
+do_bad()
+else
+do_nothing()
+really_do_nothing()
+end
+
+while true do
+sun.rise_in_the_east()
+end
+
+repeat
+host.offer_hot_beverage(guest)
+until guest.good
+
+for i,v in ipairs(base) do
+take(base)
+end
+
+function fact(i)
+if i == 0 then
+return 1
+else
+if i == 1 then
+return 1
+else
+if i == 2 then
+return 2
+else
+fact = 2
+for n=3,i do
+fact = fact * n
+end
+return fact
+end
+end
+end
+end
