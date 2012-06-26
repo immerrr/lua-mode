@@ -1222,6 +1222,28 @@ If `lua-process' is nil or dead, start a new process first."
   (interactive)
   (lua-send-region (line-beginning-position) (line-end-position)))
 
+(defun lua-send-defun (pos)
+  "Send the function definition around point to lua subprocess."
+  (interactive "d")
+  (save-excursion
+    (let ((start (if (save-match-data (looking-at "^function[ \t]"))
+                     ;; point already at the start of "function".
+                     ;; We need to handle this case explicitly since
+                     ;; lua-beginning-of-proc will move to the
+                     ;; beginning of the _previous_ function.
+                     (point)
+                   ;; point is not at the beginning of function, move
+                   ;; there and bind start to that position
+                   (lua-beginning-of-proc)
+                   (point)))
+          (end (progn (lua-end-of-proc) (point))))
+
+      ;; make sure point is in a function defintion before sending to
+      ;; the subprocess
+      (if (and (>= pos start) (< pos end))
+          (lua-send-region start end)
+        (error "Not on a function definition")))))
+
 (defun lua-send-region (start end)
   "Send region to lua subprocess."
   (interactive "r")
