@@ -1335,22 +1335,7 @@ t, otherwise return nil.  BUF must exist."
   (if lua-always-show
       (display-buffer lua-process-buffer)))
 
-(defun lua-send-proc ()
-  "Send proc around point to lua subprocess."
-  (interactive)
-  (let (beg end)
-    (save-excursion
-      (lua-beginning-of-proc)
-      (setq beg (point))
-      (lua-end-of-proc)
-      (setq end (point)))
-    (or (and lua-process
-             (comint-check-proc lua-process-buffer))
-        (lua-start-process lua-default-application))
-    (comint-simple-send lua-process
-                        (buffer-substring beg end))
-    (if lua-always-show
-        (display-buffer lua-process-buffer))))
+(defalias 'lua-send-proc 'lua-send-defun)
 
 ;; FIXME: This needs work... -Bret
 (defun lua-send-buffer ()
