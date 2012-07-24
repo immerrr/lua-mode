@@ -422,36 +422,8 @@ index of respective Lua reference manuals.")
              (temp-directory)
            temporary-file-directory))))))
 
-;;;###autoload
-(defun lua-mode ()
-  "Major mode for editing Lua code.
-The following keys are bound:
-\\{lua-mode-map}
-"
-  (interactive)
-  (let ((switches nil)
-        s)
-    (kill-all-local-variables)
-    (setq major-mode 'lua-mode)
-    (setq mode-name "Lua")
-    (setq comint-prompt-regexp lua-prompt-regexp)
-    (make-local-variable 'lua-default-command-switches)
-    (set (make-local-variable 'beginning-of-defun-function)
-         'lua-beginning-of-proc)
-    (set (make-local-variable 'end-of-defun-function) 'lua-end-of-proc)
-    (set (make-local-variable 'indent-line-function) 'lua-indent-line)
-    (set (make-local-variable 'comment-start) lua-comment-start)
-    (set (make-local-variable 'comment-start-skip) lua-comment-start-skip)
-    (set (make-local-variable 'font-lock-defaults)
-         '(lua-font-lock-keywords
-           nil nil ((?_ . "w"))))
-    (set (make-local-variable 'imenu-generic-expression)
-         lua-imenu-generic-expression)
-    (setq local-abbrev-table lua-mode-abbrev-table)
-    (abbrev-mode 1)
-    (make-local-variable 'lua-default-eval)
-    (use-local-map lua-mode-map)
-    (set-syntax-table (copy-syntax-table))
+(defvar lua-mode-syntax-table
+  (let ((st (copy-syntax-table)))
     (modify-syntax-entry ?+ ".")
     (modify-syntax-entry ?- ". 12")
     (modify-syntax-entry ?* ".")
@@ -466,7 +438,35 @@ The following keys are bound:
     (modify-syntax-entry ?~ ".")
     (modify-syntax-entry ?\n ">")
     (modify-syntax-entry ?\' "\"")
-    (modify-syntax-entry ?\" "\"")
+    (modify-syntax-entry ?\" "\""))
+  "Syntax table used while in `lua-mode'.")
+
+;; For Emacs < 24.1
+(unless (fboundp 'prog-mode)
+  (defalias 'prog-mode 'fundamental-mode))
+
+;;;###autoload
+(define-derived-mode lua-mode prog-mode "Lua"
+  "Major mode for editing Lua code."
+  :abbrev-table lua-mode-abbrev-table
+  :syntax-table lua-mode-syntax-table
+  :group 'lua
+  (let ((switches nil)
+        s)
+    (setq comint-prompt-regexp lua-prompt-regexp)
+    (make-local-variable 'lua-default-command-switches)
+    (set (make-local-variable 'beginning-of-defun-function)
+         'lua-beginning-of-proc)
+    (set (make-local-variable 'end-of-defun-function) 'lua-end-of-proc)
+    (set (make-local-variable 'indent-line-function) 'lua-indent-line)
+    (set (make-local-variable 'comment-start) lua-comment-start)
+    (set (make-local-variable 'comment-start-skip) lua-comment-start-skip)
+    (set (make-local-variable 'font-lock-defaults)
+         '(lua-font-lock-keywords
+           nil nil ((?_ . "w"))))
+    (set (make-local-variable 'imenu-generic-expression)
+         lua-imenu-generic-expression)
+    (make-local-variable 'lua-default-eval)
     ;; setup menu bar entry (XEmacs style)
     (if (and (featurep 'menubar)
              (boundp 'current-menubar)
@@ -491,8 +491,7 @@ The following keys are bound:
 
     (set (make-local-variable 'parse-sexp-lookup-properties) t)
     (lua-mark-all-multiline-literals)
-    (lua--automark-multiline-update-timer)
-    (run-hooks 'lua-mode-hook)))
+    (lua--automark-multiline-update-timer)))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.lua$" . lua-mode))
