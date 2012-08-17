@@ -448,7 +448,8 @@ index of respective Lua reference manuals.")
     (modify-syntax-entry ?~ ".")
     (modify-syntax-entry ?\n ">")
     (modify-syntax-entry ?\' "\"")
-    (modify-syntax-entry ?\" "\""))
+    (modify-syntax-entry ?\" "\"")
+    st)
   "Syntax table used while in `lua-mode'.")
 
 ;;;###autoload
