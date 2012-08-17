@@ -154,8 +154,7 @@ Should be a list of strings."
   "Buffer used for communication with Lua subprocess")
 
 (defun lua--customize-set-prefix-key (prefix-key-sym prefix-key-val)
-  ;; FIXME: enable assertion, it requires 'cl and I'm not sure of its availability
-  ;; (assert (eq prefix-key-sym 'lua-prefix-key))
+  (cl-assert (eq prefix-key-sym 'lua-prefix-key))
   (set prefix-key-sym (if (and prefix-key-val (> (length prefix-key-val) 0))
                           ;; read-kbd-macro returns a string or a vector
                           ;; in both cases (elt x 0) is ok
@@ -308,7 +307,7 @@ traceback location."
       ;; makes sense to me, I'm going to wipe them out as soon as I'm sure
       ;; that indentation won't get hurt. --immerrr
       ;;
-      (flet
+      (cl-labels
           ((module-name-re (x)
                            (concat "\\(?1:\\<"
                                    (if (listp x) (car x) x)
