@@ -442,11 +442,11 @@ index of respective Lua reference manuals.")
   "Syntax table used while in `lua-mode'.")
 
 ;; For Emacs < 24.1
-(unless (fboundp 'prog-mode)
-  (defalias 'prog-mode 'fundamental-mode))
+(defalias 'lua--prog-mode
+  (if (fboundp 'prog-mode) 'prog-mode 'fundamental-mode))
 
 ;;;###autoload
-(define-derived-mode lua-mode prog-mode "Lua"
+(define-derived-mode lua-mode lua--prog-mode "Lua"
   "Major mode for editing Lua code."
   :abbrev-table lua-mode-abbrev-table
   :syntax-table lua-mode-syntax-table
