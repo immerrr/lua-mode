@@ -105,6 +105,17 @@
 
 (require 'comint)
 
+;; Backward compatibility for Emacsen < 24.1
+(eval-and-compile
+  (defalias 'lua--prog-mode
+    (if (fboundp 'prog-mode) 'prog-mode 'fundamental-mode))
+
+  (defalias 'lua--cl-assert
+    (if (fboundp 'cl-assert) 'cl-assert 'assert))
+
+  (defalias 'lua--cl-labels
+    (if (fboundp 'cl-labels) 'cl-labels 'flet)))
+
 ;; Local variables
 (defgroup lua nil
   "Major mode for editing lua code."
@@ -154,7 +165,7 @@ Should be a list of strings."
   "Buffer used for communication with Lua subprocess")
 
 (defun lua--customize-set-prefix-key (prefix-key-sym prefix-key-val)
-  (cl-assert (eq prefix-key-sym 'lua-prefix-key))
+  (lua--cl-assert (eq prefix-key-sym 'lua-prefix-key))
   (set prefix-key-sym (if (and prefix-key-val (> (length prefix-key-val) 0))
                           ;; read-kbd-macro returns a string or a vector
                           ;; in both cases (elt x 0) is ok
@@ -307,7 +318,7 @@ traceback location."
       ;; makes sense to me, I'm going to wipe them out as soon as I'm sure
       ;; that indentation won't get hurt. --immerrr
       ;;
-      (cl-labels
+      (lua--cl-labels
           ((module-name-re (x)
                            (concat "\\(?1:\\<"
                                    (if (listp x) (car x) x)
@@ -439,10 +450,6 @@ index of respective Lua reference manuals.")
     (modify-syntax-entry ?\' "\"")
     (modify-syntax-entry ?\" "\""))
   "Syntax table used while in `lua-mode'.")
-
-;; For Emacs < 24.1
-(defalias 'lua--prog-mode
-  (if (fboundp 'prog-mode) 'prog-mode 'fundamental-mode))
 
 ;;;###autoload
 (define-derived-mode lua-mode lua--prog-mode "Lua"
