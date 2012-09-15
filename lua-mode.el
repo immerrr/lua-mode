@@ -493,21 +493,21 @@ index of respective Lua reference manuals.")
 
 (defvar lua-mode-syntax-table
   (let ((st (copy-syntax-table)))
-    (modify-syntax-entry ?+ ".")
-    (modify-syntax-entry ?- ". 12")
-    (modify-syntax-entry ?* ".")
-    (modify-syntax-entry ?/ ".")
-    (modify-syntax-entry ?^ ".")
+    (modify-syntax-entry ?+ "." st)
+    (modify-syntax-entry ?- ". 12" st)
+    (modify-syntax-entry ?* "." st)
+    (modify-syntax-entry ?/ "." st)
+    (modify-syntax-entry ?^ "." st)
     ;; This might be better as punctuation, as for C, but this way you
     ;; can treat table index as symbol.
-    (modify-syntax-entry ?. "_")        ; e.g. `io.string'
-    (modify-syntax-entry ?> ".")
-    (modify-syntax-entry ?< ".")
-    (modify-syntax-entry ?= ".")
-    (modify-syntax-entry ?~ ".")
-    (modify-syntax-entry ?\n ">")
-    (modify-syntax-entry ?\' "\"")
-    (modify-syntax-entry ?\" "\"")
+    (modify-syntax-entry ?. "_" st)     ; e.g. `io.string'
+    (modify-syntax-entry ?> "." st)
+    (modify-syntax-entry ?< "." st)
+    (modify-syntax-entry ?= "." st)
+    (modify-syntax-entry ?~ "." st)
+    (modify-syntax-entry ?\n ">" st)
+    (modify-syntax-entry ?\' "\"" st)
+    (modify-syntax-entry ?\" "\"" st)
     st)
   "Syntax table used while in `lua-mode'.")
 
