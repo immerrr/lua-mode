@@ -492,7 +492,7 @@ index of respective Lua reference manuals.")
            temporary-file-directory))))))
 
 (defvar lua-mode-syntax-table
-  (let ((st (copy-syntax-table)))
+  (with-syntax-table (copy-syntax-table)
     (modify-syntax-entry ?+ ".")
     (modify-syntax-entry ?- ". 12")
     (modify-syntax-entry ?* ".")
@@ -508,7 +508,7 @@ index of respective Lua reference manuals.")
     (modify-syntax-entry ?\n ">")
     (modify-syntax-entry ?\' "\"")
     (modify-syntax-entry ?\" "\"")
-    st)
+    (syntax-table))
   "Syntax table used while in `lua-mode'.")
 
 ;;;###autoload
