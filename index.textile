@@ -33,19 +33,17 @@ h3. MANUAL INSTALLATION
    * "last stable release":https://github.com/immerrr/lua-mode/zipball/rel-20111107
    * "current development snapshot":https://github.com/immerrr/lua-mode/zipball/master
 
-2. Add the following to your init-file:
+2. Next, you need to make sure that @lua-mode.el@ is on your load-path (and optionally byte-compile it) and to set up Emacs to automatically enable it for @*.lua@ files or ones that contain lua hash-bang line (`#!/usr/bin/lua`). Putting this snippet to @.emacs@ should be enough in most cases:
 
-   * Make sure that @lua-mode.el@ is on your @load-path@
+bc..    ;;;; This snippet enables lua-mode
+    ;; This line is not necessary, if lua-mode.el is already on your load-path
+    (add-to-list 'load-path "/path/to/directory/where/lua-mode-el/resides")
 
-bc.     (add-to-list 'load-path "/path/to/lua-mode")
-
-   * Load @lua-mode@ when visiting lua files automagically
-
-bc.     (autoload 'lua-mode "lua-mode" "Lua editing mode." t)
+    (autoload 'lua-mode "lua-mode" "Lua editing mode." t)
     (add-to-list 'auto-mode-alist '("\\.lua$" . lua-mode))
     (add-to-list 'interpreter-mode-alist '("lua" . lua-mode))
 
-3. Byte-compile lua-mode if you like
+p. 3. (optional) Byte-compile lua-mode if you like
 
 h2. USAGE
 
