@@ -15,6 +15,18 @@ If you have a problem or a suggestion about *lua-mode*, please, let me know abou
 
 h2. INSTALLATION
 
+h3. USING "EL-GET":el-get
+
+The preferable way to install *lua-mode* is via "el-get":el-get package, which is itself a package manager which greatly simplifies adding modules to your Emacs and keeping them up-to-date. Once you have *el-get* set up, installing *lua-mode* can be done with
+
+bc.    <M-x> el-get-install "lua-mode"
+
+and updating is no more than
+
+bc.    <M-x> el-get-update "lua-mode"
+    
+Please, consult with el-get documentation for further information.
+
 h3. MANUAL INSTALLATION
 
 1. Grab a zipball[1] or pick any commit you like on "github":lua-mode-github:
@@ -35,15 +47,9 @@ bc.     (autoload 'lua-mode "lua-mode" "Lua editing mode." t)
 
 3. Byte-compile lua-mode if you like
 
-h3. USING "EL-GET":el-get
-
-Installing with el-get is as easy as
-
-bc.     (el-get-install 'lua-mode)
-
 h2. USAGE
 
-*lua-mode* supports c-mode style formatting and sending of lines/regions/files to a Lua interpreter. An interpreter (see variable @lua-default-application@) will be started if you try to send some code and none is running. You can use the process-buffer (named after the application you chose) as if it were an interactive shell. See the documentation for @comint.el@ for details.
+*lua-mode* supports automatical code indentation and sending of lines/regions/files to a Lua interpreter. An interpreter (see variable @lua-default-application@) will be started if you try to send some code and none is running. You can use the process-buffer (named after the application you chose) as if it were an interactive shell. See the documentation for @comint.el@ for details.
 
 Lua-mode also works with Hide Show minor mode (see @hs-minor-mode@).
 
