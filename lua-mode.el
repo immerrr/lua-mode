@@ -105,6 +105,76 @@
 
 (require 'comint)
 
+(eval-and-compile
+  ;; Backward compatibility for Emacsen < 24.1
+  (defalias 'lua--prog-mode
+    (if (fboundp 'prog-mode) 'prog-mode 'fundamental-mode))
+
+  (defalias 'lua--cl-assert
+    (if (fboundp 'cl-assert) 'cl-assert 'assert))
+
+  (defalias 'lua--cl-labels
+    (if (fboundp 'cl-labels) 'cl-labels 'flet))
+
+  ;; for Emacsen < 22.1
+  (defalias 'lua--with-no-warnings
+    (if (fboundp 'with-no-warnings) 'with-no-warnings 'progn))
+
+  ;; provide backward compatibility for Emacs < 23.2
+  ;; called-interactively-p receives an argument starting from Emacs 23.2
+  ;; In Emacs 22 & Emacs 23.1 it didn't expect an argument
+  ;; In Emacs 21 it was called interactively-p
+  (condition-case nil
+      (progn (called-interactively-p nil)
+             ;; if first call succeeds, make lua-called-interactively-p an alias
+             (defalias 'lua--called-interactively-p 'called-interactively-p))
+
+    (wrong-number-of-arguments
+     ;; wrong number of arguments means it's 22.1 <= Emacs < 23.2
+     ;;
+     ;; Newer and smarter Emacsen will warn about obsolete functions
+     ;; and/or wrong number of arguments. Turning these warnings off,
+     ;; since it's backward-compatibility-oriented code anyway.
+     (lua--with-no-warnings
+       (defun lua--called-interactively-p (kind)
+         "Return t if containing function was called interactively.
+
+This function provides lua-mode backward compatibility for
+pre-23.2 Emacsen."
+         (if (eq kind 'interactive)
+             (interactive-p)
+           (called-interactively-p)))))
+
+    ;; if not, it's probably < 22.1, provide partial compatibility
+    ;;
+    ;; Once again, turning obsolete-function warnings off (see above).
+    (error
+     (lua--with-no-warnings
+       (defun lua--called-interactively-p (&rest opts)
+         "Return t if containing function was called interactively.
+
+This function provides lua-mode backward compatibility for pre-22
+Emacsen."
+         (interactive-p)))))
+
+  ;; backward compatibility for Emacsen < 23.3
+  ;; Emacs 23.3 introduced with-silent-modifications macro
+  (if (fboundp 'with-silent-modifications)
+      (defalias 'lua--with-silent-modifications 'with-silent-modifications)
+
+    (defmacro lua--with-silent-modifications (&rest body)
+      "Execute BODY, pretending it does not modifies the buffer.
+
+This is a reimplementation of macro `with-silent-modifications'
+for Emacsen that doesn't contain one (pre-23.3)."
+      `(let ((old-modified-p (buffer-modified-p))
+            (inhibit-modification-hooks t)
+            (buffer-undo-list t))
+
+        (unwind-protect
+            ,@body
+          (set-buffer-modified-p old-modified-p))))))
+
 ;; Local variables
 (defgroup lua nil
   "Major mode for editing lua code."
@@ -154,8 +224,7 @@ Should be a list of strings."
   "Buffer used for communication with Lua subprocess")
 
 (defun lua--customize-set-prefix-key (prefix-key-sym prefix-key-val)
-  ;; FIXME: enable assertion, it requires 'cl and I'm not sure of its availability
-  ;; (assert (eq prefix-key-sym 'lua-prefix-key))
+  (lua--cl-assert (eq prefix-key-sym 'lua-prefix-key))
   (set prefix-key-sym (if (and prefix-key-val (> (length prefix-key-val) 0))
                           ;; read-kbd-macro returns a string or a vector
                           ;; in both cases (elt x 0) is ok
@@ -308,7 +377,7 @@ traceback location."
       ;; makes sense to me, I'm going to wipe them out as soon as I'm sure
       ;; that indentation won't get hurt. --immerrr
       ;;
-      (flet
+      (lua--cl-labels
           ((module-name-re (x)
                            (concat "\\(?1:\\<"
                                    (if (listp x) (car x) x)
@@ -422,36 +491,8 @@ index of respective Lua reference manuals.")
              (temp-directory)
            temporary-file-directory))))))
 
-;;;###autoload
-(defun lua-mode ()
-  "Major mode for editing Lua code.
-The following keys are bound:
-\\{lua-mode-map}
-"
-  (interactive)
-  (let ((switches nil)
-        s)
-    (kill-all-local-variables)
-    (setq major-mode 'lua-mode)
-    (setq mode-name "Lua")
-    (setq comint-prompt-regexp lua-prompt-regexp)
-    (make-local-variable 'lua-default-command-switches)
-    (set (make-local-variable 'beginning-of-defun-function)
-         'lua-beginning-of-proc)
-    (set (make-local-variable 'end-of-defun-function) 'lua-end-of-proc)
-    (set (make-local-variable 'indent-line-function) 'lua-indent-line)
-    (set (make-local-variable 'comment-start) lua-comment-start)
-    (set (make-local-variable 'comment-start-skip) lua-comment-start-skip)
-    (set (make-local-variable 'font-lock-defaults)
-         '(lua-font-lock-keywords
-           nil nil ((?_ . "w"))))
-    (set (make-local-variable 'imenu-generic-expression)
-         lua-imenu-generic-expression)
-    (setq local-abbrev-table lua-mode-abbrev-table)
-    (abbrev-mode 1)
-    (make-local-variable 'lua-default-eval)
-    (use-local-map lua-mode-map)
-    (set-syntax-table (copy-syntax-table))
+(defvar lua-mode-syntax-table
+  (with-syntax-table (copy-syntax-table)
     (modify-syntax-entry ?+ ".")
     (modify-syntax-entry ?- ". 12")
     (modify-syntax-entry ?* ".")
@@ -467,6 +508,31 @@ The following keys are bound:
     (modify-syntax-entry ?\n ">")
     (modify-syntax-entry ?\' "\"")
     (modify-syntax-entry ?\" "\"")
+    (syntax-table))
+  "Syntax table used while in `lua-mode'.")
+
+;;;###autoload
+(define-derived-mode lua-mode lua--prog-mode "Lua"
+  "Major mode for editing Lua code."
+  :abbrev-table lua-mode-abbrev-table
+  :syntax-table lua-mode-syntax-table
+  :group 'lua
+  (let ((switches nil)
+        s)
+    (setq comint-prompt-regexp lua-prompt-regexp)
+    (make-local-variable 'lua-default-command-switches)
+    (set (make-local-variable 'beginning-of-defun-function)
+         'lua-beginning-of-proc)
+    (set (make-local-variable 'end-of-defun-function) 'lua-end-of-proc)
+    (set (make-local-variable 'indent-line-function) 'lua-indent-line)
+    (set (make-local-variable 'comment-start) lua-comment-start)
+    (set (make-local-variable 'comment-start-skip) lua-comment-start-skip)
+    (set (make-local-variable 'font-lock-defaults)
+         '(lua-font-lock-keywords
+           nil nil ((?_ . "w"))))
+    (set (make-local-variable 'imenu-generic-expression)
+         lua-imenu-generic-expression)
+    (make-local-variable 'lua-default-eval)
     ;; setup menu bar entry (XEmacs style)
     (if (and (featurep 'menubar)
              (boundp 'current-menubar)
@@ -491,8 +557,7 @@ The following keys are bound:
 
     (set (make-local-variable 'parse-sexp-lookup-properties) t)
     (lua-mark-all-multiline-literals)
-    (lua--automark-multiline-update-timer)
-    (run-hooks 'lua-mode-hook)))
+    (lua--automark-multiline-update-timer)))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.lua$" . lua-mode))
@@ -1197,7 +1262,7 @@ When called interactively, switch to the process buffer."
       (accept-process-output (get-buffer-process (current-buffer)))
       (goto-char (point-max))))
   ;; when called interactively, switch to process buffer
-  (if (called-interactively-p 'any)
+  (if (lua--called-interactively-p 'any)
       (switch-to-buffer lua-process-buffer)))
 
 (defun lua-kill-process ()
@@ -1435,33 +1500,14 @@ left out."
 (define-key lua-mode-menu [search-documentation]
   '("Search Documentation" . lua-search-documentation))
 
-(eval-and-compile
-  ;; Emacs 23.3 introduced with-silent-modifications macro
-  ;; use it if it's available, otherwise define a replacement for that
-  (if (fboundp 'with-silent-modifications)
-      (defalias 'lua-with-silent-modifications 'with-silent-modifications)
-
-    (defmacro lua-with-silent-modifications (&rest body)
-      "Execute BODY, pretending it does not modifies the buffer.
-
-This is a reimplementation of macro `with-silent-modifications'
-for Emacsen that doesn't contain one (pre-23.3)."
-      `(let ((old-modified-p (buffer-modified-p))
-            (inhibit-modification-hooks t)
-            (buffer-undo-list t))
-
-        (unwind-protect
-            ,@body
-          (set-buffer-modified-p old-modified-p))))))
-
 (defsubst lua-put-char-property (pos property value &optional object)
-  (lua-with-silent-modifications
+  (lua--with-silent-modifications
 
    (if value
        (put-text-property pos (1+ pos) property value object)
      (remove-text-properties pos (1+ pos) (list property nil))))
 
-  ;; `lua-with-silent-modifications' inhibits modification hooks, one of which
+  ;; `lua--with-silent-modifications' inhibits modification hooks, one of which
   ;; is the hook that keeps `syntax-ppss' internal cache up-to-date. If this
   ;; isn't done, the results of subsequent calls to `syntax-ppss' are
   ;; invalid. To avoid such cache discrepancy, the hook must be run manually.
@@ -1502,10 +1548,10 @@ If END is nil, stop at `end-of-buffer'."
   (setq begin (or begin (point-min))
         end   (or end   (point-max)))
 
-  (lua-with-silent-modifications
+  (lua--with-silent-modifications
    (remove-text-properties begin end '(syntax-table ())))
 
-  ;; `lua-with-silent-modifications' inhibits modification hooks, one of which
+  ;; `lua--with-silent-modifications' inhibits modification hooks, one of which
   ;; is the hook that keeps `syntax-ppss' internal cache up-to-date. If this
   ;; isn't done, the results of subsequent calls to `syntax-ppss' are
   ;; invalid. To avoid such cache discrepancy, the hook must be run manually.
@@ -1526,7 +1572,7 @@ If BEGIN is nil, start from `beginning-of-buffer'.
 If END is nil, stop at `end-of-buffer'."
   (interactive)
 
-  (if (and (called-interactively-p 'any) (use-region-p))
+  (if (and (lua--called-interactively-p 'any) (use-region-p))
       (setq begin (region-beginning)
             end (region-end)))
 

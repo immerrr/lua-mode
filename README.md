@@ -6,17 +6,38 @@ If you have a problem or a suggestion about **lua-mode**, please, let me know ab
 
 ## INSTALLATION
 
-To install, just copy `lua-mode.el` into a directory on your load-path (and optionally byte-compile it).
-To set up Emacs to automatically edit files ending in `.lua` or with a lua hash-bang line using **lua-mode**
-add the following to your init file:
+### EL-GET INSTALLATION
+
+[El-get](https://github.com/dimitri/el-get) is a package manager which greatly simplifies adding
+modules to your Emacs and keeping them up-to-date. Once you have **el-get** set up, installing
+**lua-mode** can be done with
+
+    <M-x> el-get-install "lua-mode"
+
+and updating is no more than
+
+    <M-x> el-get-update "lua-mode"`
+    
+Please, consult with [el-get documentation](https://github.com/dimitri/el-get/blob/master/README.md) for further information.
+
+### MANUAL INSTALLATION
+
+To install, you need to make sure that `lua-mode.el` is on your load-path (and optionally byte-compile
+it) and to set up Emacs to automatically enable **lua-mode** for `*.lua` files or ones that contain lua
+hash-bang line (`#!/usr/bin/lua`). Putting this snippet to `.emacs` should be enough in most cases:
+```lisp
+    ;;;; This snippet enables lua-mode
+
+    ;; This line is not necessary, if lua-mode.el is already on your load-path
+    (add-to-list 'load-path "/path/to/directory/where/lua-mode-el/resides")
 
     (autoload 'lua-mode "lua-mode" "Lua editing mode." t)
     (add-to-list 'auto-mode-alist '("\\.lua$" . lua-mode))
     (add-to-list 'interpreter-mode-alist '("lua" . lua-mode))
-
+```
 ## USAGE
 
-**lua-mode** supports c-mode style formatting and sending of lines/regions/files to a Lua interpreter. An
+**lua-mode** supports some formatting and sending of lines/regions/files to a Lua interpreter. An
 interpreter (see variable `lua-default-application`) will be started if you try to send some code and none
 is running. You can use the process-buffer (named after the application you chose) as if it were an
 interactive shell. See the documentation for `comint.el` for details.
