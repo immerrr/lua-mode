@@ -924,6 +924,21 @@ previous one even though it looked like an end-of-statement.")
       ;; the control inside this function
       (re-search-forward lua-cont-bol-regexp line-end t))))
 
+(defconst lua-block-starter-regexp
+  (eval-when-compile
+    (concat
+     "\\(\\_<"
+     (regexp-opt '("do" "while" "repeat" "until" "if" "then"
+                   "else" "elseif" "end" "for" "local") t)
+     "\\_>\\)")))
+
+(defun lua-first-token-starts-block-p ()
+  "Returns true if the first token on this line is a block starter token."
+  (let ((line-end (line-end-position)))
+    (save-excursion
+      (beginning-of-line)
+      (re-search-forward (concat "\\s *" lua-block-starter-regexp) line-end t))))
+
 (defun lua-is-continuing-statement-p (&optional parse-start)
   "Return non-nil if the line continues a statement.
 More specifically, return the point in the line that is continued.
@@ -938,6 +953,7 @@ The criteria for a continuing statement are:
       (if parse-start (goto-char parse-start))
       (save-excursion (setq prev-line (lua-forward-line-skip-blanks 'back)))
       (and prev-line
+           (not (lua-first-token-starts-block-p))
            (or (lua-first-token-continues-p)
                (and (goto-char prev-line)
                     ;; check last token of previous nonblank line
