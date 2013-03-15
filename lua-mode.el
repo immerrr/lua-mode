@@ -345,29 +345,33 @@ traceback location."
     lua--builtins
     (let*
         ((modules
-          '("_G" "_VERSION" "assert" "collectgarbage" "dofile" "error" "getfenv" "getmetatable"
-            "ipairs" "load" "loadfile" "loadstring" "module" "next" "pairs" "pcall" "print" 
-            "rawequal" "rawget" "rawlen" "rawset" "require" "select" "setfenv" "setmetatable"
-            "tonumber" "tostring" "type" "unpack" "xpcall"
-            ("bit32" . ("arshift" "band" "bnot" "bor" "btest" "bxor" "extract" "lrotate" "lshift"
-                        "replace" "rrotate" "rshift"))
+          '("_G" "_VERSION" "assert" "collectgarbage" "dofile" "error" "getfenv"
+            "getmetatable" "ipairs" "load" "loadfile" "loadstring" "module"
+            "next" "pairs" "pcall" "print" "rawequal" "rawget" "rawlen" "rawset"
+            "require" "select" "setfenv" "setmetatable" "tonumber" "tostring"
+            "type" "unpack" "xpcall"
+            ("bit32" . ("arshift" "band" "bnot" "bor" "btest" "bxor" "extract"
+                        "lrotate" "lshift" "replace" "rrotate" "rshift"))
             ("coroutine" . ("create" "resume" "running" "status" "wrap" "yield"))
-            ("debug" . ("debug" "getfenv" "gethook" "getinfo" "getlocal" "getmetatable" 
-                        "getregistry" "getupvalue" "getuservalue" "setfenv" "sethook" "setlocal" 
-                        "setmetatable" "setupvalue" "setuservalue" "traceback" "upvalueid"
+            ("debug" . ("debug" "getfenv" "gethook" "getinfo" "getlocal"
+                        "getmetatable" "getregistry" "getupvalue" "getuservalue"
+                        "setfenv" "sethook" "setlocal" "setmetatable"
+                        "setupvalue" "setuservalue" "traceback" "upvalueid"
                         "upvaluejoin"))
-            ("io" . ("close" "flush" "input" "lines" "open" "output" "popen" "read" "stderr" 
-                     "stdin" "stdout" "tmpfile" "type" "write"))
-            ("math" . ("abs" "acos" "asin" "atan" "atan2" "ceil" "cos" "cosh" "deg" "exp" "floor"
-                       "fmod" "frexp" "huge" "ldexp" "log" "log10" "max" "min" "modf" "pi" "pow"
-                       "rad" "random" "randomseed" "sin" "sinh" "sqrt" "tan" "tanh"))
-            ("os" . ("clock" "date" "difftime" "execute" "exit" "getenv" "remove" "rename"
-                     "setlocale" "time" "tmpname"))
-            ("package" . ("config" "cpath" "loaded" "loaders" "loadlib" "path" "preload"
-                          "searchers" "searchpath" "seeall"))
-            ("string" . ("byte" "char" "dump" "find" "format" "gmatch" "gsub" "len" "lower"
-                         "match" "rep" "reverse" "sub" "upper"))
-            ("table" . ("concat" "insert" "maxn" "pack" "remove" "sort" "unpack")))))
+            ("io" . ("close" "flush" "input" "lines" "open" "output" "popen"
+                     "read" "stderr" "stdin" "stdout" "tmpfile" "type" "write"))
+            ("math" . ("abs" "acos" "asin" "atan" "atan2" "ceil" "cos" "cosh"
+                       "deg" "exp" "floor" "fmod" "frexp" "huge" "ldexp" "log"
+                       "log10" "max" "min" "modf" "pi" "pow" "rad" "random"
+                       "randomseed" "sin" "sinh" "sqrt" "tan" "tanh"))
+            ("os" . ("clock" "date" "difftime" "execute" "exit" "getenv"
+                     "remove"  "rename" "setlocale" "time" "tmpname"))
+            ("package" . ("config" "cpath" "loaded" "loaders" "loadlib" "path"
+                          "preload" "searchers" "searchpath" "seeall"))
+            ("string" . ("byte" "char" "dump" "find" "format" "gmatch" "gsub"
+                         "len" "lower" "match" "rep" "reverse" "sub" "upper"))
+            ("table" . ("concat" "insert" "maxn" "pack" "remove" "sort" "unpack"
+                        )))))
 
       ;; This code uses \\< and \\> to delimit builtin symbols instead of
       ;; \\_< and \\_>, because -- a necessity -- '.' syntax class is hacked
@@ -378,30 +382,30 @@ traceback location."
       ;; that indentation won't get hurt. --immerrr
       ;;
       (lua--cl-labels
-          ((module-name-re (x)
-                           (concat "\\(?1:\\<"
-                                   (if (listp x) (car x) x)
-                                   "\\>\\)"))
-           (module-members-re (x) (if (listp x)
-                                      (concat "\\(?:[ \t]*\\.[ \t]*"
-                                              "\\<\\(?2:"
-                                              (regexp-opt (cdr x))
-                                              "\\)\\>\\)?")
-                                    "")))
+       ((module-name-re (x)
+                        (concat "\\(?1:\\<"
+                                (if (listp x) (car x) x)
+                                "\\>\\)"))
+        (module-members-re (x) (if (listp x)
+                                   (concat "\\(?:[ \t]*\\.[ \t]*"
+                                           "\\<\\(?2:"
+                                           (regexp-opt (cdr x))
+                                           "\\)\\>\\)?")
+                                 "")))
 
-        (concat
-         ;; common prefix - beginning-of-line or neither of [ '.', ':' ] to
-         ;; exclude "foo.string.rep"
-         "\\(?:\\`\\|[^:. \n\t]\\)"
-         ;; optional whitespace
-         "[ \n\t]*"
-         "\\(?:"
-         ;; any of modules/functions
-         (mapconcat (lambda (x) (concat (module-name-re x)
-                                        (module-members-re x)))
-                    modules
-                    "\\|")
-         "\\)"))))
+       (concat
+        ;; common prefix - beginning-of-line or neither of [ '.', ':' ] to
+        ;; exclude "foo.string.rep"
+        "\\(?:\\`\\|[^:. \n\t]\\)"
+        ;; optional whitespace
+        "[ \n\t]*"
+        "\\(?:"
+        ;; any of modules/functions
+        (mapconcat (lambda (x) (concat (module-name-re x)
+                                       (module-members-re x)))
+                   modules
+                   "\\|")
+        "\\)"))))
 
   "A regexp that matches lua builtin functions & variables.
 
@@ -493,23 +497,29 @@ index of respective Lua reference manuals.")
 
 (defvar lua-mode-syntax-table
   (with-syntax-table (copy-syntax-table)
-    (modify-syntax-entry ?+ ".")
+    ;; main comment syntax: begins with "--", ends with "\n"
     (modify-syntax-entry ?- ". 12")
+    (modify-syntax-entry ?\n ">")
+
+    ;; main string syntax: bounded by ' or "
+    (modify-syntax-entry ?\' "\"")
+    (modify-syntax-entry ?\" "\"")
+
+    ;; single-character binary operators: punctuation
+    (modify-syntax-entry ?+ ".")
     (modify-syntax-entry ?* ".")
     (modify-syntax-entry ?/ ".")
     (modify-syntax-entry ?^ ".")
-    ;; This might be better as punctuation, as for C, but this way you
-    ;; can treat table index as symbol.
-    (modify-syntax-entry ?. "_")        ; e.g. `io.string'
     (modify-syntax-entry ?> ".")
     (modify-syntax-entry ?< ".")
     (modify-syntax-entry ?= ".")
     (modify-syntax-entry ?~ ".")
-    (modify-syntax-entry ?\n ">")
-    (modify-syntax-entry ?\' "\"")
-    (modify-syntax-entry ?\" "\"")
+
+    ;; '.' character might be better as punctuation, as in C, but this way you
+    ;; can treat table index as symbol, e.g. `io.string'
+    (modify-syntax-entry ?. "_")
     (syntax-table))
-  "Syntax table used while in `lua-mode'.")
+  "`lua-mode' syntax table.")
 
 ;;;###autoload
 (define-derived-mode lua-mode lua--prog-mode "Lua"
@@ -529,7 +539,11 @@ index of respective Lua reference manuals.")
     (set (make-local-variable 'comment-start-skip) lua-comment-start-skip)
     (set (make-local-variable 'font-lock-defaults)
          '(lua-font-lock-keywords
-           nil nil ((?_ . "w"))))
+           nil
+           nil
+           ;; Not sure, why '_' is a word constituent only when font-locking.
+           ;; --immerrr
+           ((?_ . "w"))))
     (set (make-local-variable 'imenu-generic-expression)
          lua-imenu-generic-expression)
     (make-local-variable 'lua-default-eval)
