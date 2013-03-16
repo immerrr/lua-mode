@@ -1,6 +1,13 @@
 # -*- mode: org -*-
 #+PROPERTY: COOKIE_DATA todo recursive
 
+* Useful resources
+  - Lua5.1
+    - [[http://www.lua.org/manual/5.1/manual.html#8][bnf syntax]]
+    - [[http://www.lua.org/manual/5.1/index.html#index][function index]]
+  - Lua5.2
+    - [[http://www.lua.org/manual/5.2/manual.html#9][syntax]]
+    - [[http://www.lua.org/manual/5.2/#index][function index]]
 
 * TODO Support line-continuation with commas [0/2]
   - [ ]  assignments
