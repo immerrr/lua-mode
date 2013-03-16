@@ -432,8 +432,8 @@ index of respective Lua reference manuals.")
            (1 font-lock-builtin-face) (2 font-lock-builtin-face nil noerror))
 
      ;; Handle function names in assignments
-     '("\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)[ \t]*=[ \t]*\\(function\\)\\_>"
-       (1 font-lock-function-name-face nil t) (3 font-lock-keyword-face))
+     '("\\([[:alnum:]_]+\\(?:[:.][[:alnum:]_]+\\)*\\)[ \t]*=[ \t]*function\\_>"
+       (1 font-lock-function-name-face))
 
      ;; octal numbers
      '("\\_<0x[[:xdigit:]]+\\_>" . font-lock-constant-face)
