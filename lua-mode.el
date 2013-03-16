@@ -1140,24 +1140,79 @@ one."
         (- (cdr indentation-info) (current-indentation))
       (cdr indentation-info))))
 
-(defun lua-point-is-after-left-shifter-p ()
-  "Check if point is at a left-shifter.
-A left-shifter is a partial lua expression which should be ignored for line up purposes when closing a block. An example of this is:
+
+(eval-when-compile
+  (defconst lua--function-name-rx
+    '(seq symbol-start
+          (+ (any alnum "_"))
+          (* "." (+ (any alnum "_")))
+          (? ":" (+ (any alnum "_")))
+          symbol-end)
+    "Lua function name regexp in `rx'-SEXP format."))
+
+
+(defconst lua--left-shifter-regexp
+  (eval-when-compile
+    (rx
+     ;; All matches are returned via same group 1, even those that can match
+     ;; simultaneously. This is correct as long as, according to the manual [1]:
+     ;;
+     ;;    There is no particular restriction on the numbering, e.g., you can
+     ;;    have several groups with the same number in which case the last one
+     ;;    to match (i.e., the rightmost match) will win.
+     ;;
+     ;; 1. C-h i m "elisp" T f "regexp backslash" // i really need to stop
+     ;; forgetting things.
+     (or (seq (group-n 1 symbol-start "local" (+ blank)) "function" symbol-end)
+         (seq (group-n 1 (eval lua--function-name-rx) (* blank)) (any "{("))
+         (seq (group-n 1 (or
+                          ;; assignment statement prefix
+                          (seq (* nonl) (not (any "<=>~")) "=" (* blank))
+                          ;; return statement prefix
+                          (seq word-start "return" word-end (* blank))))
+              ;; right hand side
+              (or "{"
+                  "function"
+                  (seq (group-n 1 (eval lua--function-name-rx) (* blank))
+                       (any "({")))))))
+
+  "Regular expression that matches left-shifter expression.
+
+Left-shifter expression is defined as follows.  If a block
+follows a left-shifter expression, its contents & block-close
+token should be indented relative to left-shifter expression
+indentation rather then to block-open token.
+
+For example:
+   -- 'local a = ' is a left-shifter expression
+   -- 'function' is a block-open token
    local a = function()
-      ....
+      -- block contents is indented relative to left-shifter
+      foobarbaz()
+   -- block-end token is unindented to left-shifter indentation
    end
-   ^         ^
-   |         +- not here
-   +- Close here"
+
+The following left-shifter expressions are currently handled:
+1. local function definition with function block, begin-end
+2. function call with arguments block, () or {}
+3. assignment/return statement with
+   - table constructor block, {}
+   - function call arguments block, () or {} block
+   - function expression a.k.a. lambda, begin-end block.")
+
+
+(defun lua-point-is-after-left-shifter-p ()
+  "Check if point is right after a left-shifter expression.
+
+See `lua--left-shifter-regexp' for description & example of
+left-shifter expression. "
   (save-excursion
     (let ((old-point (point)))
       (back-to-indentation)
       (and
-       (or (looking-at "local\\s +\\(?:\\(?:\\sw\\|\\s_\\)+\\s *\\(,\\s *\\(?:\\sw\\|\\s_\\)+\\s *\\)*=\\s *\\)?")
-           ;; This is too generic, and will screw up a lot of indentations. Will need
-           ;; a better regexp for assignments
-           (looking-at "[^=]*=\\s *"))
-       (= old-point (match-end 0))))))
+       (/= (point) old-point)
+       (looking-at lua--left-shifter-regexp)
+       (= old-point (match-end 1))))))
 
 (defun lua-calculate-indentation-override (&optional parse-start)
   "Return overriding indentation amount for special cases.
