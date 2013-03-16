@@ -629,6 +629,18 @@ This function replaces previous prefix-key binding with a new one."
 If point is not inside string or comment, return nil."
   (save-excursion (elt (syntax-ppss pos) 8)))
 
+(defvar lua-indentation-offset-alist '((block-open . 3)
+                                       (block-close . -3))
+  "Alist of amounts by which Lua tokens are indented.")
+
+(defun lua-get-offset (token-type)
+  "Return indentation offset for specified token type.
+
+Indentation offsets are taken from `lua-indentation-offset-alist'."
+  (let ((tok-offset-cons (assoc token-type lua-indentation-offset-alist)))
+    (when tok-offset-cons
+      (cdr tok-offset-cons))))
+
 (defun lua-indent-line ()
   "Indent current line for Lua mode.
 Return the amount the indentation changed by."
@@ -1237,7 +1249,9 @@ to the left by the amount specified in lua-indent-level."
             (let ((block-start-column (current-column))
                   (block-start-point (point)))
               (if (lua-point-is-after-left-shifter-p)
-                  (current-indentation)
+                  (+ (current-indentation)
+                     (lua-get-offset 'block-open)
+                     (lua-get-offset 'block-close))
                 block-start-column)))))))
 
 (defun lua-calculate-indentation (&optional parse-start)
