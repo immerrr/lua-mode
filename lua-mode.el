@@ -417,45 +417,50 @@ index of respective Lua reference manuals.")
     (list
      ;; highlight the hash-bang line "#!/foo/bar/lua" as comment
      '("^#!.*$" . font-lock-comment-face)
-     ;; Handle variable names
-     ;;  local blalba =
-     ;;        ^^^^^^
-     '("\\(local[ \t]+\\(\\sw+\\)[ \t]*=\\)"
-       (2 font-lock-variable-name-face))
 
-     ;; Function name declarations.
-     '("^[ \t]*\\_<\\(\\(local[ \t]+\\)?function\\)\\_>[ \t]+\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)"
-       (1 font-lock-keyword-face) (3 font-lock-function-name-face nil t))
+     ;; Keywords.
+     `(,(rx symbol-start
+            (or "and" "break" "do" "else" "elseif" "end" "false"
+                "for" "function" "if" "in" "local" "nil" "not"
+                "or" "repeat" "return" "then" "true" "until"
+                "while")
+            symbol-end)
+       . font-lock-keyword-face)
 
      ;; Highlight lua builtin functions and variables
      `(,lua--builtins
            (1 font-lock-builtin-face) (2 font-lock-builtin-face nil noerror))
 
-     ;; Handle function names in assignments
-     '("\\([[:alnum:]_]+\\(?:[:.][[:alnum:]_]+\\)*\\)[ \t]*=[ \t]*function\\_>"
-       (1 font-lock-function-name-face))
-
-     ;; octal numbers
+     ;; hexadecimal numbers
      '("\\_<0x[[:xdigit:]]+\\_>" . font-lock-constant-face)
 
      ;; regular numbers
      ;;
      ;; This regexp relies on '.' being symbol constituent. Whenever this
      ;; changes, the regexp needs revisiting --immerrr
-     `(,(concat "\\_<\\(?1:"
-                ;; make a digit on either side of dot mandatory
-                "\\(?:[0-9]+\\.?[0-9]*\\|[0-9]*\\.?[0-9]+\\)"
-                "\\(?:[eE][+-]?[0-9]+\\)?"
-                "\\)\\_>")
-       . font-lock-constant-face)
+     `(, (rx symbol-start
+             ;; make a digit on either side of dot mandatory
+             (or (seq (+ num) (? ".") (* num))
+                 (seq (* num) (? ".") (+ num)))
+             (? (regexp "[eE][+-]?") (+ num))
+            symbol-end)
+         . font-lock-constant-face)
 
-     ;; Keywords.
-     (concat "\\_<"
-             (regexp-opt '("and" "break" "do" "else" "elseif" "end" "false"
-                           "for" "function" "if" "in" "local" "nil" "not"
-                           "or" "repeat" "return" "then" "true" "until"
-                           "while") t)
-             "\\_>")
+     ;; Handle variable names
+     ;;  local blalba =
+     ;;        ^^^^^^
+     '("local[ \t]+\\([[:alnum:]_]+\\)\\(?:[ \t]*,[ \t]*\\([[:alnum:]_]+\\)\\)[ \t]*="
+       (1 font-lock-variable-name-face)
+       (2 font-lock-variable-name-face))
+
+     ;; Function name declarations.
+     '("^[ \t]*\\_<\\(\\(local[ \t]+\\)?function\\)\\_>[ \t]+\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)"
+       (1 font-lock-keyword-face) (3 font-lock-function-name-face nil t))
+
+     ;; Handle function names in assignments
+     '("\\([[:alnum:]_]+\\(?:[:.][[:alnum:]_]+\\)*\\)[ \t]*=[ \t]*function\\_>"
+       (1 font-lock-function-name-face))
+
 
      "Default expressions to highlight in Lua mode.")))
 
