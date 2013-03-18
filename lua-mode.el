@@ -1,8 +1,6 @@
 ;;; lua-mode.el --- a major-mode for editing Lua scripts
 
-;; Copyright (C) 1997, 2001, 2004, 2006, 2007, 2010, 2011 Free Software Foundation, Inc.
-
-;; Author: 2011 immerrr <immerrr+lua@gmail.com>
+;; Author: 2011-2013 immerrr <immerrr+lua@gmail.com>
 ;;         2010-2011 Reuben Thomas <rrt@sc3d.org>
 ;;         2006 Juergen Hoetzel <juergen@hoetzel.info>
 ;;         2004 various (support for Lua 5 and byte compilation)
@@ -1293,8 +1291,8 @@ one."
      ;;    have several groups with the same number in which case the last one
      ;;    to match (i.e., the rightmost match) will win.
      ;;
-     ;; 1. C-h i m "elisp" T f "regexp backslash" // i really need to stop
-     ;; forgetting things.
+     ;; 1. C-h i g "(elisp)regexp backslash" // i really need to stop forgetting
+     ;; things.
      (or (seq (group-n 1 symbol-start "local" (+ blank)) "function" symbol-end)
          (seq (group-n 1 (eval lua--function-name-rx) (* blank)) (any "{("))
          (seq (group-n 1 (or
