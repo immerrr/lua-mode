@@ -537,26 +537,45 @@ Groups 6-9 can be used in any of argument regexps."
             symbol-end)
          . font-lock-constant-face)
 
-     ;; Handle variable names
-     ;;  local blalba =
+     ;; Handle local variable/function names
+     ;;  local blalba, xyzzy =
+     ;;        ^^^^^^  ^^^^^
+     ;;
+     ;;  local function foobar(x,y,z)
+     ;;                 ^^^^^^
+     ;;  local foobar = function(x,y,z)
      ;;        ^^^^^^
-     '("local[ \t]+\\([[:alnum:]_]+\\)\\(?:[ \t]*,[ \t]*\\([[:alnum:]_]+\\)\\)[ \t]*="
-       (1 font-lock-variable-name-face)
-       (2 font-lock-variable-name-face))
+     `("^[ \t]*\\_<local\\_>"
+       (0 font-lock-keyword-face)
 
+       ((lambda (end)
+          (re-search-forward
+           (rx point (* blank) (regexp ,lua-local-defun-regexp)) end t))
+        nil nil
+        (1 font-lock-function-name-face nil noerror))
+
+       (,(lua-make-delimited-matcher "[[:alpha:]_][[:alnum:]_]*" "," "=")
+        nil nil
+        (1 font-lock-variable-name-face nil noerror)
+        (2 font-lock-warning-face t noerror)
+        (3 font-lock-warning-face t noerror)))
+
+     ;; Function matchers are very crude, need rewrite at some point.
      ;; Function name declarations.
-     '("^[ \t]*\\_<\\(\\(local[ \t]+\\)?function\\)\\_>[ \t]+\\(\\(\\sw:\\|\\sw\\.\\|\\sw_\\|\\sw\\)+\\)"
-       (1 font-lock-keyword-face) (3 font-lock-function-name-face nil t))
-
-     ;; Handle function names in assignments
-     '("\\([[:alnum:]_]+\\(?:[:.][[:alnum:]_]+\\)*\\)[ \t]*=[ \t]*function\\_>"
+     '("^[ \t]*\\_<function\\_>[ \t]+\\([[:alnum:]_]+\\(?:\\.[[:alnum:]_]+\\)*\\(?::[[:alnum:]_]+\\)?\\)"
        (1 font-lock-function-name-face))
 
+     ;; Function matchers are very crude, need rewrite at some point.
+     ;; Handle function names in assignments
+     '("^[ \t]*\\([[:alnum:]_]+\\(?:\\.[[:alnum:]_]+\\)*\\(?::[[:alnum:]_]+\\)?\\)[ \t]*=[ \t]*\\_<function\\_>"
+       (1 font-lock-function-name-face))))
 
-     "Default expressions to highlight in Lua mode.")))
+  "Default expressions to highlight in Lua mode.")
 
 (defvar lua-imenu-generic-expression
-  '((nil "^[ \t]*\\(?:local[ \t]+\\)?function[ \t]+\\(\\(\\sw:\\|\\sw_\\|\\sw\\.\\|\\sw\\)+\\)" 1))
+  ;; Very rough expression, but probably it's for the best, since it's used for
+  ;; navigation. --immerrr
+  '((nil "^[ \t]*\\(?:local[ \t]+\\)?function[ \t]+[[:alnum:]_:.]" 1))
   "Imenu generic expression for lua-mode.  See `imenu-generic-expression'.")
 
 (defvar lua-sexp-alist '(("then" . "end")
