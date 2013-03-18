@@ -412,6 +412,97 @@ traceback location."
 This is a compilation of 5.1 and 5.2 builtins taken from the
 index of respective Lua reference manuals.")
 
+(defun lua-make-delimited-matcher (elt-regexp sep-regexp end-regexp)
+  "Construct matcher function for `font-lock-keywords' to match a sequence.
+
+It's supposed to match sequences with following EBNF:
+
+ELT-REGEXP { SEP-REGEXP ELT-REGEXP } END-REGEXP
+
+The sequence is parsed one token at a time.  If non-nil is
+returned, `match-data' will have one or more of the following
+groups set according to next matched token:
+
+1. matched element token
+2. unmatched garbage characters
+3. misplaced token (i.e. SEP-REGEXP when ELT-REGEXP is expected)
+4. matched separator token
+5. matched end token
+
+Blanks & comments between tokens are silently skipped.
+Groups 6-9 can be used in any of argument regexps."
+  (lexical-let*
+      ((delimited-matcher-re-template
+        "\\=\\(?2:.*?\\)\\(?:\\(?%s:\\(?4:%s\\)\\|\\(?5:%s\\)\\)\\|\\(?%s:\\(?1:%s\\)\\)\\)")
+       ;; There's some magic to this regexp. It works as follows:
+       ;;
+       ;; A. start at (point)
+       ;; B. non-greedy match of garbage-characters (?2:)
+       ;; C. try matching separator (?4:) or end-token (?5:)
+       ;; D. try matching element (?1:)
+       ;;
+       ;; Simple, but there's a trick: pt.C and pt.D are embraced by one more
+       ;; group whose purpose is determined only after the template is
+       ;; formatted (?%s:):
+       ;;
+       ;; - if element is expected, then D's parent group becomes "shy" and C's
+       ;;   parent becomes group 3 (aka misplaced token), so if D matches when
+       ;;   an element is expected, it'll be marked with warning face.
+       ;;
+       ;; - if separator-or-end-token is expected, then it's the opposite:
+       ;;   C's parent becomes shy and D's will be matched as misplaced token.
+       (elt-expected-re (format delimited-matcher-re-template
+                                3 sep-regexp end-regexp "" elt-regexp))
+       (sep-or-end-expected-re (format delimited-matcher-re-template
+                                       "" sep-regexp end-regexp 3 elt-regexp)))
+
+    (lambda (end)
+      (let* ((prev-elt-p (match-beginning 1))
+             (prev-sep-p (match-beginning 4))
+             (prev-end-p (match-beginning 5))
+
+             (regexp (if prev-elt-p sep-or-end-expected-re elt-expected-re))
+             (comment-start (lua-comment-start-pos (syntax-ppss)))
+             (parse-stop end))
+
+        ;; If token starts inside comment, or end-token was encountered, stop.
+        (when (and (not comment-start)
+                   (not prev-end-p))
+          ;; Skip all comments & whitespace. forward-comment doesn't have boundary
+          ;; argument, so make sure point isn't beyond parse-stop afterwards.
+          (while (and (< (point) end)
+                      (forward-comment 1)))
+          (goto-char (min (point) parse-stop))
+
+          ;; Reuse comment-start variable to store beginning of comment that is
+          ;; placed before line-end-position so as to make sure token search doesn't
+          ;; enter that comment.
+          (setq comment-start
+                (lua-comment-start-pos
+                 (save-excursion
+                   (parse-partial-sexp (point) parse-stop
+                                       nil nil nil 'stop-inside-comment)))
+                parse-stop (or comment-start parse-stop))
+
+          ;; Now, let's match stuff.  If regular matcher fails, declare a span of
+          ;; non-blanks 'garbage', and the next iteration will start from where the
+          ;; garbage ends.  If couldn't match any garbage, move point to the end
+          ;; and return nil.
+          (or (re-search-forward regexp parse-stop t)
+              (re-search-forward "\\(?1:\\(?2:[^ \t]+\\)\\)" parse-stop 'skip)
+              (prog1 nil (goto-char end))))))))
+
+(defconst lua-local-defun-regexp
+  ;; Function matchers are very crude, need rewrite at some point.
+  (rx (or (seq (regexp "\\(?:\\_<function\\_>\\)")
+               (* blank)
+               (? (regexp "\\(?1:\\_<[[:alpha:]][[:alnum:]]*\\_>\\)"))
+               (group-n 2 (* nonl)))
+          (seq (? (regexp "\\(?1:\\_<[[:alpha:]][[:alnum:]]*\\_>\\)"))
+               (* blank) "=" (* blank)
+               (regexp "\\(?:\\_<function\\_>\\)")
+               (group-n 2 (* nonl))))))
+
 (defvar lua-font-lock-keywords
   (eval-when-compile
     (list
@@ -618,6 +709,12 @@ This function replaces previous prefix-key binding with a new one."
 (defun lua-string-p (&optional pos)
   "Returns true if the point is in a string."
   (save-excursion (elt (syntax-ppss pos) 3)))
+
+(defun lua-comment-start-pos (parsing-state)
+  "Return position of comment containing current point.
+
+If point is not inside a comment, return nil."
+  (and parsing-state (nth 4 parsing-state) (nth 8 parsing-state)))
 
 (defun lua-comment-p (&optional pos)
   "Returns true if the point is in a comment."
