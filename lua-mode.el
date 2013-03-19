@@ -232,8 +232,7 @@ Should be a list of strings."
                           ;; in both cases (elt x 0) is ok
                           (elt (read-kbd-macro prefix-key-val) 0)))
   (if (fboundp 'lua-prefix-key-update-bindings)
-      (lua-prefix-key-update-bindings))
-  (message "prefix key set to %S"  (single-key-description (eval prefix-key-sym))))
+      (lua-prefix-key-update-bindings)))
 
 (defcustom lua-prefix-key "\C-c"
   "Prefix for all lua-mode commands."
@@ -730,6 +729,7 @@ Groups 6-9 can be used in any of argument regexps."
 This function replaces previous prefix-key binding with a new one."
   (interactive "sNew prefix key (empty string means no key): ")
   (lua--customize-set-prefix-key 'lua-prefix-key new-key-str)
+  (message "Prefix key set to %S"  (single-key-description lua-prefix-key))
   (lua-prefix-key-update-bindings))
 
 (defun lua-string-p (&optional pos)
