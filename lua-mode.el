@@ -414,9 +414,8 @@ traceback location."
 This is a compilation of 5.1 and 5.2 builtins taken from the
 index of respective Lua reference manuals.")
 
-(eval-when-compile 
-  (defun lua-make-delimited-matcher (elt-regexp sep-regexp end-regexp)
-    "Construct matcher function for `font-lock-keywords' to match a sequence.
+(defun lua-make-delimited-matcher (elt-regexp sep-regexp end-regexp)
+  "Construct matcher function for `font-lock-keywords' to match a sequence.
 
 It's supposed to match sequences with following EBNF:
 
@@ -434,151 +433,149 @@ groups set according to next matched token:
 
 Blanks & comments between tokens are silently skipped.
 Groups 6-9 can be used in any of argument regexps."
-    (lexical-let*
-        ((delimited-matcher-re-template
-          "\\=\\(?2:.*?\\)\\(?:\\(?%s:\\(?4:%s\\)\\|\\(?5:%s\\)\\)\\|\\(?%s:\\(?1:%s\\)\\)\\)")
-         ;; There's some magic to this regexp. It works as follows:
-         ;;
-         ;; A. start at (point)
-         ;; B. non-greedy match of garbage-characters (?2:)
-         ;; C. try matching separator (?4:) or end-token (?5:)
-         ;; D. try matching element (?1:)
-         ;;
-         ;; Simple, but there's a trick: pt.C and pt.D are embraced by one more
-         ;; group whose purpose is determined only after the template is
-         ;; formatted (?%s:):
-         ;;
-         ;; - if element is expected, then D's parent group becomes "shy" and C's
-         ;;   parent becomes group 3 (aka misplaced token), so if D matches when
-         ;;   an element is expected, it'll be marked with warning face.
-         ;;
-         ;; - if separator-or-end-token is expected, then it's the opposite:
-         ;;   C's parent becomes shy and D's will be matched as misplaced token.
-         (elt-expected-re (format delimited-matcher-re-template
-                                  3 sep-regexp end-regexp "" elt-regexp))
-         (sep-or-end-expected-re (format delimited-matcher-re-template
-                                         "" sep-regexp end-regexp 3 elt-regexp)))
+  (lexical-let*
+      ((delimited-matcher-re-template
+        "\\=\\(?2:.*?\\)\\(?:\\(?%s:\\(?4:%s\\)\\|\\(?5:%s\\)\\)\\|\\(?%s:\\(?1:%s\\)\\)\\)")
+       ;; There's some magic to this regexp. It works as follows:
+       ;;
+       ;; A. start at (point)
+       ;; B. non-greedy match of garbage-characters (?2:)
+       ;; C. try matching separator (?4:) or end-token (?5:)
+       ;; D. try matching element (?1:)
+       ;;
+       ;; Simple, but there's a trick: pt.C and pt.D are embraced by one more
+       ;; group whose purpose is determined only after the template is
+       ;; formatted (?%s:):
+       ;;
+       ;; - if element is expected, then D's parent group becomes "shy" and C's
+       ;;   parent becomes group 3 (aka misplaced token), so if D matches when
+       ;;   an element is expected, it'll be marked with warning face.
+       ;;
+       ;; - if separator-or-end-token is expected, then it's the opposite:
+       ;;   C's parent becomes shy and D's will be matched as misplaced token.
+       (elt-expected-re (format delimited-matcher-re-template
+                                3 sep-regexp end-regexp "" elt-regexp))
+       (sep-or-end-expected-re (format delimited-matcher-re-template
+                                       "" sep-regexp end-regexp 3 elt-regexp)))
 
-      (lambda (end)
-        (let* ((prev-elt-p (match-beginning 1))
-               (prev-sep-p (match-beginning 4))
-               (prev-end-p (match-beginning 5))
+    (lambda (end)
+      (let* ((prev-elt-p (match-beginning 1))
+             (prev-sep-p (match-beginning 4))
+             (prev-end-p (match-beginning 5))
 
-               (regexp (if prev-elt-p sep-or-end-expected-re elt-expected-re))
-               (comment-start (lua-comment-start-pos (syntax-ppss)))
-               (parse-stop end))
+             (regexp (if prev-elt-p sep-or-end-expected-re elt-expected-re))
+             (comment-start (lua-comment-start-pos (syntax-ppss)))
+             (parse-stop end))
 
-          ;; If token starts inside comment, or end-token was encountered, stop.
-          (when (and (not comment-start)
-                     (not prev-end-p))
-            ;; Skip all comments & whitespace. forward-comment doesn't have boundary
-            ;; argument, so make sure point isn't beyond parse-stop afterwards.
-            (while (and (< (point) end)
-                        (forward-comment 1)))
-            (goto-char (min (point) parse-stop))
+        ;; If token starts inside comment, or end-token was encountered, stop.
+        (when (and (not comment-start)
+                   (not prev-end-p))
+          ;; Skip all comments & whitespace. forward-comment doesn't have boundary
+          ;; argument, so make sure point isn't beyond parse-stop afterwards.
+          (while (and (< (point) end)
+                      (forward-comment 1)))
+          (goto-char (min (point) parse-stop))
 
-            ;; Reuse comment-start variable to store beginning of comment that is
-            ;; placed before line-end-position so as to make sure token search doesn't
-            ;; enter that comment.
-            (setq comment-start
-                  (lua-comment-start-pos
-                   (save-excursion
-                     (parse-partial-sexp (point) parse-stop
-                                         nil nil nil 'stop-inside-comment)))
-                  parse-stop (or comment-start parse-stop))
+          ;; Reuse comment-start variable to store beginning of comment that is
+          ;; placed before line-end-position so as to make sure token search doesn't
+          ;; enter that comment.
+          (setq comment-start
+                (lua-comment-start-pos
+                 (save-excursion
+                   (parse-partial-sexp (point) parse-stop
+                                       nil nil nil 'stop-inside-comment)))
+                parse-stop (or comment-start parse-stop))
 
-            ;; Now, let's match stuff.  If regular matcher fails, declare a span of
-            ;; non-blanks 'garbage', and the next iteration will start from where the
-            ;; garbage ends.  If couldn't match any garbage, move point to the end
-            ;; and return nil.
-            (or (re-search-forward regexp parse-stop t)
-                (re-search-forward "\\(?1:\\(?2:[^ \t]+\\)\\)" parse-stop 'skip)
-                (prog1 nil (goto-char end))))))))
+          ;; Now, let's match stuff.  If regular matcher fails, declare a span of
+          ;; non-blanks 'garbage', and the next iteration will start from where the
+          ;; garbage ends.  If couldn't match any garbage, move point to the end
+          ;; and return nil.
+          (or (re-search-forward regexp parse-stop t)
+              (re-search-forward "\\(?1:\\(?2:[^ \t]+\\)\\)" parse-stop 'skip)
+              (prog1 nil (goto-char end))))))))
 
-  (defconst lua-local-defun-regexp
-    ;; Function matchers are very crude, need rewrite at some point.
-    (rx (or (seq (regexp "\\(?:\\_<function\\_>\\)")
-                 (* blank)
-                 (? (regexp "\\(?1:\\_<[[:alpha:]][[:alnum:]]*\\_>\\)"))
-                 (regexp "\\(?2:.*\\)"))
-            (seq (? (regexp "\\(?1:\\_<[[:alpha:]][[:alnum:]]*\\_>\\)"))
-                 (* blank) "=" (* blank)
-                 (regexp "\\(?:\\_<function\\_>\\)")
-                 (regexp "\\(?2:.*\\)"))))))
+(defconst lua-local-defun-regexp
+  ;; Function matchers are very crude, need rewrite at some point.
+  (rx (or (seq (regexp "\\(?:\\_<function\\_>\\)")
+               (* blank)
+               (? (regexp "\\(?1:\\_<[[:alpha:]][[:alnum:]]*\\_>\\)"))
+               (regexp "\\(?2:.*\\)"))
+          (seq (? (regexp "\\(?1:\\_<[[:alpha:]][[:alnum:]]*\\_>\\)"))
+               (* blank) "=" (* blank)
+               (regexp "\\(?:\\_<function\\_>\\)")
+               (regexp "\\(?2:.*\\)")))))
 
 (defvar lua-font-lock-keywords
-  (eval-when-compile
-    (list
-     ;; highlight the hash-bang line "#!/foo/bar/lua" as comment
-     '("^#!.*$" . font-lock-comment-face)
+  `(;; highlight the hash-bang line "#!/foo/bar/lua" as comment
+    ("^#!.*$" . font-lock-comment-face)
 
-     ;; Keywords.
-     `(,(rx symbol-start
-            (or "and" "break" "do" "else" "elseif" "end" "false"
-                "for" "function" "if" "in" "local" "nil" "not"
-                "or" "repeat" "return" "then" "true" "until"
-                "while")
-            symbol-end)
-       . font-lock-keyword-face)
+    ;; Keywords.
+    (,(rx symbol-start
+          (or "and" "break" "do" "else" "elseif" "end" "false"
+              "for" "function" "if" "in" "local" "nil" "not"
+              "or" "repeat" "return" "then" "true" "until"
+              "while")
+          symbol-end)
+     . font-lock-keyword-face)
 
-     ;; Highlight lua builtin functions and variables
-     `(,lua--builtins
-           (1 font-lock-builtin-face) (2 font-lock-builtin-face nil noerror))
+    ;; Highlight lua builtin functions and variables
+    (,lua--builtins
+     (1 font-lock-builtin-face) (2 font-lock-builtin-face nil noerror))
 
-     ;; hexadecimal numbers
-     '("\\_<0x[[:xdigit:]]+\\_>" . font-lock-constant-face)
+    ;; hexadecimal numbers
+    ("\\_<0x[[:xdigit:]]+\\_>" . font-lock-constant-face)
 
-     ;; regular numbers
-     ;;
-     ;; This regexp relies on '.' being symbol constituent. Whenever this
-     ;; changes, the regexp needs revisiting --immerrr
-     `(, (rx symbol-start
-             ;; make a digit on either side of dot mandatory
-             (or (seq (+ num) (? ".") (* num))
-                 (seq (* num) (? ".") (+ num)))
-             (? (regexp "[eE][+-]?") (+ num))
-            symbol-end)
-         . font-lock-constant-face)
+    ;; regular numbers
+    ;;
+    ;; This regexp relies on '.' being symbol constituent. Whenever this
+    ;; changes, the regexp needs revisiting --immerrr
+    (, (rx symbol-start
+           ;; make a digit on either side of dot mandatory
+           (or (seq (+ num) (? ".") (* num))
+               (seq (* num) (? ".") (+ num)))
+           (? (regexp "[eE][+-]?") (+ num))
+           symbol-end)
+       . font-lock-constant-face)
 
-     `("^[ \t]*\\_<for\\_>"
-       (,(lua-make-delimited-matcher "\\_<[[:alpha:]_][[:alnum:]_]*\\_>" "," "\\_<in\\_>")
-        nil nil
-        (1 font-lock-variable-name-face nil noerror)
-        (2 font-lock-warning-face t noerror)
-        (3 font-lock-warning-face t noerror)))
+    ("^[ \t]*\\_<for\\_>"
+     (,(lua-make-delimited-matcher "\\_<[[:alpha:]_][[:alnum:]_]*\\_>" "," "\\_<in\\_>")
+      nil nil
+      (1 font-lock-variable-name-face nil noerror)
+      (2 font-lock-warning-face t noerror)
+      (3 font-lock-warning-face t noerror)))
 
-     ;; Handle local variable/function names
-     ;;  local blalba, xyzzy =
-     ;;        ^^^^^^  ^^^^^
-     ;;
-     ;;  local function foobar(x,y,z)
-     ;;                 ^^^^^^
-     ;;  local foobar = function(x,y,z)
-     ;;        ^^^^^^
-     `("^[ \t]*\\_<local\\_>"
-       (0 font-lock-keyword-face)
+    ;; Handle local variable/function names
+    ;;  local blalba, xyzzy =
+    ;;        ^^^^^^  ^^^^^
+    ;;
+    ;;  local function foobar(x,y,z)
+    ;;                 ^^^^^^
+    ;;  local foobar = function(x,y,z)
+    ;;        ^^^^^^
+    ("^[ \t]*\\_<local\\_>"
+     (0 font-lock-keyword-face)
 
-       ((lambda (end)
-          (re-search-forward
-           (rx point (* blank) (regexp ,lua-local-defun-regexp)) end t))
-        nil nil
-        (1 font-lock-function-name-face nil noerror))
+     ((lambda (end)
+        (re-search-forward
+         (rx point (* blank) (regexp ,lua-local-defun-regexp)) end t))
+      nil nil
+      (1 font-lock-function-name-face nil noerror))
 
-       (,(lua-make-delimited-matcher "\\_<[[:alpha:]_][[:alnum:]_]*\\_>" "," "=\\(?:[^=]\\)")
-        nil nil
-        (1 font-lock-variable-name-face nil noerror)
-        (2 font-lock-warning-face t noerror)
-        (3 font-lock-warning-face t noerror)))
+     (,(lua-make-delimited-matcher "\\_<[[:alpha:]_][[:alnum:]_]*\\_>" "," "=\\(?:[^=]\\)")
+      nil nil
+      (1 font-lock-variable-name-face nil noerror)
+      (2 font-lock-warning-face t noerror)
+      (3 font-lock-warning-face t noerror)))
 
-     ;; Function matchers are very crude, need rewrite at some point.
-     ;; Function name declarations.
-     '("^[ \t]*\\_<function\\_>[ \t]+\\([[:alnum:]_]+\\(?:\\.[[:alnum:]_]+\\)*\\(?::[[:alnum:]_]+\\)?\\)"
-       (1 font-lock-function-name-face))
+    ;; Function matchers are very crude, need rewrite at some point.
+    ;; Function name declarations.
+    ("^[ \t]*\\_<function\\_>[ \t]+\\([[:alnum:]_]+\\(?:\\.[[:alnum:]_]+\\)*\\(?::[[:alnum:]_]+\\)?\\)"
+     (1 font-lock-function-name-face))
 
-     ;; Function matchers are very crude, need rewrite at some point.
-     ;; Handle function names in assignments
-     '("^[ \t]*\\([[:alnum:]_]+\\(?:\\.[[:alnum:]_]+\\)*\\(?::[[:alnum:]_]+\\)?\\)[ \t]*=[ \t]*\\_<function\\_>"
-       (1 font-lock-function-name-face))))
+    ;; Function matchers are very crude, need rewrite at some point.
+    ;; Handle function names in assignments
+    ("^[ \t]*\\([[:alnum:]_]+\\(?:\\.[[:alnum:]_]+\\)*\\(?::[[:alnum:]_]+\\)?\\)[ \t]*=[ \t]*\\_<function\\_>"
+     (1 font-lock-function-name-face)))
 
   "Default expressions to highlight in Lua mode.")
 
