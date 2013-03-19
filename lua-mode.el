@@ -500,11 +500,11 @@ Groups 6-9 can be used in any of argument regexps."
     (rx (or (seq (regexp "\\(?:\\_<function\\_>\\)")
                  (* blank)
                  (? (regexp "\\(?1:\\_<[[:alpha:]][[:alnum:]]*\\_>\\)"))
-                 (group-n 2 (* nonl)))
+                 (regexp "\\(?2:.*\\)"))
             (seq (? (regexp "\\(?1:\\_<[[:alpha:]][[:alnum:]]*\\_>\\)"))
                  (* blank) "=" (* blank)
                  (regexp "\\(?:\\_<function\\_>\\)")
-                 (group-n 2 (* nonl)))))))
+                 (regexp "\\(?2:.*\\)"))))))
 
 (defvar lua-font-lock-keywords
   (eval-when-compile
@@ -1285,27 +1285,28 @@ one."
 (defconst lua--left-shifter-regexp
   (eval-when-compile
     (rx
-     ;; All matches are returned via same group 1, even those that can match
-     ;; simultaneously. This is correct as long as, according to the manual [1]:
+     ;; This regexp should answer the following questions:
+     ;; 1. is there a left shifter regexp on that line?
+     ;; 2. where does block-open token of that left shifter reside?
      ;;
-     ;;    There is no particular restriction on the numbering, e.g., you can
-     ;;    have several groups with the same number in which case the last one
-     ;;    to match (i.e., the rightmost match) will win.
-     ;;
-     ;; 1. C-h i g "(elisp)regexp backslash" // i really need to stop forgetting
-     ;; things.
-     (or (seq (group-n 1 symbol-start "local" (+ blank)) "function" symbol-end)
-         (seq (group-n 1 (eval lua--function-name-rx) (* blank)) (any "{("))
-         (seq (group-n 1 (or
-                          ;; assignment statement prefix
-                          (seq (* nonl) (not (any "<=>~")) "=" (* blank))
-                          ;; return statement prefix
-                          (seq word-start "return" word-end (* blank))))
+     ;; NOTE: couldn't use `group-n' keyword of `rx' macro, because it was
+     ;; introduced in Emacs 24.2 only, so for the sake of code clarity the named
+     ;; groups don't really match anything, they just report the position of the
+     ;; match.
+     (or (seq (regexp "\\_<local[ \t]+") (regexp "\\(?1:\\)function\\_>"))
+         (seq (eval lua--function-name-rx) (* blank) (regexp "\\(?1:\\)[{(]"))
+         (seq (or
+               ;; assignment statement prefix
+               (seq (* nonl) (not (any "<=>~")) "=" (* blank))
+               ;; return statement prefix
+               (seq word-start "return" word-end (* blank)))
+              (regexp "\\(?1:\\)")
               ;; right hand side
               (or "{"
                   "function"
-                  (seq (group-n 1 (eval lua--function-name-rx) (* blank))
-                       (any "({")))))))
+                  (seq
+                   (eval lua--function-name-rx) (* blank)
+                   (regexp "\\(?1:\\)") (any "({")))))))
 
   "Regular expression that matches left-shifter expression.
 
