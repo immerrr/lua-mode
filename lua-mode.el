@@ -648,53 +648,50 @@ Groups 6-9 can be used in any of argument regexps."
   :abbrev-table lua-mode-abbrev-table
   :syntax-table lua-mode-syntax-table
   :group 'lua
-  (let ((switches nil)
-        s)
-    (setq comint-prompt-regexp lua-prompt-regexp)
-    (make-local-variable 'lua-default-command-switches)
-    (set (make-local-variable 'beginning-of-defun-function)
-         'lua-beginning-of-proc)
-    (set (make-local-variable 'end-of-defun-function) 'lua-end-of-proc)
-    (set (make-local-variable 'indent-line-function) 'lua-indent-line)
-    (set (make-local-variable 'comment-start) lua-comment-start)
-    (set (make-local-variable 'comment-start-skip) lua-comment-start-skip)
-    (set (make-local-variable 'font-lock-defaults)
-         '(lua-font-lock-keywords ;; keywords
-           nil                    ;; keywords-only
-           nil                    ;; case-fold
-           ;; Not sure, why '_' is a word constituent only when font-locking.
-           ;; --immerrr
-           ((?_ . "w")) ;; syntax-alist
-           nil          ;; syntax-begin
-           (font-lock-syntactic-keywords . lua-font-lock-syntactic-keywords)
-           (font-lock-extra-managed-props . (syntax-table))))
-    
-    (set (make-local-variable 'imenu-generic-expression)
-         lua-imenu-generic-expression)
-    (make-local-variable 'lua-default-eval)
-    ;; setup menu bar entry (XEmacs style)
-    (if (and (featurep 'menubar)
-             (boundp 'current-menubar)
-             (fboundp 'set-buffer-menubar)
-             (fboundp 'add-menu)
-             (not (assoc "Lua" current-menubar)))
-        (progn
-          (set-buffer-menubar (copy-sequence current-menubar))
-          (add-menu nil "Lua" lua-emacs-menu)))
-    ;; Append Lua menu to popup menu for Emacs.
-    (if (boundp 'mode-popup-menu)
-        (setq mode-popup-menu
-              (cons (concat mode-name " Mode Commands") lua-emacs-menu)))
 
-    ;; hideshow setup
-    (unless (assq 'lua-mode hs-special-modes-alist)
-      (add-to-list 'hs-special-modes-alist
-                   `(lua-mode
-                     ,(regexp-opt (mapcar 'car lua-sexp-alist) 'words) ;start
-                     ,(regexp-opt (mapcar 'cdr lua-sexp-alist) 'words) ;end
-                     nil lua-forward-sexp)))
+  (setq comint-prompt-regexp lua-prompt-regexp)
+  (make-local-variable 'lua-default-command-switches)
+  (set (make-local-variable 'font-lock-defaults)
+       '(lua-font-lock-keywords ;; keywords
+         nil                    ;; keywords-only
+         nil                    ;; case-fold
+         ;; Not sure, why '_' is a word constituent only when font-locking.
+         ;; --immerrr
+         ((?_ . "w")) ;; syntax-alist
+         nil          ;; syntax-begin
+         ;; initialize font-lock buffer-local variables
+         (font-lock-syntactic-keywords  . lua-font-lock-syntactic-keywords)
+         (font-lock-extra-managed-props . (syntax-table))
+         (parse-sexp-lookup-properties  . t)
+         ;; initialize the rest of buffer-local variables
+         (beginning-of-defun-function   . lua-beginning-of-proc)
+         (end-of-defun-function         . lua-end-of-proc)
+         (indent-line-function          . lua-indent-line)
+         (comment-start                 . lua-comment-start)
+         (comment-start-skip            . lua-comment-start-skip)
+         (imenu-generic-expression      . lua-imenu-generic-expression)))
 
-    (set (make-local-variable 'parse-sexp-lookup-properties) t)))
+  ;; setup menu bar entry (XEmacs style)
+  (if (and (featurep 'menubar)
+           (boundp 'current-menubar)
+           (fboundp 'set-buffer-menubar)
+           (fboundp 'add-menu)
+           (not (assoc "Lua" current-menubar)))
+      (progn
+        (set-buffer-menubar (copy-sequence current-menubar))
+        (add-menu nil "Lua" lua-emacs-menu)))
+  ;; Append Lua menu to popup menu for Emacs.
+  (if (boundp 'mode-popup-menu)
+      (setq mode-popup-menu
+            (cons (concat mode-name " Mode Commands") lua-emacs-menu)))
+
+  ;; hideshow setup
+  (unless (assq 'lua-mode hs-special-modes-alist)
+    (add-to-list 'hs-special-modes-alist
+                 `(lua-mode
+                   ,(regexp-opt (mapcar 'car lua-sexp-alist) 'words) ;start
+                   ,(regexp-opt (mapcar 'cdr lua-sexp-alist) 'words) ;end
+                   nil lua-forward-sexp))))
 
 
 ;;;###autoload
