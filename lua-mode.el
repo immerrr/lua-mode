@@ -858,7 +858,9 @@ Return the amount the indentation changed by."
       (save-excursion
         (goto-char (lua-comment-or-string-start-pos))
         (+ (current-indentation)
-           (if left-shifter-p
+           (if (and left-shifter-p
+                    (looking-at (format "--\\[%s\\["
+                                        (match-string-no-properties 1))))
                0
              lua-indent-level))))))
 
