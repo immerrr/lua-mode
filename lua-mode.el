@@ -537,7 +537,7 @@ Groups 6-9 can be used in any of argument regexps."
 
     ("^[ \t]*\\_<for\\_>"
      (,(lua-make-delimited-matcher "\\_<[[:alpha:]_][[:alnum:]_]*\\_>" ","
-                                   "\\(?:\\_<in\\_>\\|=\\(?:[^=]\\)\\)")
+                                   "\\(?:\\_<in\\_>\\|=\\(?:[^=]\\|$\\)\\)")
       nil nil
       (1 font-lock-variable-name-face nil noerror)
       (2 font-lock-warning-face t noerror)
@@ -560,7 +560,8 @@ Groups 6-9 can be used in any of argument regexps."
       nil nil
       (1 font-lock-function-name-face nil noerror))
 
-     (,(lua-make-delimited-matcher "\\_<[[:alpha:]_][[:alnum:]_]*\\_>" "," "=\\(?:[^=]\\)")
+     (,(lua-make-delimited-matcher "\\_<[[:alpha:]_][[:alnum:]_]*\\_>" "," 
+                                   "=\\(?:[^=]\\|$\\)")
       nil nil
       (1 font-lock-variable-name-face nil noerror)
       (2 font-lock-warning-face t noerror)
