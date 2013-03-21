@@ -653,7 +653,7 @@ Groups 6-9 can be used in any of argument regexps."
   (setq comint-prompt-regexp lua-prompt-regexp)
   (make-local-variable 'lua-default-command-switches)
   (set (make-local-variable 'font-lock-defaults)
-       '(lua-font-lock-keywords ;; keywords
+       `(lua-font-lock-keywords ;; keywords
          nil                    ;; keywords-only
          nil                    ;; case-fold
          ;; Not sure, why '_' is a word constituent only when font-locking.
@@ -668,9 +668,9 @@ Groups 6-9 can be used in any of argument regexps."
          (beginning-of-defun-function   . lua-beginning-of-proc)
          (end-of-defun-function         . lua-end-of-proc)
          (indent-line-function          . lua-indent-line)
-         (comment-start                 . lua-comment-start)
-         (comment-start-skip            . lua-comment-start-skip)
-         (imenu-generic-expression      . lua-imenu-generic-expression)))
+         (comment-start                 . ,lua-comment-start)
+         (comment-start-skip            . ,lua-comment-start-skip)
+         (imenu-generic-expression      . ,lua-imenu-generic-expression)))
 
   ;; setup menu bar entry (XEmacs style)
   (if (and (featurep 'menubar)
