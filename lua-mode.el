@@ -1166,28 +1166,28 @@ one."
 (defconst lua--left-shifter-regexp
   (eval-when-compile
     (rx
-     ;; All matches are returned via same group 1, even those that can match
-     ;; simultaneously. This is correct as long as, according to the manual [1]:
-     ;;
-     ;;    There is no particular restriction on the numbering, e.g., you can
-     ;;    have several groups with the same number in which case the last one
-     ;;    to match (i.e., the rightmost match) will win.
-     ;;
-     ;; 1. C-h i m "elisp" T f "regexp backslash" // i really need to stop
-     ;; forgetting things.
-     (or (seq (group-n 1 symbol-start "local" (+ blank)) "function" symbol-end)
-         (seq (group-n 1 (eval lua--function-name-rx) (* blank)) (any "{("))
-         (seq (group-n 1 (or
-                          ;; assignment statement prefix
-                          (seq (* nonl) (not (any "<=>~")) "=" (* blank))
-                          ;; return statement prefix
-                          (seq word-start "return" word-end (* blank))))
-              ;; right hand side
-              (or "{"
-                  "function"
-                  (seq (group-n 1 (eval lua--function-name-rx) (* blank))
-                       (any "({")))))))
+     (or (seq
+          ;; regular function definition: left shift for 'function' & '(' tokens
+          (? (regexp "\\_<local\\_>[ \t]+"))
+          (regexp "\\(?1:\\_<function\\_>[ \t]*\\)")
+          (? (eval lua--function-name-rx) (* blank) (regexp "\\(?2:(\\)")))
 
+         ;; function call: left-shift for '(' & '{' tokens
+         (seq (eval lua--function-name-rx) (* blank) (regexp "\\(?1:[{(]\\)"))
+
+         ;; assignment/return statement:
+         (seq (or
+               (seq (* nonl) (not (any "<=>~")) "=" (* blank))
+               (seq (regexp "\\_<return\\_>") (* blank)))
+              ;; right hand side:
+              ;; 1. table ctor: '{'
+              ;; 2. function literal: 'function' & '('
+              ;; 3. function call: '{' & '('
+              (or (regexp "\\(?2:{\\)")
+                  (regexp "\\(?1:\\_<function\\_>\\)[ \t]*\\(?2:(\\)" )
+                  (seq
+                   (eval lua--function-name-rx) (* blank)
+                   (regexp "\\(?2:[{(]\\)")))))))
   "Regular expression that matches left-shifter expression.
 
 Left-shifter expression is defined as follows.  If a block
@@ -1224,7 +1224,9 @@ left-shifter expression. "
       (and
        (/= (point) old-point)
        (looking-at lua--left-shifter-regexp)
-       (= old-point (match-end 1))))))
+       (or (= old-point (match-beginning 1))
+           (= old-point (match-beginning 2)))))))
+
 
 (defun lua-calculate-indentation-override (&optional parse-start)
   "Return overriding indentation amount for special cases.
