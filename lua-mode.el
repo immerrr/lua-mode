@@ -1266,7 +1266,24 @@ the block is opened."
      ; Just add the pair
      (cons pair info))))
 
-(defun lua-calculate-indentation-info (&optional parse-start parse-end)
+(defun lua-calculate-indentation-info-1 (indentation-info bound)
+  "Helper function for `lua-calculate-indentation-info'.
+
+Return list of indentation modifiers from point to BOUND."
+  (while (lua-find-regexp 'forward lua-indentation-modifier-regexp
+                          bound)
+    (let ((found-token (match-string 0))
+          (found-pos (match-beginning 0))
+          (found-end (match-end 0))
+          (data (match-data)))
+      (setq indentation-info
+            (lua-add-indentation-info-pair
+             (lua-make-indentation-info-pair found-token found-pos)
+             indentation-info))))
+  indentation-info)
+
+
+(defun lua-calculate-indentation-info (&optional parse-end)
   "For each block token on the line, computes how it affects the indentation.
 The effect of each token can be either a shift relative to the current
 indentation level, or indentation to some absolute column. This information
@@ -1282,21 +1299,13 @@ and relative each, and the shift/column to indent to."
                            (min parse-end combined-line-end)
                          combined-line-end))
           (indentation-info nil))
-      (if parse-start (goto-char parse-start))
+
       (save-excursion
         (beginning-of-line)
-        (while (lua-find-regexp 'forward lua-indentation-modifier-regexp
-                                search-stop)
-          (let ((found-token (match-string 0))
-                (found-pos (match-beginning 0))
-                (found-end (match-end 0))
-                (data (match-data)))
-            (setq indentation-info
-		  (lua-add-indentation-info-pair
-		   (lua-make-indentation-info-pair found-token found-pos)
-		   indentation-info))))
-	(or indentation-info
-	    (list (cons 'absolute start-indentation)))))))
+        (setq indentation-info (lua-calculate-indentation-info-1
+                                indentation-info search-stop))
+        (or indentation-info
+            (list (cons 'absolute start-indentation)))))))
 
 (defun lua-accumulate-indentation-info (info)
   "Accumulates the indentation information previously calculated by
@@ -1327,7 +1336,7 @@ one."
     (lua-forward-line-skip-blanks 'back))
   (let ((case-fold-search nil)
         (indentation-info (lua-accumulate-indentation-info
-                           (lua-calculate-indentation-info nil parse-end))))
+                           (lua-calculate-indentation-info parse-end))))
     (if (eq (car indentation-info) 'absolute)
         (- (cdr indentation-info) (current-indentation))
       (cdr indentation-info))))
