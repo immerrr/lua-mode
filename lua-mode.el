@@ -580,9 +580,12 @@ Groups 6-9 can be used in any of argument regexps."
   "Default expressions to highlight in Lua mode.")
 
 (defvar lua-imenu-generic-expression
-  ;; Very rough expression, but probably it's for the best, since it's used for
-  ;; navigation. --immerrr
-  '((nil "^[ \t]*\\(?:local[ \t]+\\)?function[ \t]+[[:alnum:]_:.]" 1))
+  ;; This regexp matches expressions which look like function
+  ;; definitions, but are not necessarily allowed by Lua syntax.  This
+  ;; is done on purpose to avoid frustration when making a small error
+  ;; might cause a function get hidden from imenu index. --immerrr
+  '((nil "^[ \t]*\\(?:local[ \t]+\\)?function[ \t]+\\([[:alnum:]_:.]+\\)" 1)
+    (nil "^[ \t]*\\(?:local[ \t]+\\)?\\(\\_<[[:alnum:]_:.]+\\_>\\)[ \t]*=\[ \t]*\\_<function\\_>" 1))
   "Imenu generic expression for lua-mode.  See `imenu-generic-expression'.")
 
 (defvar lua-sexp-alist '(("then" . "end")
