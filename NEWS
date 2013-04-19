@@ -1,0 +1,37 @@
+* Release rel-20130419
+** highlight hash-bang line as comment
+
+** make lua-mode-hook editable via customize
+
+** rewrite of indentation engine fixing several indentation bugs & quirks
+
+** fix lua-send-proc not to send previous function when point is at the beginning of a function
+
+** derive lua-mode from prog-mode for Emacs24
+
+** add font-locking for builtins and numeric constants
+
+** fix a bug causing exponential complexity in a keyword matching regexp
+
+** add more unindentation cases for block-closing tokens
+
+** improve multiline highlighting via font-lock-syntactic-keywords
+   This should make font-locking of multiline literals more fluent & stable.  And
+   it becomes customizable via standard font-lock configuration
+
+** properly fontify variable definitions in 'local ...' & 'for ...'
+   Also, perform some basic syntax verification in those lines.  Multi-line
+   constructs not supported yet.
+
+** fix indentation for blocks starting on continued lines
+     local foo =
+        {
+           bar,
+           baz
+        }  ^
+           1. these lines should be indented properly now
+     ^
+     2. the following lines should be unindented properly now
+
+** extend imenu-generic-expression
+   Now it matches 'foo = function(...)' function definitions
