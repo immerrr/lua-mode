@@ -3,7 +3,7 @@
 
 ** make lua-mode-hook editable via customize
 
-** rewrite of indentation engine fixing several indentation bugs & quirks
+** fix several indentation bugs & quirks
 
 ** fix lua-send-proc not to send previous function when point is at the beginning of a function
 
