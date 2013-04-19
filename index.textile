@@ -15,23 +15,31 @@ If you have a problem or a suggestion about *lua-mode*, please, let me know abou
 
 h2. INSTALLATION
 
-h3. USING "EL-GET":el-get
+The preferred way of installation is via "el-get":el-get or "MELPA":melpa packages.
 
-The preferable way to install *lua-mode* is via "el-get":el-get package, which is itself a package manager which greatly simplifies adding modules to your Emacs and keeping them up-to-date. Once you have *el-get* set up, installing *lua-mode* can be done with
+h3. EL-GET-BASED INSTALLATION
 
-bc.    <M-x> el-get-install "lua-mode"
+"El-get":el-get is a a package manager which greatly simplifies adding modules to your Emacs and keeping them up-to-date. It already includes a recipe for *lua-mode*, so once you have *el-get* set up, installing *lua-mode* can be done with
+
+bc.    <M-x> el-get-install lua-mode
 
 and updating is no more than
 
-bc.    <M-x> el-get-update "lua-mode"
+bc.    <M-x> el-get-update lua-mode
     
 Please, consult with el-get documentation for further information.
 
+h3. MELPA-BASED INSTALLATION
+
+"MELPA":melpa is a package repository compatible with standard Emacs lisp package archive ("ELPA":package-el) introduced in Emacs24 that strives to provide up-to-date versions packages which is invaluable in the world of everchanging Emacs packages. Please, follow the installation instructions from "MELPA":melpa main page and you'll be able to install *lua-mode* with
+
+bc.    <M-x> package-install lua-mode
+
 h3. MANUAL INSTALLATION
 
-1. Grab a zipball[1] or pick any commit you like on "github":lua-mode-github:
-   * "last stable release":https://github.com/immerrr/lua-mode/zipball/rel-20111107
-   * "current development snapshot":https://github.com/immerrr/lua-mode/zipball/master
+1. Grab a zipball or pick any commit you like on "github":lua-mode-github:
+   * "current snapshot":https://github.com/immerrr/lua-mode/zipball/master
+   * "last stable release":https://github.com/immerrr/lua-mode/zipball/rel-20130419
 
 2. Next, you need to make sure that @lua-mode.el@ is on your load-path (and optionally byte-compile it) and to set up Emacs to automatically enable it for @*.lua@ files or ones that contain lua hash-bang line (`#!/usr/bin/lua`). Putting this snippet to @.emacs@ should be enough in most cases:
 
@@ -56,3 +64,5 @@ Lua-mode also works with Hide Show minor mode (see @hs-minor-mode@).
 [lua-mode-tracker]https://github.com/immerrr/lua-mode/issues
 [lua-mode-github]https://github.com/immerrr/lua-mode
 [el-get]https://github.com/dimitri/el-get
+[elpa]http://tromey.com/elpa/
+[melpa]https://github.com/milkypostman/melpa
