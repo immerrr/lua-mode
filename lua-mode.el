@@ -1482,32 +1482,24 @@ If not, return nil."
 
 (defun lua-beginning-of-proc (&optional arg)
   "Move backward to the beginning of a lua proc (or similar).
+
 With argument, do it that many times.  Negative arg -N
 means move forward to Nth following beginning of proc.
+
 Returns t unless search stops due to beginning or end of buffer."
   (interactive "P")
-  (or arg
-      (setq arg 1))
-  (let ((found nil)
-        (ret t))
-    (while (< arg 0)
-      (if (re-search-forward "^function[ \t]" nil t)
-          (setq arg (1+ arg)
-                found t)
-        (setq ret nil
-              arg 0)))
-    (if found
-        (beginning-of-line))
-    (if (> arg 0)
-        (if (re-search-forward "^function[ \t]" nil t)
-            (setq arg (1+ arg))
-          (goto-char (point-max))))
-    (while (> arg 0)
-      (if (re-search-backward "^function[ \t]" nil t)
-          (setq arg (1- arg))
-        (setq ret nil
-              arg 0)))
-    ret))
+  (or arg (setq arg 1))
+
+  (while (and (> arg 0)
+              (re-search-backward "^function[ \t]" nil t))
+    (setq arg (1- arg)))
+
+  (while (and (< arg 0)
+              (re-search-forward "^function[ \t]" nil t))
+    (beginning-of-line)
+    (setq arg (1+ arg)))
+
+  (zerop arg))
 
 (defun lua-end-of-proc (&optional arg)
   "Move forward to next end of lua proc (or similar).
