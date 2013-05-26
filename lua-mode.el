@@ -492,92 +492,94 @@ Groups 6-9 can be used in any of argument regexps."
               (re-search-forward "\\(?1:\\(?2:[^ \t]+\\)\\)" parse-stop 'skip)
               (prog1 nil (goto-char end))))))))
 
-(defconst lua-local-defun-regexp
-  ;; Function matchers are very crude, need rewrite at some point.
-  (rx (or (seq (regexp "\\(?:\\_<function\\_>\\)")
-               (* blank)
-               (? (regexp "\\(?1:\\_<[[:alpha:]][[:alnum:]]*\\_>\\)"))
-               (regexp "\\(?2:.*\\)"))
-          (seq (? (regexp "\\(?1:\\_<[[:alpha:]][[:alnum:]]*\\_>\\)"))
-               (* blank) "=" (* blank)
-               (regexp "\\(?:\\_<function\\_>\\)")
-               (regexp "\\(?2:.*\\)")))))
+(eval-and-compile
+ (defconst lua--function-name-rx
+   '(seq symbol-start
+         (+ (any alnum "_"))
+         (* "." (+ (any alnum "_")))
+         (? ":" (+ (any alnum "_")))
+         symbol-end)
+   "Lua function name regexp in `rx'-SEXP format."))
 
-(defvar lua-font-lock-keywords
-  `(;; highlight the hash-bang line "#!/foo/bar/lua" as comment
-    ("^#!.*$" . font-lock-comment-face)
-
-    ;; Keywords.
-    (,(rx symbol-start
-          (or "and" "break" "do" "else" "elseif" "end" "false"
-              "for" "function" "if" "in" "local" "nil" "not"
-              "or" "repeat" "return" "then" "true" "until"
-              "while")
-          symbol-end)
-     . font-lock-keyword-face)
-
-    ;; Highlight lua builtin functions and variables
-    (,lua--builtins
-     (1 font-lock-builtin-face) (2 font-lock-builtin-face nil noerror))
-
-    ;; hexadecimal numbers
-    ("\\_<0x[[:xdigit:]]+\\_>" . font-lock-constant-face)
-
-    ;; regular numbers
-    ;;
-    ;; This regexp relies on '.' being symbol constituent. Whenever this
-    ;; changes, the regexp needs revisiting --immerrr
-    (, (rx symbol-start
-           ;; make a digit on either side of dot mandatory
-           (or (seq (+ num) (? ".") (* num))
-               (seq (* num) (? ".") (+ num)))
-           (? (regexp "[eE][+-]?") (+ num))
-           symbol-end)
-       . font-lock-constant-face)
-
-    ("^[ \t]*\\_<for\\_>"
-     (,(lua-make-delimited-matcher "\\_<[[:alpha:]_][[:alnum:]_]*\\_>" ","
-                                   "\\(?:\\_<in\\_>\\|=\\(?:[^=]\\|$\\)\\)")
-      nil nil
-      (1 font-lock-variable-name-face nil noerror)
-      (2 font-lock-warning-face t noerror)
-      (3 font-lock-warning-face t noerror)))
-
-    ;; Handle local variable/function names
-    ;;  local blalba, xyzzy =
-    ;;        ^^^^^^  ^^^^^
-    ;;
-    ;;  local function foobar(x,y,z)
-    ;;                 ^^^^^^
-    ;;  local foobar = function(x,y,z)
-    ;;        ^^^^^^
-    ("^[ \t]*\\_<local\\_>"
-     (0 font-lock-keyword-face)
-
-     ((lambda (end)
-        (re-search-forward
-         (rx point (* blank) (regexp ,lua-local-defun-regexp)) end t))
-      nil nil
-      (1 font-lock-function-name-face nil noerror))
-
-     (,(lua-make-delimited-matcher "\\_<[[:alpha:]_][[:alnum:]_]*\\_>" "," 
-                                   "=\\(?:[^=]\\|$\\)")
-      nil nil
-      (1 font-lock-variable-name-face nil noerror)
-      (2 font-lock-warning-face t noerror)
-      (3 font-lock-warning-face t noerror)))
-
+(eval-and-compile
+  (defconst lua-defun-intro-regexp
     ;; Function matchers are very crude, need rewrite at some point.
-    ;; Function name declarations.
-    ("^[ \t]*\\_<function\\_>[ \t]+\\([[:alnum:]_]+\\(?:\\.[[:alnum:]_]+\\)*\\(?::[[:alnum:]_]+\\)?\\)"
-     (1 font-lock-function-name-face))
+    (rx
+     (or (seq (regexp "\\(?:\\_<function\\_>\\)")
+              (* blank)
+              (? (regexp "\\(?1:") (eval lua--function-name-rx) (regexp "\\)")))
+         (seq (? (regexp "\\(?1:") (eval lua--function-name-rx) (regexp "\\)"))
+              (* blank) "=" (* blank)
+              (regexp "\\(?:\\_<function\\_>\\)")))))
 
-    ;; Function matchers are very crude, need rewrite at some point.
-    ;; Handle function names in assignments
-    ("^[ \t]*\\([[:alnum:]_]+\\(?:\\.[[:alnum:]_]+\\)*\\(?::[[:alnum:]_]+\\)?\\)[ \t]*=[ \t]*\\_<function\\_>"
-     (1 font-lock-function-name-face)))
+  (defvar lua-font-lock-keywords
+    `( ;; highlight the hash-bang line "#!/foo/bar/lua" as comment
+      ("^#!.*$" . font-lock-comment-face)
 
-  "Default expressions to highlight in Lua mode.")
+      ;; Keywords.
+      (,(rx symbol-start
+            (or "and" "break" "do" "else" "elseif" "end" "false"
+                "for" "function" "if" "in" "local" "nil" "not"
+                "or" "repeat" "return" "then" "true" "until"
+                "while")
+            symbol-end)
+       . font-lock-keyword-face)
+
+      ;; Highlight lua builtin functions and variables
+      (,lua--builtins
+       (1 font-lock-builtin-face) (2 font-lock-builtin-face nil noerror))
+
+      ;; hexadecimal numbers
+      ("\\_<0x[[:xdigit:]]+\\_>" . font-lock-constant-face)
+
+      ;; regular numbers
+      ;;
+      ;; This regexp relies on '.' being symbol constituent. Whenever this
+      ;; changes, the regexp needs revisiting --immerrr
+      (, (rx symbol-start
+             ;; make a digit on either side of dot mandatory
+             (or (seq (+ num) (? ".") (* num))
+                 (seq (* num) (? ".") (+ num)))
+             (? (regexp "[eE][+-]?") (+ num))
+             symbol-end)
+         . font-lock-constant-face)
+
+      ("^[ \t]*\\_<for\\_>"
+       (,(lua-make-delimited-matcher "\\_<[[:alpha:]_][[:alnum:]_]*\\_>" ","
+                                     "\\(?:\\_<in\\_>\\|=\\(?:[^=]\\|$\\)\\)")
+        nil nil
+        (1 font-lock-variable-name-face nil noerror)
+        (2 font-lock-warning-face t noerror)
+        (3 font-lock-warning-face t noerror)))
+
+      ;; Handle local variable/function names
+      ;;  local blalba, xyzzy =
+      ;;        ^^^^^^  ^^^^^
+      ;;
+      ;;  local function foobar(x,y,z)
+      ;;                 ^^^^^^
+      ;;  local foobar = function(x,y,z)
+      ;;        ^^^^^^
+      ("^[ \t]*\\_<local\\_>"
+       (0 font-lock-keyword-face)
+
+       ((lambda (end)
+          (re-search-forward
+           (rx point (* blank) (regexp ,lua-defun-intro-regexp)) end t))
+        nil nil
+        (1 font-lock-function-name-face nil noerror))
+
+       (,(lua-make-delimited-matcher "\\_<[[:alpha:]_][[:alnum:]_]*\\_>" "," 
+                                     "=\\(?:[^=]\\|$\\)")
+        nil nil
+        (1 font-lock-variable-name-face nil noerror)
+        (2 font-lock-warning-face t noerror)
+        (3 font-lock-warning-face t noerror)))
+
+      (,lua-defun-intro-regexp
+       (1 font-lock-function-name-face)))
+
+    "Default expressions to highlight in Lua mode."))
 
 (defvar lua-imenu-generic-expression
   ;; This regexp matches expressions which look like function
@@ -1362,18 +1364,8 @@ one."
       (cdr indentation-info))))
 
 
-(eval-when-compile
-  (defconst lua--function-name-rx
-    '(seq symbol-start
-          (+ (any alnum "_"))
-          (* "." (+ (any alnum "_")))
-          (? ":" (+ (any alnum "_")))
-          symbol-end)
-    "Lua function name regexp in `rx'-SEXP format."))
-
-
-(defconst lua--left-shifter-regexp
-  (eval-when-compile
+(eval-and-compile
+  (defconst lua--left-shifter-regexp
     (rx
      ;; This regexp should answer the following questions:
      ;; 1. is there a left shifter regexp on that line?
@@ -1396,9 +1388,9 @@ one."
                   "function"
                   (seq
                    (eval lua--function-name-rx) (* blank)
-                   (regexp "\\(?1:\\)") (any "({")))))))
+                   (regexp "\\(?1:\\)") (any "({"))))))
 
-  "Regular expression that matches left-shifter expression.
+    "Regular expression that matches left-shifter expression.
 
 Left-shifter expression is defined as follows.  If a block
 follows a left-shifter expression, its contents & block-close
@@ -1420,7 +1412,7 @@ The following left-shifter expressions are currently handled:
 3. assignment/return statement with
    - table constructor block, {}
    - function call arguments block, () or {} block
-   - function expression a.k.a. lambda, begin-end block.")
+   - function expression a.k.a. lambda, begin-end block."))
 
 
 (defun lua-point-is-after-left-shifter-p ()
