@@ -959,7 +959,7 @@ TOKEN-TYPE determines where the token occurs on a statement. open indicates that
   (interactive)
   (lua-find-regexp 'backward lua-block-regexp))
 
-(defun lua-find-matching-token-word (token search-start &optional direction)
+(defun lua-find-matching-token-word (token &optional direction)
   (let* ((token-info (lua-get-block-token-info token))
          (match-type (lua-get-token-type token-info))
          ;; If we are on a middle token, go backwards. If it is a middle or open,
@@ -976,7 +976,6 @@ TOKEN-TYPE determines where the token occurs on a statement. open indicates that
     ;; (i.e. for a closing token), need to step one character forward
     ;; first, or the regexp will match the opening token.
     (if (eq search-direction 'forward) (forward-char 1))
-    (if search-start (goto-char search-start))
     (catch 'found
       ;; If we are attempting to find a matching token for a terminating token
       ;; (i.e. a token that starts a statement when searching back, or a token
@@ -1005,7 +1004,7 @@ TOKEN-TYPE determines where the token occurs on a statement. open indicates that
                               (eq match-type 'middle-or-open)
                               (eq found-type 'middle-or-open)
                               (eq match-type found-type))
-                          (lua-find-matching-token-word found-token nil
+                          (lua-find-matching-token-word found-token
                                                         search-direction)))
                     (when maybe-found-pos
                       (goto-char maybe-found-pos)
@@ -1027,7 +1026,7 @@ TOKEN-TYPE determines where the token occurs on a statement. open indicates that
               (setq match-type (lua-get-token-type token-info))))))
       maybe-found-pos)))
 
-(defun lua-goto-matching-block-token (&optional search-start parse-start direction)
+(defun lua-goto-matching-block-token (&optional parse-start direction)
   "Find block begion/end token matching the one at the point.
 This function moves the point to the token that matches the one
 at the current point. Returns the point position of the first character of
@@ -1036,7 +1035,7 @@ the matching token if successful, nil otherwise."
   (let ((case-fold-search nil))
     (if (looking-at lua-indentation-modifier-regexp)
         (let ((position (lua-find-matching-token-word (match-string 0)
-                                                      search-start direction)))
+                                                      direction)))
           (and position
                (goto-char position))))))
 
@@ -1205,7 +1204,7 @@ use standalone."
    ((member found-token (list "until" "elseif"))
     (save-excursion
       (let ((line (line-number-at-pos)))
-        (if (and (lua-goto-matching-block-token nil found-pos 'backward)
+        (if (and (lua-goto-matching-block-token found-pos 'backward)
                  (= line (line-number-at-pos)))
             (cons 'remove-matching 0)
           (cons 'relative 0)))))
@@ -1217,7 +1216,7 @@ use standalone."
    ((string-equal found-token "else")
      (save-excursion
        (let ((line (line-number-at-pos)))
-         (if (and (lua-goto-matching-block-token nil found-pos 'backward)
+         (if (and (lua-goto-matching-block-token found-pos 'backward)
                   (= line (line-number-at-pos)))
              (cons 'replace-matching (cons 'relative lua-indent-level))
                    (cons 'relative lua-indent-level)))))
@@ -1228,7 +1227,7 @@ use standalone."
    ((member found-token (list ")" "}" "]" "end"))
     (save-excursion
       (let ((line (line-number-at-pos)))
-        (lua-goto-matching-block-token nil found-pos 'backward)
+        (lua-goto-matching-block-token found-pos 'backward)
         (if (/= line (line-number-at-pos))
             (lua-calculate-indentation-info (point))
           (cons 'remove-matching 0)))))
@@ -1428,31 +1427,37 @@ left-shifter expression. "
        (looking-at lua--left-shifter-regexp)
        (= old-point (match-end 1))))))
 
+
+
 (defun lua-calculate-indentation-override (&optional parse-start)
   "Return overriding indentation amount for special cases.
-Look for an uninterrupted sequence of block-closing tokens that starts
-at the beginning of the line. For each of these tokens, shift indentation
-to the left by the amount specified in lua-indent-level."
-  (let ((indentation-modifier 0)
-        (case-fold-search nil)
-        (block-token nil))
+
+If there's a sequence of block-close tokens starting at the
+beginning of the line, calculate indentation according to the
+line containing block-open token for the last block-close token
+in the sequence.
+
+If not, return nil."
+  (let (case-fold-search token-info block-token-pos)
     (save-excursion
       (if parse-start (goto-char parse-start))
-      ;; Look for the last block closing token
+
       (back-to-indentation)
-      (if (and (not (lua-comment-or-string-p))
-               (looking-at lua-indentation-modifier-regexp)
-               (let ((token-info (lua-get-block-token-info (match-string 0))))
-                 (and token-info
-                      (not (eq 'open (lua-get-token-type token-info))))))
-          (when (lua-goto-matching-block-token nil nil 'backward)
-            ;; Exception cases: when the start of the line is an assignment,
-            ;; go to the start of the assignment instead of the matching item
-            (let ((block-start-column (current-column))
-                  (block-start-point (point)))
-              (if (lua-point-is-after-left-shifter-p)
-                  (current-indentation)
-                block-start-column)))))))
+      (unless (lua-comment-or-string-p)
+        (while
+            (and (looking-at lua-indentation-modifier-regexp)
+                 (setq token-info (lua-get-block-token-info (match-string 0)))
+                 (not (eq 'open (lua-get-token-type token-info))))
+          (setq block-token-pos (match-beginning 0))
+          (goto-char (match-end 0))
+          (skip-syntax-forward " " (line-end-position)))
+
+        (when (lua-goto-matching-block-token block-token-pos 'backward)
+          ;; Exception cases: when the start of the line is an assignment,
+          ;; go to the start of the assignment instead of the matching item
+          (if (lua-point-is-after-left-shifter-p)
+              (current-indentation)
+            (current-column)))))))
 
 (defun lua-calculate-indentation (&optional parse-start)
   "Return appropriate indentation for current line as Lua code."
