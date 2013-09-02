@@ -6,6 +6,8 @@ DISTFILE = lua-mode-$(VERSION).zip
 # EMACS value may be overridden
 EMACS?=emacs
 
+TESTS=ert-tests/test-defun-font-lock.el
+
 default:
 	@echo version is $(VERSION)
 
@@ -15,6 +17,9 @@ compile:
 dist:
 	rm -f $(DISTFILE) && \
 	git archive --format=zip -o $(DISTFILE) --prefix=lua-mode/ HEAD
+
+check:
+	emacs -Q -batch -l ert -l lua-mode.el $(addprefix -l ,$(TESTS)) -f ert-run-tests-batch-and-exit
 
 release:
 	git fetch && \
