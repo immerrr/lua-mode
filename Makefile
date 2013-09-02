@@ -19,7 +19,9 @@ dist:
 	git archive --format=zip -o $(DISTFILE) --prefix=lua-mode/ HEAD
 
 check:
-	emacs -Q -batch -l ert -l lua-mode.el $(addprefix -l ,$(TESTS)) -f ert-run-tests-batch-and-exit
+	emacs -Q -batch -l ert \
+		-l lua-mode.el -l ert-tests/lua-font-lock-test-helpers.el \
+		$(addprefix -l ,$(TESTS)) -f ert-run-tests-batch-and-exit
 
 release:
 	git fetch && \
