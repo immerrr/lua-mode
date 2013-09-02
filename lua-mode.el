@@ -508,11 +508,15 @@ Groups 6-9 can be used in any of argument regexps."
   `(;; highlight the hash-bang line "#!/foo/bar/lua" as comment
     ("^#!.*$" . font-lock-comment-face)
 
-    ;; Keywords.
+    ;; Builtin constants
+    (,(rx symbol-start (or "true" "false" "nil") symbol-end)
+     . font-lock-constant-face)
+
+    ;; Keywords
     (,(rx symbol-start
-          (or "and" "break" "do" "else" "elseif" "end" "false"
-              "for" "function" "if" "in" "local" "nil" "not"
-              "or" "repeat" "return" "then" "true" "until"
+          (or "and" "break" "do" "else" "elseif" "end"
+              "for" "function" "if" "in" "local" "not"
+              "or" "repeat" "return" "then" "until"
               "while")
           symbol-end)
      . font-lock-keyword-face)
