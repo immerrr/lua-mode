@@ -394,11 +394,13 @@ traceback location."
                                  "")))
 
        (concat
-        ;; common prefix - beginning-of-line or neither of [ '.', ':' ] to
-        ;; exclude "foo.string.rep"
-        "\\(?:\\`\\|[^:. \n\t]\\)"
+        ;; common prefix:
+        ;; - beginning-of-line
+        ;; - or neither of [ '.', ':' ] to exclude "foo.string.rep"
+        ;; - or concatenation operator ".."
+        "\\(?:^\\|[^:. \t]\\|[.][.]\\)"
         ;; optional whitespace
-        "[ \n\t]*"
+        "[ \t]*"
         "\\(?:"
         ;; any of modules/functions
         (mapconcat (lambda (x) (concat (module-name-re x)
