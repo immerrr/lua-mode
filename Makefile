@@ -6,6 +6,8 @@ DISTFILE = lua-mode-$(VERSION).zip
 # EMACS value may be overridden
 EMACS?=emacs
 
+EMACS_BATCH=cask exec $(EMACS) --batch -Q
+
 TESTS=
 TESTS += ert-tests/test-defun-font-lock.el
 TESTS += ert-tests/test-builtin-font-lock.el
@@ -14,7 +16,7 @@ default:
 	@echo version is $(VERSION)
 
 compile:
-	$(EMACS) --batch --no-site-file -f batch-byte-compile lua-mode.el
+	$(EMACS_BATCH) -f batch-byte-compile lua-mode.el
 
 dist:
 	rm -f $(DISTFILE) && \
@@ -25,12 +27,12 @@ dist:
 test: test-compiled test-uncompiled
 
 test-compiled: compile
-	$(EMACS) -Q --batch -l ert \
+	$(EMACS_BATCH) -l ert-tests/ert.el \
 		-l lua-mode.elc -l ert-tests/lua-font-lock-test-helpers.el \
 		$(addprefix -l ,$(TESTS)) -f ert-run-tests-batch-and-exit
 
 test-uncompiled:
-	$(EMACS) -Q --batch -l ert \
+	$(EMACS_BATCH) -l ert-tests/ert.el \
 		-l lua-mode.el -l ert-tests/lua-font-lock-test-helpers.el \
 		$(addprefix -l ,$(TESTS)) -f ert-run-tests-batch-and-exit
 
