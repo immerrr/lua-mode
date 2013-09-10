@@ -49,4 +49,7 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
   `(should (equal (lua-get-line-faces ,strs)
                   (lua-mk-font-lock-faces ,faces))))
 
+;; suppress fontification messages in emacs23 output
+(setq font-lock-verbose nil)
+
 (provide 'lua-font-lock-test-helpers)
