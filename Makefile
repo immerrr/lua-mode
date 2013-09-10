@@ -20,8 +20,17 @@ dist:
 	rm -f $(DISTFILE) && \
 	git archive --format=zip -o $(DISTFILE) --prefix=lua-mode/ HEAD
 
-check:
-	emacs -Q -batch -l ert \
+.PHONY: test test-compiled test-uncompiled
+# check both regular and compiled versions
+test: test-compiled test-uncompiled
+
+test-compiled: compile
+	$(EMACS) -Q --batch -l ert \
+		-l lua-mode.elc -l ert-tests/lua-font-lock-test-helpers.el \
+		$(addprefix -l ,$(TESTS)) -f ert-run-tests-batch-and-exit
+
+test-uncompiled:
+	$(EMACS) -Q --batch -l ert \
 		-l lua-mode.el -l ert-tests/lua-font-lock-test-helpers.el \
 		$(addprefix -l ,$(TESTS)) -f ert-run-tests-batch-and-exit
 
