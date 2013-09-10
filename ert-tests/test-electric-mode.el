@@ -63,3 +63,18 @@
    (execute-kbd-macro (kbd "elseif C-j"))
    (beginning-of-line 0)
    (should (eq (current-indentation) 0))))
+
+
+(when (fboundp 'electric-pair-mode)
+  (ert-deftest test-electric-pair-skip-self ()
+    (let ((old-mode (if electric-pair-mode 1 0)))
+      (unwind-protect
+          (with-lua-buffer
+           (set (make-local-variable 'electric-pair-skip-self) t)
+           (set (make-local-variable 'lua-electric-flag) t)
+           (electric-pair-mode 1)
+           (execute-kbd-macro "(")
+           (should (string= (buffer-string) "()"))
+           (execute-kbd-macro ")")
+           (should (string= (buffer-string) "()")))
+        (electric-pair-mode old-mode)))))
