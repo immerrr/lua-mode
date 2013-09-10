@@ -11,6 +11,7 @@ EMACS_BATCH=cask exec $(EMACS) --batch -Q
 TESTS=
 TESTS += ert-tests/test-defun-font-lock.el
 TESTS += ert-tests/test-builtin-font-lock.el
+TESTS += ert-tests/test-electric-mode.el
 
 default:
 	@echo version is $(VERSION)
