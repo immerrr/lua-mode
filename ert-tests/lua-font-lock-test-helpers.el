@@ -52,4 +52,28 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
 ;; suppress fontification messages in emacs23 output
 (setq font-lock-verbose nil)
 
+
+(defmacro with-lua-buffer (&rest body)
+  `(with-temp-buffer
+     (switch-to-buffer (current-buffer))
+     (lua-mode)
+     (font-lock-fontify-buffer)
+     ,@body))
+
+(defun lua-get-indented-strs (strs)
+  (butlast
+   (split-string
+    (with-lua-buffer
+     (insert (replace-regexp-in-string
+              "^\\s *" "" (mapconcat (lambda (x) (concat x "\n")) strs "")))
+     (indent-region (point-min) (point-max))
+     (buffer-substring-no-properties
+      (point-min) (point-max)))
+    "\n" nil)))
+
+(defmacro should-lua-indent (strs)
+  `(should
+    (equal ,strs (lua-get-indented-strs ,strs))))
+
+
 (provide 'lua-font-lock-test-helpers)

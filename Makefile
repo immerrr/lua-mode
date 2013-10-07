@@ -12,6 +12,7 @@ TESTS=
 TESTS += ert-tests/test-defun-font-lock.el
 TESTS += ert-tests/test-builtin-font-lock.el
 TESTS += ert-tests/test-electric-mode.el
+TESTS += ert-tests/test-indentation.el
 
 default:
 	@echo version is $(VERSION)
