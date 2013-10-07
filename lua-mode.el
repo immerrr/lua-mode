@@ -527,21 +527,6 @@ Groups 6-9 can be used in any of argument regexps."
     (,lua--builtins
      (1 font-lock-builtin-face) (2 font-lock-builtin-face nil noerror))
 
-    ;; hexadecimal numbers
-    ("\\_<0x[[:xdigit:]]+\\_>" . font-lock-constant-face)
-
-    ;; regular numbers
-    ;;
-    ;; This regexp relies on '.' being symbol constituent. Whenever this
-    ;; changes, the regexp needs revisiting --immerrr
-    (, (rx symbol-start
-           ;; make a digit on either side of dot mandatory
-           (or (seq (+ num) (? ".") (* num))
-               (seq (* num) (? ".") (+ num)))
-           (? (regexp "[eE][+-]?") (+ num))
-           symbol-end)
-       . font-lock-constant-face)
-
     ("^[ \t]*\\_<for\\_>"
      (,(lua-make-delimited-matcher "\\_<[[:alpha:]_][[:alnum:]_]*\\_>" ","
                                    "\\(?:\\_<in\\_>\\|=\\(?:[^=]\\|$\\)\\)")
