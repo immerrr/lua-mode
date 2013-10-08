@@ -627,6 +627,7 @@ Groups 6-9 can be used in any of argument regexps."
     (modify-syntax-entry ?* ".")
     (modify-syntax-entry ?/ ".")
     (modify-syntax-entry ?^ ".")
+    (modify-syntax-entry ?% ".")
     (modify-syntax-entry ?> ".")
     (modify-syntax-entry ?< ".")
     (modify-syntax-entry ?= ".")
@@ -1071,10 +1072,10 @@ Returns final value of point as integer or nil if operation failed."
                    "local" "function" "if" "until" "elseif" "return") t)
      "\\_>\\|"
      "\\(^\\|[^" lua-operator-class "]\\)"
-     (regexp-opt '("+" "-" "*" "/" "^" ".." "==" "=" "<" ">" "<=" ">=" "~=") t)
+     (regexp-opt '("+" "-" "*" "/" "%" "^" ".." "=="
+                   "=" "<" ">" "<=" ">=" "~=" "." ":" ) t)
      "\\)"
-     "\\s *\\=")
-    )
+     "\\s *\\="))
   "Regexp that matches the ending of a line that needs continuation
 
 This regexp starts from eol and looks for a binary operator or an unclosed
@@ -1088,11 +1089,10 @@ an optional whitespace till the end of the line.")
      "\\(\\_<"
      (regexp-opt '("and" "or" "not") t)
      "\\_>\\|"
-     (regexp-opt '("+" "-" "*" "/" "^" ".." "==" "=" "<" ">" "<=" ">=" "~=") t)
+     (regexp-opt '("+" "-" "*" "/" "%" "^" ".." "=="
+                   "=" "<" ">" "<=" ">=" "~=" "." ":") t)
      "\\($\\|[^" lua-operator-class "]\\)"
-     "\\)")
-
-    )
+     "\\)"))
   "Regexp that matches a line that continues previous one
 
 This regexp means, starting from point there is an optional whitespace followed
