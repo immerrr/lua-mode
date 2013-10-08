@@ -208,3 +208,14 @@
 (ert-deftest lua-indentation-tablector ()
   ;; FIXME: add
   )
+
+(ert-deftest lua-indentation-continuation-spans-over-empty-lines ()
+  ;; FIXME: add
+  ;; FIXME: check comment-only lines too
+  )
+
+
+(ert-deftest lua-indentation-keywords-with-special-characters ()
+  (should-lua-indent '("do"
+                       "   foobar = _do"
+                       "end")))

@@ -373,24 +373,16 @@ traceback location."
             ("table" . ("concat" "insert" "maxn" "pack" "remove" "sort" "unpack"
                         )))))
 
-      ;; This code uses \\< and \\> to delimit builtin symbols instead of
-      ;; \\_< and \\_>, because -- a necessity -- '.' syntax class is hacked
-      ;; to 'symbol' and \\_> won't detect a symbol boundary in 'foo.bar' and
-      ;; -- sufficiency -- conveniently, underscore '_' is hacked to count as
-      ;; word constituent, but only for font-locking. Neither of these hacks
-      ;; makes sense to me, I'm going to wipe them out as soon as I'm sure
-      ;; that indentation won't get hurt. --immerrr
-      ;;
       (lua--cl-labels
        ((module-name-re (x)
-                        (concat "\\(?1:\\<"
+                        (concat "\\(?1:\\_<"
                                 (if (listp x) (car x) x)
-                                "\\>\\)"))
+                                "\\_>\\)"))
         (module-members-re (x) (if (listp x)
                                    (concat "\\(?:[ \t]*\\.[ \t]*"
-                                           "\\<\\(?2:"
+                                           "\\_<\\(?2:"
                                            (regexp-opt (cdr x))
-                                           "\\)\\>\\)?")
+                                           "\\)\\_>\\)?")
                                  "")))
 
        (concat
@@ -633,9 +625,6 @@ Groups 6-9 can be used in any of argument regexps."
     (modify-syntax-entry ?= ".")
     (modify-syntax-entry ?~ ".")
 
-    ;; '.' character might be better as punctuation, as in C, but this way you
-    ;; can treat table index as symbol, e.g. `io.string'
-    (modify-syntax-entry ?. "_")
     (syntax-table))
   "`lua-mode' syntax table.")
 
@@ -652,10 +641,8 @@ Groups 6-9 can be used in any of argument regexps."
        `(lua-font-lock-keywords ;; keywords
          nil                    ;; keywords-only
          nil                    ;; case-fold
-         ;; Not sure, why '_' is a word constituent only when font-locking.
-         ;; --immerrr
-         ((?_ . "w")) ;; syntax-alist
-         nil          ;; syntax-begin
+         nil                    ;; syntax-alist
+         nil                    ;; syntax-begin
          ;; initialize font-lock buffer-local variables
          (font-lock-syntactic-keywords  . lua-font-lock-syntactic-keywords)
          (font-lock-extra-managed-props . (syntax-table))
@@ -889,20 +876,20 @@ ignored, nil otherwise."
      (regexp-opt '("{" "(" "[" "]" ")" "}") t))))
 
 (defconst lua-block-token-alist
-  '(("do"       "\\<end\\>"   "\\<for\\|while\\>"                       middle-or-open)
-    ("function" "\\<end\\>"   nil                                       open)
-    ("repeat"   "\\<until\\>" nil                                       open)
-    ("then"     "\\<\\(e\\(lse\\(if\\)?\\|nd\\)\\)\\>" "\\<\\(else\\)?if\\>" middle)
+  '(("do"       "\\_<end\\_>"   "\\_<for\\|while\\_>"                       middle-or-open)
+    ("function" "\\_<end\\_>"   nil                                       open)
+    ("repeat"   "\\_<until\\_>" nil                                       open)
+    ("then"     "\\_<\\(e\\(lse\\(if\\)?\\|nd\\)\\)\\_>" "\\_<\\(else\\)?if\\_>" middle)
     ("{"        "}"           nil                                       open)
     ("["        "]"           nil                                       open)
     ("("        ")"           nil                                       open)
-    ("if"       "\\<then\\>"  nil                                       open)
-    ("for"      "\\<do\\>"    nil                                       open)
-    ("while"    "\\<do\\>"    nil                                       open)
-    ("else"     "\\<end\\>"   "\\<then\\>"                              middle)
-    ("elseif"   "\\<then\\>"  "\\<then\\>"                              middle)
-    ("end"      nil           "\\<\\(do\\|function\\|then\\|else\\)\\>" close)
-    ("until"    nil           "\\<repeat\\>"                            close)
+    ("if"       "\\_<then\\_>"  nil                                       open)
+    ("for"      "\\_<do\\_>"    nil                                       open)
+    ("while"    "\\_<do\\_>"    nil                                       open)
+    ("else"     "\\_<end\\_>"   "\\_<then\\_>"                              middle)
+    ("elseif"   "\\_<then\\_>"  "\\_<then\\_>"                              middle)
+    ("end"      nil           "\\_<\\(do\\|function\\|then\\|else\\)\\_>" close)
+    ("until"    nil           "\\_<repeat\\_>"                            close)
     ("}"        nil           "{"                                       close)
     ("]"        nil           "\\["                                     close)
     (")"        nil           "("                                       close))

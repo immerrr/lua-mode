@@ -27,8 +27,17 @@ foo.  table.sort(foobar)
 foo  .table.sort(foobar)
 foo:table.sort(foobar)
 foo:  table.sort(foobar)
-foo  :table.sort(foobar)"
-   '(nil nil nil nil nil nil))
+foo  :table.sort(foobar)
+
+_table.sort(foobar)
+   table_.sort(foobar)"
+   '(nil nil nil nil nil nil nil nil nil))
+
+  (should-lua-font-lock-equal
+   "\
+   table  ._sort(foobar)
+   table.  sort_(foobar)"
+   '(("table" builtin) ("table" builtin)))
 
   (should-lua-font-lock-equal
    ;; After concatenation operator builtins should be highlighted too.
@@ -41,8 +50,25 @@ foo  :table.sort(foobar)"
    "a = { nil, true, false}"
    '(("nil" constant "true" constant "false" constant)))
 
+  ;; Hint user that builtin constants cannot be used like that
   (should-lua-font-lock-equal
    "a = { foo.true, foo:false }"
-   '(;; This case won't work while '.' has symbol syntax
-     ;; ("true" constant "false" constant)
-     ("false" constant))))
+   '(("true" constant "false" constant))))
+
+
+(ert-deftest lua-font-lock-keywords ()
+  (should-lua-font-lock-equal
+   "do foo(5) end"
+   '(("do" keyword "end" keyword)))
+
+  (should-lua-font-lock-equal
+   "_do foo(5) end_"
+   '(nil))
+
+  ;; Hint user that keywords cannot be used like that
+  (should-lua-font-lock-equal
+   "do foo(5).end end"
+   '(("do" keyword "end" keyword "end" keyword)))
+  (should-lua-font-lock-equal
+   "do foo(5):end end"
+   '(("do" keyword "end" keyword "end" keyword))))
