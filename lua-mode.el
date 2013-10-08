@@ -219,6 +219,7 @@ Should be a list of strings."
   :type 'string
   :group 'lua)
 
+
 (defvar lua-process nil
   "The active Lua subprocess")
 
@@ -1543,6 +1544,30 @@ When called interactively, switch to the process buffer."
   (if (lua--called-interactively-p 'any)
       (switch-to-buffer lua-process-buffer)))
 
+(defvar lua-process-init-code
+  (concat "function luamode_dofile(fname, displayname)"
+          "  local f = assert(io.open(fname))"
+          "  local d = f:read('*all')"
+          "  f:close()"
+          "  x, e = loadstring(d, '@'..displayname)"
+          "  if fname ~= displayname then"
+          "    os.remove(fname)"
+          "  end"
+          "  if e then"
+          "    error(e)"
+          "  end"
+          "  return x()"
+          "end"))
+
+(defun lua-get-create-process ()
+  (or (and (comint-check-proc lua-process-buffer)
+           lua-process)
+      (prog1 (lua-start-process)
+        (when (fboundp 'process-kill-without-query)
+          (process-kill-without-query lua-process))))
+  (comint-simple-send lua-process lua-process-init-code)
+  lua-process)
+
 (defun lua-kill-process ()
   "Kill lua subprocess and its buffer."
   (interactive)
@@ -1588,74 +1613,19 @@ If `lua-process' is nil or dead, start a new process first."
         (error "Not on a function definition")))))
 
 (defun lua-send-region (start end)
-  "Send region to lua subprocess."
   (interactive "r")
-  ;; make temporary lua file
-  (let ((tempfile (lua-make-temp-file "lua-"))
-        (last-prompt nil)
-        (prompt-found nil)
-        (lua-stdin-line-offset (count-lines (point-min) start))
-        (lua-stdin-buffer (current-buffer))
-        current-prompt )
-    (write-region start end tempfile)
-    (or (and lua-process
-             (comint-check-proc lua-process-buffer))
-        (lua-start-process lua-default-application))
-    ;; kill lua process without query
-    (if (fboundp 'process-kill-without-query)
-        (process-kill-without-query lua-process))
-    ;; send dofile(tempfile)
-    (with-current-buffer lua-process-buffer
-      (goto-char (point-max))
-      (setq last-prompt (point-max))
-      (comint-simple-send (get-buffer-process (current-buffer))
-                          (format "dofile(\"%s\")"
-                                  (replace-regexp-in-string "\\\\" "\\\\\\\\" tempfile)))
-      ;; wait for prompt
-      (while (not prompt-found)
-        (accept-process-output (get-buffer-process (current-buffer)))
-        (goto-char (point-max))
-        (setq prompt-found (and (lua-prompt-line) (< last-prompt (point-max)))))
-      ;; remove temp. lua file
-      (delete-file tempfile)
-      (lua-postprocess-output-buffer lua-process-buffer last-prompt lua-stdin-line-offset)
-      (if lua-always-show
-          (display-buffer lua-process-buffer)))))
+  (let* ((lineno (line-number-at-pos start))
+         (lua-tempfile (lua-make-temp-file "lua-"))
+         (lua-file (or (buffer-file-name) lua-tempfile))
+         (command (format "luamode_dofile('%s', '%s')"
+                          (replace-regexp-in-string "\\\\" "\\\\\\\\" lua-tempfile)
+                          (replace-regexp-in-string "\\\\" "\\\\\\\\" lua-file))))
 
-(defun lua-postprocess-output-buffer (buf start &optional lua-stdin-line-offset)
-  "Highlight tracebacks found in buf. If an traceback occurred return
-t, otherwise return nil.  BUF must exist."
-  (let ((lua-stdin-line-offset (or lua-stdin-line-offset 0))
-        line file bol err-p)
-    (with-current-buffer buf
-      (goto-char start)
-      (beginning-of-line)
-      (if (re-search-forward lua-traceback-line-re nil t)
-          (setq file (match-string 1)
-                line (string-to-number (match-string 2)))))
-    (when (and lua-jump-on-traceback line)
-      (beep)
-      ;; FIXME: highlight
-      (lua-jump-to-traceback file line lua-stdin-line-offset)
-      (setq err-p t))
-    err-p))
+    (write-region (concat (make-string (1- lineno) ?\n)
+                          (buffer-substring-no-properties start end)) nil lua-tempfile)
 
-(defun lua-jump-to-traceback (file line lua-stdin-line-offset)
-  "Jump to the Lua code in FILE at LINE."
-  ;; sanity check: temporary-file-directory
-  (if (string= (substring file 0 3)  "...")
-      (message "Lua traceback output truncated: customize 'temporary-file-directory' or increase 'LUA_IDSIZE' in 'luaconf.h'.")
-    (let ((buffer (cond ((or (string-equal file tempfile) (string-equal file "stdin"))
-                         (setq line (+ line lua-stdin-line-offset))
-                         lua-stdin-buffer)
-                        (t (find-file-noselect file)))))
-      (pop-to-buffer buffer)
-      ;; Force Lua mode
-      (if (not (eq major-mode 'lua-mode))
-          (lua-mode))
-      ;; FIXME: fix offset when executing region
-      (goto-char (point-min)) (forward-line (1- line))
-      (message "Jumping to error in file %s on line %d" file line))))
+    (comint-simple-send (lua-get-create-process) command)
+    (when lua-always-show (lua-show-process-buffer))))
 
 (defun lua-prompt-line ()
   (save-excursion
@@ -1667,16 +1637,9 @@ t, otherwise return nil.  BUF must exist."
 (defun lua-send-lua-region ()
   "Send preset lua region to lua subprocess."
   (interactive)
-  (or (and lua-region-start lua-region-end)
-      (error "lua-region not set"))
-  (or (and lua-process
-           (comint-check-proc lua-process-buffer))
-      (lua-start-process lua-default-application))
-  (comint-simple-send lua-process
-                      (buffer-substring lua-region-start lua-region-end)
-                      )
-  (if lua-always-show
-      (display-buffer lua-process-buffer)))
+  (unless (and lua-region-start lua-region-end)
+    (error "lua-region not set"))
+  (lua-send-region lua-region-start lua-region-end))
 
 (defalias 'lua-send-proc 'lua-send-defun)
 
@@ -1690,7 +1653,6 @@ t, otherwise return nil.  BUF must exist."
   "Restart lua subprocess and send whole file as input."
   (interactive)
   (lua-kill-process)
-  (lua-start-process lua-default-application)
   (lua-send-buffer))
 
 (defun lua-show-process-buffer ()
