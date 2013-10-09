@@ -1524,26 +1524,6 @@ This function just searches for a `end' at the beginning of a line."
           (forward-line)))
     ret))
 
-(defun lua-start-process (&optional name program startfile &rest switches)
-  "Start a lua process named NAME, running PROGRAM.
-PROGRAM defaults to NAME, which defaults to `lua-default-application'.
-When called interactively, switch to the process buffer."
-  (interactive)
-  (or switches
-      (setq switches lua-default-command-switches))
-  (setq name (or name lua-default-application))
-  (setq program (or program name))
-  (setq lua-process-buffer (apply 'make-comint name program startfile switches))
-  (setq lua-process (get-buffer-process lua-process-buffer))
-  ;; wait for prompt
-  (with-current-buffer lua-process-buffer
-    (while (not (lua-prompt-line))
-      (accept-process-output (get-buffer-process (current-buffer)))
-      (goto-char (point-max))))
-  ;; when called interactively, switch to process buffer
-  (if (lua--called-interactively-p 'any)
-      (switch-to-buffer lua-process-buffer)))
-
 (defvar lua-process-init-code
   (concat "function luamode_dofile(fname, displayname)"
           "  local f = assert(io.open(fname))"
@@ -1559,13 +1539,37 @@ When called interactively, switch to the process buffer."
           "  return x()"
           "end"))
 
+(defun lua-start-process (&optional name program startfile &rest switches)
+  "Start a lua process named NAME, running PROGRAM.
+PROGRAM defaults to NAME, which defaults to `lua-default-application'.
+When called interactively, switch to the process buffer."
+  (interactive)
+  (or switches
+      (setq switches lua-default-command-switches))
+  (setq name (or name lua-default-application))
+  (setq program (or program name))
+  (setq lua-process-buffer (apply 'make-comint name program startfile switches))
+  (setq lua-process (get-buffer-process lua-process-buffer))
+  (with-current-buffer lua-process-buffer
+    ;; wait for prompt
+    (while (not (lua-prompt-line))
+      (accept-process-output (get-buffer-process (current-buffer)))
+      (goto-char (point-max)))
+    ;; send initialization code
+    (comint-simple-send nil lua-process-init-code)
+    ;; enable error highlighting in stack traces
+    (compilation-shell-minor-mode))
+
+  ;; when called interactively, switch to process buffer
+  (if (lua--called-interactively-p 'any)
+      (switch-to-buffer lua-process-buffer)))
+
 (defun lua-get-create-process ()
   (or (and (comint-check-proc lua-process-buffer)
            lua-process)
       (prog1 (lua-start-process)
         (when (fboundp 'process-kill-without-query)
           (process-kill-without-query lua-process))))
-  (comint-simple-send lua-process lua-process-init-code)
   lua-process)
 
 (defun lua-kill-process ()
