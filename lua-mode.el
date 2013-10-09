@@ -1525,19 +1525,32 @@ This function just searches for a `end' at the beginning of a line."
     ret))
 
 (defvar lua-process-init-code
-  (concat "function luamode_dofile(fname, displayname)"
-          "  local f = assert(io.open(fname))"
-          "  local d = f:read('*all')"
-          "  f:close()"
-          "  x, e = loadstring(d, '@'..displayname)"
-          "  if fname ~= displayname then"
-          "    os.remove(fname)"
-          "  end"
-          "  if e then"
-          "    error(e)"
-          "  end"
-          "  return x()"
-          "end"))
+  (mapconcat
+   'identity
+   '("function luamode_loadstring(str, displayname, lineoffset)"
+     "  if lineoffset > 1 then"
+     "    str = string.rep('\\n', lineoffset - 1) .. str"
+     "  end"
+     ""
+     "  x, e = loadstring(str, '@'..displayname)"
+     "  if e then"
+     "    error(e)"
+     "  end"
+     "  return x()"
+     "end")
+   " "))
+
+(defun lua-make-lua-string (str)
+  "Convert string to Lua literal."
+  (save-match-data
+    (with-temp-buffer
+      (insert str)
+      (goto-char (point-min))
+      (while (re-search-forward "[\"'\\\n]" nil t)
+        (if (string= (match-string 0) "\n")
+            (replace-match "\\\\n")
+          (replace-match "\\\\\\&" t)))
+      (concat "'" (buffer-string) "'"))))
 
 (defun lua-start-process (&optional name program startfile &rest switches)
   "Start a lua process named NAME, running PROGRAM.
@@ -1620,14 +1633,13 @@ If `lua-process' is nil or dead, start a new process first."
   (interactive "r")
   (let* ((lineno (line-number-at-pos start))
          (lua-tempfile (lua-make-temp-file "lua-"))
-         (lua-file (or (buffer-file-name) lua-tempfile))
-         (command (format "luamode_dofile('%s', '%s')"
-                          (replace-regexp-in-string "\\\\" "\\\\\\\\" lua-tempfile)
-                          (replace-regexp-in-string "\\\\" "\\\\\\\\" lua-file))))
-
-    (write-region (concat (make-string (1- lineno) ?\n)
-                          (buffer-substring-no-properties start end)) nil lua-tempfile)
-
+         (lua-file (or (buffer-file-name) (buffer-name)))
+         (region-str (buffer-substring-no-properties start end))
+         (command
+          (format "luamode_loadstring(%s, %s, %s)"
+                  (lua-make-lua-string region-str)
+                  (lua-make-lua-string lua-file)
+                  lineno)))
     (comint-simple-send (lua-get-create-process) command)
     (when lua-always-show (lua-show-process-buffer))))
 
