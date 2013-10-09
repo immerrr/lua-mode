@@ -1563,6 +1563,7 @@ When called interactively, switch to the process buffer."
   (setq program (or program name))
   (setq lua-process-buffer (apply 'make-comint name program startfile switches))
   (setq lua-process (get-buffer-process lua-process-buffer))
+  (set-process-query-on-exit-flag lua-process nil)
   (with-current-buffer lua-process-buffer
     ;; wait for prompt
     (while (not (lua-prompt-line))
@@ -1578,11 +1579,10 @@ When called interactively, switch to the process buffer."
       (switch-to-buffer lua-process-buffer)))
 
 (defun lua-get-create-process ()
+  "Return active Lua process creating one if necessary."
   (or (and (comint-check-proc lua-process-buffer)
            lua-process)
-      (prog1 (lua-start-process)
-        (when (fboundp 'process-kill-without-query)
-          (process-kill-without-query lua-process))))
+      (lua-start-process))
   lua-process)
 
 (defun lua-kill-process ()
