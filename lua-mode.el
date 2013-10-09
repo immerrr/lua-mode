@@ -1571,7 +1571,15 @@ When called interactively, switch to the process buffer."
       (goto-char (point-max)))
     ;; send initialization code
     (comint-simple-send nil lua-process-init-code)
+
     ;; enable error highlighting in stack traces
+    (require 'compile)
+    (make-local-variable 'compilation-error-regexp-alist)
+    (setq compilation-error-regexp-alist
+          (cons '("^\t*\\([^:\n]+\\):\\([^:\n]+\\):" 1 2)
+                ;; Remove 'gnu entry from error regexp alist, it somehow forces
+                ;; leading TAB to be recognized as part of filename in Emacs23.
+                (delq 'gnu compilation-error-regexp-alist)))
     (compilation-shell-minor-mode))
 
   ;; when called interactively, switch to process buffer
@@ -1659,7 +1667,6 @@ If `lua-process' is nil or dead, start a new process first."
 
 (defalias 'lua-send-proc 'lua-send-defun)
 
-;; FIXME: This needs work... -Bret
 (defun lua-send-buffer ()
   "Send whole buffer to lua subprocess."
   (interactive)
