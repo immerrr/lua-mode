@@ -1637,8 +1637,25 @@ If `lua-process' is nil or dead, start a new process first."
           (lua-send-region start end)
         (error "Not on a function definition")))))
 
+(defun lua-maybe-skip-shebang-line (start)
+  "Skip shebang (#!/path/to/interpreter/) line at beginning of buffer.
+
+Return a position that is after Lua-recognized shebang line (1st
+character in file must be ?#) if START is at its beginning.
+Otherwise, return START."
+  (save-restriction
+    (widen)
+    (if (and (eq start (point-min))
+             (eq (char-after start) ?#))
+        (save-excursion
+          (goto-char start)
+          (forward-line)
+          (point))
+      start)))
+
 (defun lua-send-region (start end)
   (interactive "r")
+  (setq start (lua-maybe-skip-shebang-line start))
   (let* ((lineno (line-number-at-pos start))
          (lua-tempfile (lua-make-temp-file "lua-"))
          (lua-file (or (buffer-file-name) (buffer-name)))
