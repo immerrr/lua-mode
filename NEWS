@@ -1,3 +1,32 @@
+* dev
+** skip shebang line when sending to inferior buffer (issue #61)
+
+** rewrite lua-send-region to use "loadstring" rather than "dofile"
+   - sending code to processes on remote hosts is now supported
+   - stack traces for errors occurred in sent code point to proper lines in files
+   - script path is preserved when sending code (issue #55)
+   - no more hang ups when waiting for input (issue #48) or after sending code
+     with no output (issue #60)
+
+** increase consistency with Emacs ecosystem to improve user experience
+   - fix character syntax hacks: '.' is now punctuation and '_' is now symbol
+   - remove number highlighting
+   - font-lock "nil", "true" and "false" as constants rather than keywords
+
+** make builtin font-locking more stable, enable it after ".." operator
+
+** add missing modulo operator (%) to line-continuation tokens
+
+** fix interaction with electric-pair-mode (issue #54)
+
+** when unindenting block-close tokens consider all of them, not just the first one
+     x = foobar('arg1', function ()
+                  print('foobar')
+     end)
+     ^ this line starts with two block-close tokens and is unindented
+     accordingly
+
+
 * Release rel-20130419
 ** highlight hash-bang line as comment
 
