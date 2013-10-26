@@ -106,6 +106,7 @@
   (require 'cl))
 
 (require 'comint)
+(require 'newcomment)
 
 (eval-and-compile
   ;; Backward compatibility for Emacsen < 24.1
@@ -193,7 +194,7 @@ for Emacsen that doesn't contain one (pre-23.3)."
   :type 'string
   :group 'lua)
 
-(defcustom lua-comment-start-skip "-- "
+(defcustom lua-comment-start-skip "---*[ \t]*"
   "Default value of `comment-start-skip'."
   :type 'string
   :group 'lua)
@@ -654,6 +655,8 @@ Groups 6-9 can be used in any of argument regexps."
          (indent-line-function          . lua-indent-line)
          (comment-start                 . ,lua-comment-start)
          (comment-start-skip            . ,lua-comment-start-skip)
+         (comment-use-syntax            . t)
+         (comment-use-global-state      . t)
          (imenu-generic-expression      . ,lua-imenu-generic-expression)))
 
   ;; setup menu bar entry (XEmacs style)

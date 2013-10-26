@@ -53,6 +53,9 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
 (setq font-lock-verbose nil)
 
 
+(defun lua-join-lines (strs)
+  (mapconcat (lambda (x) (concat x "\n")) strs ""))
+
 (defmacro with-lua-buffer (&rest body)
   `(with-temp-buffer
      (switch-to-buffer (current-buffer))
@@ -64,13 +67,29 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
   (butlast
    (split-string
     (with-lua-buffer
-     (insert (replace-regexp-in-string
-              "^\\s *" "" (mapconcat (lambda (x) (concat x "\n")) strs "")))
+     (insert (replace-regexp-in-string "^\\s *" "" (lua-join-lines strs)))
      (indent-region (point-min) (point-max))
      (buffer-substring-no-properties
       (point-min) (point-max)))
     "\n" nil)))
 
+(defun lua-insert-goto-<> (strs)
+  "Insert sequence of strings and put point in place of \"<>\"."
+  (insert (lua-join-lines strs))
+  (goto-char (point-min))
+  (re-search-forward "<>")
+  (replace-match "")
+  ;; Inserted text may contain multiline constructs which will only be
+  ;; recognized after fontification.
+  (font-lock-fontify-buffer))
+
+(defmacro lua-buffer-strs (&rest body)
+  `(butlast
+    (split-string
+     (with-lua-buffer
+      (progn ,@body)
+      (buffer-substring-no-properties (point-min) (point-max)))
+     "\n" nil)))
 (defmacro should-lua-indent (strs)
   `(should
     (equal ,strs (lua-get-indented-strs ,strs))))
