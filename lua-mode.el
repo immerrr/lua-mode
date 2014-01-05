@@ -1708,10 +1708,17 @@ Otherwise, return START."
   (interactive)
   (delete-windows-on lua-process-buffer))
 
+(defun lua-funcname-at-point ()
+  "Get current Name { '.' Name } sequence."
+  ;; FIXME: copying/modifying syntax table for each call may incur a penalty
+  (with-syntax-table (copy-syntax-table)
+    (modify-syntax-entry ?. "_")
+    (current-word t)))
+
 (defun lua-search-documentation ()
   "Search Lua documentation for the word at the point."
   (interactive)
-  (browse-url (concat lua-search-url-prefix (current-word t))))
+  (browse-url (concat lua-search-url-prefix (lua-funcname-at-point))))
 
 (defun lua-toggle-electric-state (&optional arg)
   "Toggle the electric indentation feature.
