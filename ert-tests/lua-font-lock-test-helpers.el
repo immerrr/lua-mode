@@ -90,9 +90,12 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
       (progn ,@body)
       (buffer-substring-no-properties (point-min) (point-max)))
      "\n" nil)))
-(defmacro should-lua-indent (strs)
-  `(should
-    (equal ,strs (lua-get-indented-strs ,strs))))
+
+(defmacro should-lua-indent (str)
+  `(let ((strs (split-string ,str "\n"))
+         (indent-tabs-mode nil))
+     (should
+      (equal strs (lua-get-indented-strs strs)))))
 
 
 (provide 'lua-font-lock-test-helpers)
