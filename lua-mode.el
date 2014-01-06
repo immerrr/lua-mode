@@ -107,6 +107,83 @@
 
 (require 'comint)
 (require 'newcomment)
+(require 'rx)
+
+
+;; rx-wrappers for Lua
+
+(eval-and-compile
+  (defvar lua-rx-constituents)
+
+  (defun lua-rx-to-string (form &optional no-group)
+    "Lua-specific replacement for `rx-to-string'.
+
+See `rx-to-string' documentation for more information FORM and
+NO-GROUP arguments."
+    (let ((rx-constituents lua-rx-constituents))
+      (rx-to-string form no-group)))
+
+  (defmacro lua-rx (&rest regexps)
+    "Lua-specific replacement for `rx'.
+
+See `rx' documentation for more information about REGEXPS param."
+    (cond ((null regexps)
+           (error "No regexp"))
+          ((cdr regexps)
+           (lua-rx-to-string `(and ,@regexps) t))
+          (t
+           (lua-rx-to-string (car regexps) t))))
+
+  (defun lua--new-rx-form (form)
+    "Add FORM definition to `lua-rx' macro.
+
+FORM is a cons (NAME . DEFN), see more in `rx-constituents' doc.
+This function enables specifying new definitions using old ones:
+if DEFN is a list that starts with `:rx' symbol its second
+element is itself expanded with `lua-rx-to-string'. "
+    (let ((name (car form))
+          (form-definition (cdr form)))
+      (when (and (listp form-definition) (eq ':rx (car form-definition)))
+        (setcdr form (lua-rx-to-string (cadr form-definition) t)))
+      (push form lua-rx-constituents)))
+
+  (defun lua--rx-symbol (form)
+    (rx-form `(seq symbol-start (or ,@(cdr form))
+                   symbol-end)))
+
+  (setq lua-rx-constituents (copy-sequence rx-constituents))
+
+  ;; group-n is not available in Emacs23, provide a fallback.
+  (unless (assq 'group-n rx-constituents)
+    (defun lua--rx-group-n (form)
+      (concat (format "\\(?%d:" (nth 1 form))
+              (rx-form `(seq ,@(nthcdr 2 form)) ':)
+              "\\)"))
+    (push '(group-n lua--rx-group-n 1 nil) lua-rx-constituents))
+
+  (mapc #'lua--new-rx-form
+        `((symbol lua--rx-symbol 1 nil)
+          (ws . "[ \t]*") (ws+ . "[ \t]+")
+          (lua-name :rx (symbol (regexp "[[:alpha:]_]+[[:alnum:]_]*")))
+          (lua-funcname
+           :rx (seq lua-name (* ws "." ws lua-name)
+                    (opt ws ":" ws lua-name)))
+          (lua-funcheader
+           :rx (or (seq (symbol "function") ws (group-n 1 lua-funcname))
+                   (seq (group-n 1 lua-funcname) ws "=" ws (symbol "function"))))
+          (lua-number
+           :rx (seq (or (seq (+ digit) (opt ".") (* digit))
+                        (seq (* digit) (opt ".") (+ digit)))
+                    (opt (regexp "[eE][+-]?[0-9]+"))))
+          (lua-token
+           :rx (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
+                   ">" "=" ";" ":" "," "." ".." "..."))
+          (lua-keyword
+           :rx (symbol "and" "break" "do" "else" "elseif" "end"  "for" "function"
+                       "if" "in" "local" "not" "or" "repeat" "return" "then"
+                       "until" "while")))
+        ))
+
 
 (eval-and-compile
   ;; Backward compatibility for Emacsen < 24.1
