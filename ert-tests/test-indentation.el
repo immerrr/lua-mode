@@ -1,4 +1,4 @@
-(require 'cl)
+(require 'cl-lib)
 (require 'ert)
 (require 'lua-font-lock-test-helpers
          ;; let's try a bit to help Emacs find the helpers, just in case
