@@ -290,6 +290,7 @@ for Emacsen that doesn't contain one (pre-23.3)."
 Should be a list of strings."
   :type '(repeat string)
   :group 'lua)
+(make-variable-buffer-local 'lua-default-command-switches)
 
 (defcustom lua-always-show t
   "*Non-nil means display lua-process-buffer after sending a command."
@@ -682,7 +683,6 @@ Groups 6-9 can be used in any of argument regexps."
   :group 'lua
 
   (setq comint-prompt-regexp lua-prompt-regexp)
-  (make-local-variable 'lua-default-command-switches)
   (set (make-local-variable 'font-lock-defaults)
        `(lua-font-lock-keywords ;; keywords
          nil                    ;; keywords-only
