@@ -674,17 +674,6 @@ Groups 6-9 can be used in any of argument regexps."
       ("else"   "else"     lua-indent-line nil 'system)
       ("elseif" "elseif"   lua-indent-line nil 'system))))
 
-(eval-and-compile
-  (defalias 'lua-make-temp-file
-    (if (fboundp 'make-temp-file)
-        'make-temp-file
-      (lambda (prefix &optional dir-flag) ;; Simple implementation
-        (expand-file-name
-         (make-temp-name prefix)
-         (if (fboundp 'temp-directory)
-             (temp-directory)
-           temporary-file-directory))))))
-
 (defvar lua-mode-syntax-table
   (with-syntax-table (copy-syntax-table)
     ;; main comment syntax: begins with "--", ends with "\n"
@@ -1739,7 +1728,6 @@ Otherwise, return START."
   (interactive "r")
   (setq start (lua-maybe-skip-shebang-line start))
   (let* ((lineno (line-number-at-pos start))
-         (lua-tempfile (lua-make-temp-file "lua-"))
          (lua-file (or (buffer-file-name) (buffer-name)))
          (region-str (buffer-substring-no-properties start end))
          (command
