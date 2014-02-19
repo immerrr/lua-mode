@@ -233,16 +233,8 @@ a = 0")
 
   (should-lua-indent "\
 while
-   foo do
-   a = a + 1
-end
-
-a = 0")
-
-  (should-lua-indent "\
-while
    foo
-   do
+do
    a = a + 1
 end
 
@@ -257,7 +249,7 @@ a = 0")
 while
    x +
    y > 0
-   do
+do
    a = a + 1
 end
 
@@ -318,18 +310,6 @@ for k, v in pairs(bar) do a = a + 1 end
 a = 0")
 
   (should-lua-indent "\
-for
-   k, v in pairs(bar) do a = a + 1 end
-
-a = 0")
-
-  (should-lua-indent "\
-for k, v
-   in pairs(bar) do a = a + 1 end
-
-a = 0")
-
-  (should-lua-indent "\
 for y = 0, 10 do
    a = a + 1
 end
@@ -366,14 +346,31 @@ foobar(a,
        c)")
 
   (should-lua-indent "\
+foobar{
+   a, b, c
+}"))
+
+
+(ert-deftest lua-indentation-funcall-with-nested-table ()
+  :expected-result :failed
+    (should-lua-indent "\
 foobar({
    a, b, c
 })")
 
   (should-lua-indent "\
-foobar{
-   a, b, c
-}")
+foobar(a, {
+   b,
+   c
+})")
+
+  (should-lua-indent "\
+foobar(
+   a,
+   {
+      b,
+      c
+   })")
 
   (should-lua-indent "\
 foobar(a,
@@ -397,8 +394,8 @@ foobar(
       b
    },
    c, d
-)")
-  )
+)"))
+
 
 (ert-deftest lua-indentation-continuation-with-functioncall ()
   (should-lua-indent "\
@@ -467,3 +464,28 @@ a = 0"))
 do
    foobar = _do
 end"))
+
+
+(ert-deftest lua-indentation-block-intro-continuation ()
+  :expected-result :failed
+  (should-lua-indent "\
+while
+   foo do
+   a = a + 1
+end
+
+a = 0")
+
+  (should-lua-indent "\
+for k, v
+   in pairs(bar) do a = a + 1 end
+
+a = 0")
+
+  (should-lua-indent "\
+for k, v
+   in pairs(bar) do a = a + 1 end
+
+a = 0")
+
+  )
