@@ -60,3 +60,20 @@ end"
      ("local" keyword "function" keyword "foo" function-name)
      nil
      ("end" keyword))))
+
+(ert-deftest lua-funcnames-with-underscore ()
+  (should-lua-font-lock-equal
+   ;; Check all defun variants, check embedded defuns
+   "\
+function foo()
+  function bar_bar() end
+  local function baz_baz() end
+  qux_qux = function() end
+  local quux_quux = function() end
+end"
+   '(("function" keyword "foo" function-name)
+     ("function" keyword "bar_bar" function-name "end" keyword)
+     ("local" keyword "function" keyword "baz_baz" function-name "end" keyword)
+     ("qux_qux" function-name "function" keyword "end" keyword)
+     ("local" keyword "quux_quux" function-name "function" keyword "end" keyword)
+     ("end" keyword)))  )

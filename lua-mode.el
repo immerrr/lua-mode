@@ -144,7 +144,7 @@ element is itself expanded with `lua-rx-to-string'. "
     (let ((name (car form))
           (form-definition (cdr form)))
       (when (and (listp form-definition) (eq ':rx (car form-definition)))
-        (setcdr form (lua-rx-to-string (cadr form-definition) t)))
+        (setcdr form (lua-rx-to-string (cadr form-definition) 'nogroup)))
       (push form lua-rx-constituents)))
 
   (defun lua--rx-symbol (form)
@@ -169,8 +169,10 @@ element is itself expanded with `lua-rx-to-string'. "
            :rx (seq lua-name (* ws "." ws lua-name)
                     (opt ws ":" ws lua-name)))
           (lua-funcheader
-           :rx (or (seq (symbol "function") ws (group-n 1 lua-funcname))
-                   (seq (group-n 1 lua-funcname) ws "=" ws (symbol "function"))))
+           ;; Outer (seq ...) is here to shy-group the definition
+           :rx (seq (or (seq (symbol "function") ws (group-n 1 lua-funcname))
+                        (seq (group-n 1 lua-funcname) ws "=" ws
+                             (symbol "function")))))
           (lua-number
            :rx (seq (or (seq (+ digit) (opt ".") (* digit))
                         (seq (* digit) (opt ".") (+ digit)))
@@ -619,7 +621,7 @@ Groups 6-9 can be used in any of argument regexps."
 
      ((lambda (end)
         (re-search-forward
-         (rx point (* blank) (regexp ,lua-local-defun-regexp)) end t))
+         (lua-rx point ws lua-funcheader (* nonl)) end t))
       nil nil
       (1 font-lock-function-name-face nil noerror))
 
