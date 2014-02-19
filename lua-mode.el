@@ -177,6 +177,8 @@ element is itself expanded with `lua-rx-to-string'. "
            :rx (seq (or (seq (+ digit) (opt ".") (* digit))
                         (seq (* digit) (opt ".") (+ digit)))
                     (opt (regexp "[eE][+-]?[0-9]+"))))
+          (lua-assignment-op
+           :rx (seq "=" (or buffer-end (not (any "=")))))
           (lua-token
            :rx (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
                    ">" "=" ";" ":" "," "." ".." "..."))
@@ -568,32 +570,17 @@ Groups 6-9 can be used in any of argument regexps."
                 (re-search-forward "\\(?1:\\(?2:[^ \t]+\\)\\)" parse-stop 'skip)
                 (prog1 nil (goto-char end)))))))))
 
-(defconst lua-local-defun-regexp
-  ;; Function matchers are very crude, need rewrite at some point.
-  (rx (or (seq (regexp "\\(?:\\_<function\\_>\\)")
-               (* blank)
-               (? (regexp "\\(?1:\\_<[[:alpha:]][[:alnum:]]*\\_>\\)"))
-               (regexp "\\(?2:.*\\)"))
-          (seq (? (regexp "\\(?1:\\_<[[:alpha:]][[:alnum:]]*\\_>\\)"))
-               (* blank) "=" (* blank)
-               (regexp "\\(?:\\_<function\\_>\\)")
-               (regexp "\\(?2:.*\\)")))))
 
 (defvar lua-font-lock-keywords
   `(;; highlight the hash-bang line "#!/foo/bar/lua" as comment
     ("^#!.*$" . font-lock-comment-face)
 
     ;; Builtin constants
-    (,(rx symbol-start (or "true" "false" "nil") symbol-end)
+    (,(lua-rx (symbol "true" "false" "nil"))
      . font-lock-constant-face)
 
     ;; Keywords
-    (,(rx symbol-start
-          (or "and" "break" "do" "else" "elseif" "end"
-              "for" "function" "if" "in" "local" "not"
-              "or" "repeat" "return" "then" "until"
-              "while")
-          symbol-end)
+    (,(lua-rx lua-keyword)
      . font-lock-keyword-face)
 
     ;; Highlight lua builtin functions and variables
@@ -601,8 +588,8 @@ Groups 6-9 can be used in any of argument regexps."
      (1 font-lock-builtin-face) (2 font-lock-builtin-face nil noerror))
 
     ("^[ \t]*\\_<for\\_>"
-     (,(lua-make-delimited-matcher "\\_<[[:alpha:]_][[:alnum:]_]*\\_>" ","
-                                   "\\(?:\\_<in\\_>\\|=\\(?:[^=]\\|$\\)\\)")
+     (,(lua-make-delimited-matcher (lua-rx lua-name) ","
+                                   (lua-rx (or (symbol "in") lua-assignment-op)))
       nil nil
       (1 font-lock-variable-name-face nil noerror)
       (2 font-lock-warning-face t noerror)
@@ -619,38 +606,27 @@ Groups 6-9 can be used in any of argument regexps."
     ("^[ \t]*\\_<local\\_>"
      (0 font-lock-keyword-face)
 
-     ((lambda (end)
-        (re-search-forward
-         (lua-rx point ws lua-funcheader (* nonl)) end t))
+     ;; (* nonl) at the end is to consume trailing characters or otherwise they
+     ;; delimited matcher would attempt to parse them afterwards and wrongly
+     ;; highlight parentheses as incorrect variable name characters.
+     (,(lua-rx point ws lua-funcheader (* nonl))
       nil nil
       (1 font-lock-function-name-face nil noerror))
 
-     (,(lua-make-delimited-matcher "\\_<[[:alpha:]_][[:alnum:]_]*\\_>" "," 
-                                   "=\\(?:[^=]\\|$\\)")
+     (,(lua-make-delimited-matcher (lua-rx lua-name) ","
+                                   (lua-rx lua-assignment-op))
       nil nil
       (1 font-lock-variable-name-face nil noerror)
       (2 font-lock-warning-face t noerror)
       (3 font-lock-warning-face t noerror)))
 
-    ;; Function matchers are very crude, need rewrite at some point.
-    ;; Function name declarations.
-    ("^[ \t]*\\_<function\\_>[ \t]+\\([[:alnum:]_]+\\(?:\\.[[:alnum:]_]+\\)*\\(?::[[:alnum:]_]+\\)?\\)"
-     (1 font-lock-function-name-face))
-
-    ;; Function matchers are very crude, need rewrite at some point.
-    ;; Handle function names in assignments
-    ("^[ \t]*\\([[:alnum:]_]+\\(?:\\.[[:alnum:]_]+\\)*\\(?::[[:alnum:]_]+\\)?\\)[ \t]*=[ \t]*\\_<function\\_>"
+    (,(lua-rx (or bol ";") ws lua-funcheader)
      (1 font-lock-function-name-face)))
 
   "Default expressions to highlight in Lua mode.")
 
 (defvar lua-imenu-generic-expression
-  ;; This regexp matches expressions which look like function
-  ;; definitions, but are not necessarily allowed by Lua syntax.  This
-  ;; is done on purpose to avoid frustration when making a small error
-  ;; might cause a function get hidden from imenu index. --immerrr
-  '((nil "^[ \t]*\\(?:local[ \t]+\\)?function[ \t]+\\([[:alnum:]_:.]+\\)" 1)
-    (nil "^[ \t]*\\(?:local[ \t]+\\)?\\(\\_<[[:alnum:]_:.]+\\_>\\)[ \t]*=\[ \t]*\\_<function\\_>" 1))
+  `((nil ,(lua-rx (or bol ";") ws lua-funcheader) 1))
   "Imenu generic expression for lua-mode.  See `imenu-generic-expression'.")
 
 (defvar lua-sexp-alist '(("then" . "end")
