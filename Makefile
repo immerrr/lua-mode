@@ -9,11 +9,11 @@ EMACS?=emacs
 EMACS_BATCH=cask exec $(EMACS) --batch -Q
 
 TESTS=
-TESTS += ert-tests/test-defun-font-lock.el
-TESTS += ert-tests/test-builtin-font-lock.el
-TESTS += ert-tests/test-electric-mode.el
-TESTS += ert-tests/test-indentation.el
-TESTS += ert-tests/test-strings-and-comments.el
+TESTS += test/test-defun-font-lock.el
+TESTS += test/test-builtin-font-lock.el
+TESTS += test/test-electric-mode.el
+TESTS += test/test-indentation.el
+TESTS += test/test-strings-and-comments.el
 
 default:
 	@echo version is $(VERSION)
@@ -30,13 +30,13 @@ dist:
 test: test-compiled test-uncompiled
 
 test-compiled: compile
-	$(EMACS_BATCH) -l ert-tests/ert.el \
-		-l lua-mode.elc -l ert-tests/lua-font-lock-test-helpers.el \
+	$(EMACS_BATCH) -l test/ert.el \
+		-l lua-mode.elc -l test/lua-font-lock-test-helpers.el \
 		$(addprefix -l ,$(TESTS)) -f ert-run-tests-batch-and-exit
 
 test-uncompiled:
-	$(EMACS_BATCH) -l ert-tests/ert.el \
-		-l lua-mode.el -l ert-tests/lua-font-lock-test-helpers.el \
+	$(EMACS_BATCH) -l test/ert.el \
+		-l lua-mode.el -l test/lua-font-lock-test-helpers.el \
 		$(addprefix -l ,$(TESTS)) -f ert-run-tests-batch-and-exit
 
 release:
