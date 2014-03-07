@@ -1284,14 +1284,14 @@ and the cdr of the replace-matching info is added in its place. This is used
 when a middle-of the block (the only case is 'else') is seen on the same line
 the block is opened."
   (cond
-   ( (listp (cdr-safe pair))
-     (nconc pair info))
    ( (eq 'remove-matching (car pair))
      ; Remove head of list
      (cdr info))
    ( (eq 'replace-matching (car pair))
      ; remove head of list, and add the cdr of pair instead
      (cons (cdr pair) (cdr info)))
+   ( (listp (cdr-safe pair))
+     (nconc pair info))
    ( t
      ; Just add the pair
      (cons pair info))))

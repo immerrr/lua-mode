@@ -437,8 +437,12 @@ elseif baz then
    a = a + 3
 end
 
-a = 0"))
+a = 0")
 
+  (should-lua-indent "\
+if foo then a = a + 1 else
+   a = a + 2
+end"))
 
 (ert-deftest lua-indentation-defun ()
   ;; 	 [local] function funcname funcbody
