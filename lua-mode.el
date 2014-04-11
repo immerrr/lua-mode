@@ -114,6 +114,7 @@
 
 (eval-and-compile
   (defvar lua-rx-constituents)
+  (defvar rx-parent)
 
   (defun lua-rx-to-string (form &optional no-group)
     "Lua-specific replacement for `rx-to-string'.
@@ -148,8 +149,15 @@ element is itself expanded with `lua-rx-to-string'. "
       (push form lua-rx-constituents)))
 
   (defun lua--rx-symbol (form)
-    (rx-form `(seq symbol-start (or ,@(cdr form))
-                   symbol-end)))
+    ;; form is a list (symbol XXX ...)
+    ;; Skip initial 'symbol
+    (setq form (cdr form))
+    ;; If there's only one element, take it from the list, otherwise wrap the
+    ;; whole list into `(or XXX ...)' form.
+    (setq form (if (eq 1 (length form))
+                   (car form)
+                 (append '(or) form)))
+    (rx-form `(seq symbol-start ,form symbol-end) rx-parent))
 
   (setq lua-rx-constituents (copy-sequence rx-constituents))
 
