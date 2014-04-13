@@ -635,7 +635,7 @@ Groups 6-9 can be used in any of argument regexps."
   "Default expressions to highlight in Lua mode.")
 
 (defvar lua-imenu-generic-expression
-  `((nil ,(lua-rx (or bol ";") ws lua-funcheader) 1))
+  `((nil ,(lua-rx (or bol ";") ws (opt (seq (symbol "local") ws)) lua-funcheader) 1))
   "Imenu generic expression for lua-mode.  See `imenu-generic-expression'.")
 
 (defvar lua-sexp-alist '(("then" . "end")
