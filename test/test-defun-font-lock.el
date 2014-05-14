@@ -77,3 +77,35 @@ end"
      ("qux_qux" function-name "function" keyword "end" keyword)
      ("local" keyword "quux_quux" function-name "function" keyword "end" keyword)
      ("end" keyword)))  )
+
+(ert-deftest lua-font-lock-labels ()
+  (should-lua-font-lock-equal
+    "\
+goto foo
+::foo::"
+   '(("goto" keyword "foo" constant)
+     ("::foo::" constant)))
+
+  (should-lua-font-lock-equal
+    "\
+local foo = 'test' ::f12o::
+goto f12o"
+   '(("local" keyword "foo" variable-name "'test'" string "::f12o::" constant)
+     ("goto" keyword "f12o" constant)))
+
+  ;; With spaces after and before "::"
+  (should-lua-font-lock-equal
+    "\
+goto foo
+:: foo ::"
+   '(("goto" keyword "foo" constant)
+     (":: foo ::" constant)))
+
+  ;; Don't font lock labels when substring "goto" appears as a suffix
+  ;; of another variable
+  (should-lua-font-lock-equal
+    "\
+JUNKgoto foo
+:: foo ::"
+   '(nil ;; don't font lock "foo"
+     (":: foo ::" constant))))
