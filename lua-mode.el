@@ -192,8 +192,8 @@ element is itself expanded with `lua-rx-to-string'. "
                    ">" "=" ";" ":" "," "." ".." "..."))
           (lua-keyword
            :rx (symbol "and" "break" "do" "else" "elseif" "end"  "for" "function"
-                       "if" "in" "local" "not" "or" "repeat" "return" "then"
-                       "until" "while")))
+                       "goto" "if" "in" "local" "not" "or" "repeat" "return"
+                       "then" "until" "while")))
         ))
 
 
@@ -591,6 +591,10 @@ Groups 6-9 can be used in any of argument regexps."
     ;; Keywords
     (,(lua-rx lua-keyword)
      . font-lock-keyword-face)
+
+    ;; goto labels
+    ;; Highlights the following:  ::label::
+    ("[ \t]::[[:alpha:]_]+[[:alnum:]_]*::[ \t]" . font-lock-keyword-face)
 
     ;; Highlight lua builtin functions and variables
     (,lua--builtins
