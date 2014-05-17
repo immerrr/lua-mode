@@ -1150,7 +1150,8 @@ previous one even though it looked like an end-of-statement.")
 (defun lua-last-token-continues-p ()
   "Returns true if the last token on this line is a continuation token."
   (let ((line-begin (line-beginning-position))
-        (line-end (line-end-position)))
+        (line-end (line-end-position))
+        (label-declaration-eol-regexp (lua-rx "::" ws eol)))
     (save-excursion
       (end-of-line)
       ;; we need to check whether the line ends in a comment and
@@ -1159,17 +1160,46 @@ previous one even though it looked like an end-of-statement.")
         (if (looking-at "--")
             (setq line-end (point))))
       (goto-char line-end)
-      (re-search-backward lua-cont-eol-regexp line-begin t))))
+      (when (re-search-backward lua-cont-eol-regexp line-begin t)
+        (goto-char line-end)
+        ;; Label declarations (used in "goto" statements) should not be considered
+        ;; as continuations tokens.
+        ;;
+        ;; Unfortunately the regexp `lua-cont-eol-regexp' always
+        ;; considers them as continuations tokens due to the fact that
+        ;; a label declaration always ends with the ":" character
+        ;; (e.g. "::foo::"), which causes `lua-cont-eol-regexp' to match.
+        ;;
+        ;; Since label declarations should not be considered as continuation
+        ;; tokens, we do an extra check against `label-declaration-eol-regexp'
+        ;; before concluding whether or not this line ends with a continuation
+        ;; token.
+        (not (re-search-backward label-declaration-eol-regexp line-begin t))))))
 
 (defun lua-first-token-continues-p ()
   "Returns true if the first token on this line is a continuation token."
-  (let ((line-end (line-end-position)))
+  (let ((line-end (line-end-position))
+        (label-declaration-bol-regexp (lua-rx bol ws "::")))
     (save-excursion
       (beginning-of-line)
       ;; if first character of the line is inside string, it's a continuation
       ;; if strings aren't supposed to be indented, `lua-calculate-indentation' won't even let
       ;; the control inside this function
-      (re-search-forward lua-cont-bol-regexp line-end t))))
+      (when (re-search-forward lua-cont-bol-regexp line-end t)
+        (beginning-of-line)
+        ;; Label declarations (used in "goto" statements) should not be considered
+        ;; as continuations tokens.
+        ;;
+        ;; Unfortunately the regexp `lua-cont-bol-regexp' always
+        ;; considers them as continuations tokens due to the fact that
+        ;; a label declaration always starts with the ":" character
+        ;; (e.g. "::foo::"), which causes `lua-cont-bol-regexp' to match.
+        ;;
+        ;; Since label declarations should not be considered as continuation
+        ;; tokens, we do an extra check against `label-declaration-bol-regexp'
+        ;; before concluding whether or not this line ends with a continuation
+        ;; token.
+        (not (re-search-forward label-declaration-bol-regexp line-end t))))))
 
 (defconst lua-block-starter-regexp
   (eval-when-compile
