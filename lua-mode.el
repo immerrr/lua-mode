@@ -592,9 +592,16 @@ Groups 6-9 can be used in any of argument regexps."
     (,(lua-rx lua-keyword)
      . font-lock-keyword-face)
 
-    ;; goto labels
-    ;; Highlights the following:  ::label::
-    ("[ \t]::[[:alpha:]_]+[[:alnum:]_]*::[ \t]" . font-lock-keyword-face)
+    ;; Labels used by the "goto" statement
+    ;; Highlights the following syntax:  ::label::
+    (,(lua-rx ws "::" lua-name "::" ws)
+      . font-lock-constant-face)
+
+    ;; Hightlights the name of the label in the "goto" statement like
+    ;; "goto label"
+    (,(lua-rx ws "goto" ws+ (group-n 1 lua-name))
+      nil nil
+      (1 font-lock-constant-face))
 
     ;; Highlight lua builtin functions and variables
     (,lua--builtins
