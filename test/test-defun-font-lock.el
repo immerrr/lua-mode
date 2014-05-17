@@ -89,6 +89,14 @@ goto foo
   (should-lua-font-lock-equal
     "\
 local foo = 'test' ::f12o::
-goto f12o; return 1"
-   '(("local" keyword "foo" variable-name "'test'" string "::f12o::" constant)
-     ("goto" keyword "f12o" constant "return" keyword))))
+goto f12o"
+   '(("local" keyword "foo" variable-name "'test'" string " ::f12o::" constant)
+     ("goto" keyword "f12o" constant)))
+
+  ;; With spaces after and before "::"
+  (should-lua-font-lock-equal
+    "\
+goto foo
+:: foo ::"
+   '(("goto" keyword "foo" constant)
+     (":: foo ::" constant))))

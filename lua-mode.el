@@ -594,7 +594,7 @@ Groups 6-9 can be used in any of argument regexps."
 
     ;; Labels used by the "goto" statement
     ;; Highlights the following syntax:  ::label::
-    (,(lua-rx ws "::" lua-name "::" ws)
+    (,(lua-rx ws "::" ws lua-name ws "::" ws)
       . font-lock-constant-face)
 
     ;; Hightlights the name of the label in the "goto" statement like
