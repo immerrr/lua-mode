@@ -594,12 +594,12 @@ Groups 6-9 can be used in any of argument regexps."
 
     ;; Labels used by the "goto" statement
     ;; Highlights the following syntax:  ::label::
-    (,(lua-rx ws "::" ws lua-name ws "::" ws)
+    (,(lua-rx "::" ws lua-name ws "::")
       . font-lock-constant-face)
 
     ;; Hightlights the name of the label in the "goto" statement like
     ;; "goto label"
-    (,(lua-rx ws "goto" ws+ (group-n 1 lua-name))
+    (,(lua-rx (symbol (seq "goto" ws+ (group-n 1 lua-name))))
       nil nil
       (1 font-lock-constant-face))
 

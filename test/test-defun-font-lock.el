@@ -90,7 +90,7 @@ goto foo
     "\
 local foo = 'test' ::f12o::
 goto f12o"
-   '(("local" keyword "foo" variable-name "'test'" string " ::f12o::" constant)
+   '(("local" keyword "foo" variable-name "'test'" string "::f12o::" constant)
      ("goto" keyword "f12o" constant)))
 
   ;; With spaces after and before "::"
@@ -99,4 +99,13 @@ goto f12o"
 goto foo
 :: foo ::"
    '(("goto" keyword "foo" constant)
+     (":: foo ::" constant)))
+
+  ;; Don't font lock labels when substring "goto" appears as a suffix
+  ;; of another variable
+  (should-lua-font-lock-equal
+    "\
+JUNKgoto foo
+:: foo ::"
+   '(nil ;; don't font lock "foo"
      (":: foo ::" constant))))
