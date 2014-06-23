@@ -1,12 +1,6 @@
-(require 'ert)
-(require 's)
-
-(defmacro with-lua-buffer (&rest body)
-  `(with-temp-buffer
-     (switch-to-buffer (current-buffer))
-     (lua-mode)
-     (font-lock-fontify-buffer)
-     ,@body))
+(load (concat (file-name-directory (or load-file-name (buffer-file-name)
+                                       default-directory))
+              "test-helper.el") nil 'nomessage 'nosuffix)
 
 
 (ert-deftest test-electric-brace ()

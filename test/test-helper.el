@@ -1,3 +1,4 @@
+(require 'ert)
 (require 'lua-mode)
 
 (defun get-str-faces (str)
@@ -96,6 +97,3 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
          (indent-tabs-mode nil))
      (should
       (equal strs (lua-get-indented-strs strs)))))
-
-
-(provide 'lua-font-lock-test-helpers)

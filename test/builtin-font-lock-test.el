@@ -1,9 +1,6 @@
-(require 'ert)
-(require 'lua-font-lock-test-helpers
-         ;; let's try a bit to help Emacs find the helpers, just in case
-         (concat (file-name-directory (or load-file-name (buffer-file-name)
-                                          default-directory))
-                 "lua-font-lock-test-helpers.el"))
+(load (concat (file-name-directory (or load-file-name (buffer-file-name)
+                                       default-directory))
+              "test-helper.el") nil 'nomessage 'nosuffix)
 
 
 (ert-deftest lua-font-lock-builtins ()
