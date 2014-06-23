@@ -11,3 +11,11 @@
    (lua-forward-sexp)
    (should (looking-back "x = function() return {{}} end"))))
 
+(ert-deftest lua-forward-sexp-if-then-block ()
+  (with-lua-buffer
+   (lua-insert-goto-<>
+    '("if foo <>then"
+      "  return bar"
+      "--[[end here]] end"))
+   (lua-forward-sexp)
+   (should (looking-back (rx "--[[end here]] end")))))

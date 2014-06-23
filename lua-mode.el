@@ -1801,19 +1801,20 @@ left out."
 (defun lua-forward-sexp (&optional count)
   "Forward to block end"
   (interactive "p")
+  ;; negative offsets not supported
+  (assert (or (not count) (>= count 0)))
   (save-match-data
     (let* ((count (or count 1))
            (block-start (mapcar 'car lua-sexp-alist))
            (block-end (mapcar 'cdr lua-sexp-alist))
            (block-regex (regexp-opt (append  block-start block-end) 'words))
-           current-exp
-           )
+           current-exp)
       (while (> count 0)
         ;; skip whitespace
         (skip-chars-forward " \t\n")
         (if (looking-at (regexp-opt block-start 'words))
             (let ((keyword (match-string 1)))
-              (lua-find-matching-token-word keyword nil))
+              (lua-find-matching-token-word keyword 'forward))
           ;; If the current keyword is not a "begin" keyword, then just
           ;; perform the normal forward-sexp.
           (forward-sexp 1))
