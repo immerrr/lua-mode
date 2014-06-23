@@ -14,6 +14,7 @@ TESTS += test/builtin-font-lock-test.el
 TESTS += test/electric-mode-test.el
 TESTS += test/indentation-test.el
 TESTS += test/strings-and-comments-test.el
+TESTS += test/generic-test.el
 
 default:
 	@echo version is $(VERSION)

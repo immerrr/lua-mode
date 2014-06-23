@@ -1049,6 +1049,7 @@ TOKEN-TYPE determines where the token occurs on a statement. open indicates that
                               (eq match-type 'middle-or-open)
                               (eq found-type 'middle-or-open)
                               (eq match-type found-type))
+                          (goto-char found-pos)
                           (lua-find-matching-token-word found-token
                                                         search-direction)))
                     (when maybe-found-pos
