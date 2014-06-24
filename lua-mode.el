@@ -145,12 +145,12 @@
                            "repeat" "return" "then" "until" "while"))
 
       ;; group-n is not available in Emacs23, provide a fallback.
-      ,@(unless (assq 'group-n rx-constituents)
-          '(group-n (:func (lambda (_ n &rest args)
-                             (concat (format "\\(?%d:" n)
-                                     (arx-and args)
-                                     "\\)"))
-                           :min-args 1))))))
+      ,(unless (assq 'group-n rx-constituents)
+         '(group-n (:func (lambda (_ n &rest args)
+                            (concat (format "\\(?%d:" n)
+                                    (arx-and args)
+                                    "\\)"))
+                          :min-args 1))))))
 
 
 
