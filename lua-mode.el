@@ -12,6 +12,8 @@
 ;;              Aaron Smith <aaron-lua@gelatinous.com>.
 ;;
 ;; URL:         http://immerrr.github.com/lua-mode
+;; Package-Requires: ((ample-regexps "0.1"))
+
 ;; Version:     20130419
 ;;
 ;; This file is NOT part of Emacs.
@@ -107,94 +109,49 @@
 
 (require 'comint)
 (require 'newcomment)
-(require 'rx)
+(require 'ample-regexps)
 
 
 ;; rx-wrappers for Lua
 
 (eval-and-compile
-  (defvar lua-rx-constituents)
-  (defvar rx-parent)
+  (define-arx lua-rx
+    `((symbol (:func (lambda (_ arg1 &rest args)
+                       `(seq symbol-start
+                             ,(if args `(or ,arg1 ,@args) arg1)
+                             symbol-end))
+                     :min-args 1))
+      (alpha_ (regexp "[[:alpha:]_]"))
+      (alnum_ (regexp "[[:alnum:]_]"))
+      (ws (regexp "[ \t]*"))
+      (ws+ (regexp "[ \t]+"))
+      (lua-name (symbol (+ alpha_) (* alnum_)))
+      (lua-funcname (seq lua-name (* ws "." ws lua-name)
+                         (opt ws ":" ws lua-name)))
+      (lua-funcheader (or (seq (symbol "function") ws (group-n 1 lua-funcname))
+                          (seq (group-n 1 lua-funcname) ws "=" ws
+                               (symbol "function"))))
+      ;; lua-number currently unused
+      ;;
+      ;; (lua-number
+      ;;  :rx (seq (or (seq (+ digit) (opt ".") (* digit))
+      ;;               (seq (* digit) (opt ".") (+ digit)))
+      ;;           (opt (regexp "[eE][+-]?[0-9]+"))))
+      (lua-assignment-op (seq "=" (or buffer-end (not (any "=")))))
+      (lua-token (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
+                     ">" "=" ";" ":" "," "." ".." "..."))
+      (lua-keyword (symbol "and" "break" "do" "else" "elseif" "end" "for"
+                           "function" "goto" "if" "in" "local" "not" "or"
+                           "repeat" "return" "then" "until" "while"))
 
-  (defun lua-rx-to-string (form &optional no-group)
-    "Lua-specific replacement for `rx-to-string'.
+      ;; group-n is not available in Emacs23, provide a fallback.
+      ,@(unless (assq 'group-n rx-constituents)
+          '(group-n (:func (lambda (_ n &rest args)
+                             (concat (format "\\(?%d:" n)
+                                     (arx-and args)
+                                     "\\)"))
+                           :min-args 1))))))
 
-See `rx-to-string' documentation for more information FORM and
-NO-GROUP arguments."
-    (let ((rx-constituents lua-rx-constituents))
-      (rx-to-string form no-group)))
-
-  (defmacro lua-rx (&rest regexps)
-    "Lua-specific replacement for `rx'.
-
-See `rx' documentation for more information about REGEXPS param."
-    (cond ((null regexps)
-           (error "No regexp"))
-          ((cdr regexps)
-           (lua-rx-to-string `(and ,@regexps) t))
-          (t
-           (lua-rx-to-string (car regexps) t))))
-
-  (defun lua--new-rx-form (form)
-    "Add FORM definition to `lua-rx' macro.
-
-FORM is a cons (NAME . DEFN), see more in `rx-constituents' doc.
-This function enables specifying new definitions using old ones:
-if DEFN is a list that starts with `:rx' symbol its second
-element is itself expanded with `lua-rx-to-string'. "
-    (let ((name (car form))
-          (form-definition (cdr form)))
-      (when (and (listp form-definition) (eq ':rx (car form-definition)))
-        (setcdr form (lua-rx-to-string (cadr form-definition) 'nogroup)))
-      (push form lua-rx-constituents)))
-
-  (defun lua--rx-symbol (form)
-    ;; form is a list (symbol XXX ...)
-    ;; Skip initial 'symbol
-    (setq form (cdr form))
-    ;; If there's only one element, take it from the list, otherwise wrap the
-    ;; whole list into `(or XXX ...)' form.
-    (setq form (if (eq 1 (length form))
-                   (car form)
-                 (append '(or) form)))
-    (rx-form `(seq symbol-start ,form symbol-end) rx-parent))
-
-  (setq lua-rx-constituents (copy-sequence rx-constituents))
-
-  ;; group-n is not available in Emacs23, provide a fallback.
-  (unless (assq 'group-n rx-constituents)
-    (defun lua--rx-group-n (form)
-      (concat (format "\\(?%d:" (nth 1 form))
-              (rx-form `(seq ,@(nthcdr 2 form)) ':)
-              "\\)"))
-    (push '(group-n lua--rx-group-n 1 nil) lua-rx-constituents))
-
-  (mapc #'lua--new-rx-form
-        `((symbol lua--rx-symbol 1 nil)
-          (ws . "[ \t]*") (ws+ . "[ \t]+")
-          (lua-name :rx (symbol (regexp "[[:alpha:]_]+[[:alnum:]_]*")))
-          (lua-funcname
-           :rx (seq lua-name (* ws "." ws lua-name)
-                    (opt ws ":" ws lua-name)))
-          (lua-funcheader
-           ;; Outer (seq ...) is here to shy-group the definition
-           :rx (seq (or (seq (symbol "function") ws (group-n 1 lua-funcname))
-                        (seq (group-n 1 lua-funcname) ws "=" ws
-                             (symbol "function")))))
-          (lua-number
-           :rx (seq (or (seq (+ digit) (opt ".") (* digit))
-                        (seq (* digit) (opt ".") (+ digit)))
-                    (opt (regexp "[eE][+-]?[0-9]+"))))
-          (lua-assignment-op
-           :rx (seq "=" (or buffer-end (not (any "=")))))
-          (lua-token
-           :rx (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
-                   ">" "=" ";" ":" "," "." ".." "..."))
-          (lua-keyword
-           :rx (symbol "and" "break" "do" "else" "elseif" "end"  "for" "function"
-                       "goto" "if" "in" "local" "not" "or" "repeat" "return"
-                       "then" "until" "while")))
-        ))
 
 
 (eval-and-compile

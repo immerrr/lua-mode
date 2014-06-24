@@ -1,10 +1,9 @@
 (source melpa)
 (source gnu)
 
-(package "lua-mode" "dev" "Major mode for editing Lua")
+(package-file "lua-mode.el")
 
 (development
- (depends-on "s")
  (depends-on "cl-lib"))
 
 ;; Local Variables:
