@@ -125,7 +125,7 @@
       (alnum_ (regexp "[[:alnum:]_]"))
       (ws (regexp "[ \t]*"))
       (ws+ (regexp "[ \t]+"))
-      (lua-name (symbol (+ alpha_) (* alnum_)))
+      (lua-name (symbol (seq alpha_ (* alnum_))))
       (lua-funcname (seq lua-name (* ws "." ws lua-name)
                          (opt ws ":" ws lua-name)))
       (lua-funcheader (or (seq (symbol "function") ws (group-n 1 lua-funcname))
