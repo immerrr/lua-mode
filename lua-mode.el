@@ -1665,8 +1665,9 @@ When called interactively, switch to the process buffer."
 (defun lua-kill-process ()
   "Kill lua subprocess and its buffer."
   (interactive)
-  (if lua-process-buffer
-      (kill-buffer lua-process-buffer)))
+  (when lua-process-buffer
+    (kill-buffer lua-process-buffer)
+    (setq lua-process-buffer nil)))
 
 (defun lua-set-lua-region-start (&optional arg)
   "Set start of region for use with `lua-send-lua-region'."
@@ -1764,14 +1765,17 @@ Otherwise, return START."
   (lua-send-buffer))
 
 (defun lua-show-process-buffer ()
-  "Make sure `lua-process-buffer' is being displayed."
+  "Make sure `lua-process-buffer' is being displayed.
+Create a Lua process if one doesn't already exist."
   (interactive)
-  (display-buffer lua-process-buffer))
+  (display-buffer (process-buffer (lua-get-create-process))))
+
 
 (defun lua-hide-process-buffer ()
   "Delete all windows that display `lua-process-buffer'."
   (interactive)
-  (delete-windows-on lua-process-buffer))
+  (when (buffer-live-p lua-process-buffer)
+    (delete-windows-on lua-process-buffer)))
 
 (defun lua-funcname-at-point ()
   "Get current Name { '.' Name } sequence."
