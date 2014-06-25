@@ -3,6 +3,23 @@
               "test-helper.el") nil 'nomessage 'nosuffix)
 
 
+(ert-deftest lua-font-lock-builtin-globals ()
+  (should-lua-font-lock-equal
+   "\
+_G
+type(1)
+a.type(1)
+a:type(1)
+'a'..type(1)
+'a' .. type(1)"
+   '(("_G" builtin)
+     ("type" builtin)
+     ()
+     ()
+     ("'a'" string "type" builtin)
+     ("'a'" string "type" builtin))))
+
+
 (ert-deftest lua-font-lock-builtins ()
   (should-lua-font-lock-equal
    "\

@@ -144,6 +144,8 @@
                            "function" "goto" "if" "in" "local" "not" "or"
                            "repeat" "return" "then" "until" "while"))
 
+      (lua-global-prefix (seq (or line-start ".." (not (any ".: \t"))) ws))
+
       ;; group-n is not available in Emacs23, provide a fallback.
       ,(unless (assq 'group-n rx-constituents)
          '(group-n (:func (lambda (_ n &rest args)
@@ -392,70 +394,66 @@ traceback location."
 ;; the whole defconst is inside eval-when-compile, because it's later referenced
 ;; inside another eval-and-compile block
 (eval-and-compile
-  (defconst
-    lua--builtins
-    (let*
-        ((modules
-          '("_G" "_VERSION" "assert" "collectgarbage" "dofile" "error" "getfenv"
-            "getmetatable" "ipairs" "load" "loadfile" "loadstring" "module"
-            "next" "pairs" "pcall" "print" "rawequal" "rawget" "rawlen" "rawset"
-            "require" "select" "setfenv" "setmetatable" "tonumber" "tostring"
-            "type" "unpack" "xpcall" "self"
-            ("bit32" . ("arshift" "band" "bnot" "bor" "btest" "bxor" "extract"
-                        "lrotate" "lshift" "replace" "rrotate" "rshift"))
-            ("coroutine" . ("create" "resume" "running" "status" "wrap" "yield"))
-            ("debug" . ("debug" "getfenv" "gethook" "getinfo" "getlocal"
-                        "getmetatable" "getregistry" "getupvalue" "getuservalue"
-                        "setfenv" "sethook" "setlocal" "setmetatable"
-                        "setupvalue" "setuservalue" "traceback" "upvalueid"
-                        "upvaluejoin"))
-            ("io" . ("close" "flush" "input" "lines" "open" "output" "popen"
-                     "read" "stderr" "stdin" "stdout" "tmpfile" "type" "write"))
-            ("math" . ("abs" "acos" "asin" "atan" "atan2" "ceil" "cos" "cosh"
-                       "deg" "exp" "floor" "fmod" "frexp" "huge" "ldexp" "log"
-                       "log10" "max" "min" "modf" "pi" "pow" "rad" "random"
-                       "randomseed" "sin" "sinh" "sqrt" "tan" "tanh"))
-            ("os" . ("clock" "date" "difftime" "execute" "exit" "getenv"
-                     "remove"  "rename" "setlocale" "time" "tmpname"))
-            ("package" . ("config" "cpath" "loaded" "loaders" "loadlib" "path"
-                          "preload" "searchers" "searchpath" "seeall"))
-            ("string" . ("byte" "char" "dump" "find" "format" "gmatch" "gsub"
-                         "len" "lower" "match" "rep" "reverse" "sub" "upper"))
-            ("table" . ("concat" "insert" "maxn" "pack" "remove" "sort" "unpack"
-                        )))))
+  ;; the whole defconst is inside eval-when-compile, because it's later
+  ;; referenced inside another eval-and-compile block
+  (defconst lua--stdlib-builtins
+    '("_G" "_VERSION" "assert" "collectgarbage" "dofile" "error" "getfenv"
+      "getmetatable" "ipairs" "load" "loadfile" "loadstring" "module" "next"
+      "pairs" "pcall" "print" "rawequal" "rawget" "rawlen" "rawset" "require"
+      "select" "setfenv" "setmetatable" "tonumber" "tostring" "type" "unpack"
+      "xpcall" "self"
+      ("bit32" ("arshift" "band" "bnot" "bor" "btest" "bxor" "extract" "lrotate"
+                "lshift" "replace" "rrotate" "rshift"))
+      ("coroutine" ("create" "resume" "running" "status" "wrap" "yield"))
+      ("debug" ("debug" "getfenv" "gethook" "getinfo" "getlocal" "getmetatable"
+                "getregistry" "getupvalue" "getuservalue" "setfenv" "sethook"
+                "setlocal" "setmetatable" "setupvalue" "setuservalue" "traceback"
+                "upvalueid" "upvaluejoin"))
+      ("io" ("close" "flush" "input" "lines" "open" "output" "popen" "read"
+             "stderr" "stdin" "stdout" "tmpfile" "type" "write"))
+      ("math" ("abs" "acos" "asin" "atan" "atan2" "ceil" "cos" "cosh" "deg" "exp"
+               "floor" "fmod" "frexp" "huge" "ldexp" "log" "log10" "max" "min"
+               "modf" "pi" "pow" "rad" "random" "randomseed" "sin" "sinh" "sqrt"
+               "tan" "tanh"))
+      ("os" ("clock" "date" "difftime" "execute" "exit" "getenv" "remove"
+             "rename" "setlocale" "time" "tmpname"))
+      ("package" ("config" "cpath" "loaded" "loaders" "loadlib" "path" "preload"
+                  "searchers" "searchpath" "seeall"))
+      ("string" ("byte" "char" "dump" "find" "format" "gmatch" "gsub" "len"
+                 "lower" "match" "rep" "reverse" "sub" "upper"))
+      ("table" ("concat" "insert" "maxn" "pack" "remove" "sort" "unpack")))
 
-      (lua--cl-labels
-       ((module-name-re (x)
-                        (concat "\\(?1:\\_<"
-                                (if (listp x) (car x) x)
-                                "\\_>\\)"))
-        (module-members-re (x) (if (listp x)
-                                   (concat "\\(?:[ \t]*\\.[ \t]*"
-                                           "\\_<\\(?2:"
-                                           (regexp-opt (cdr x))
-                                           "\\)\\_>\\)?")
-                                 "")))
-
-       (concat
-        ;; common prefix:
-        ;; - beginning-of-line
-        ;; - or neither of [ '.', ':' ] to exclude "foo.string.rep"
-        ;; - or concatenation operator ".."
-        "\\(?:^\\|[^:. \t]\\|[.][.]\\)"
-        ;; optional whitespace
-        "[ \t]*"
-        "\\(?:"
-        ;; any of modules/functions
-        (mapconcat (lambda (x) (concat (module-name-re x)
-                                       (module-members-re x)))
-                   modules
-                   "\\|")
-        "\\)"))))
-
-  "A regexp that matches lua builtin functions & variables.
+    "Lua standard library builtins.
 
 This is a compilation of 5.1 and 5.2 builtins taken from the
 index of respective Lua reference manuals.")
+
+  (defconst
+    lua--builtin-regexp
+    (eval-when-compile
+      (lua-rx-to-string
+       `(seq
+         lua-global-prefix
+         ,@(let (vars result)
+             (mapc
+              ;; Libraries are put into resulting list directly, variables
+              ;; are first collected into a list and then wrapped into a
+              ;; single (symbol ...) form.
+              (lambda (x)
+                (cond
+                 ((listp x)
+                  (push `(seq (group-n 1 (symbol ,(car x)))
+                              (opt ws "." ws
+                                   (group-n 2 (symbol ,@(cadr x)))))
+                        result))
+                 ((stringp x) (push x vars))
+                 (t (error "Incorrect builtin declaration"))))
+              lua--stdlib-builtins)
+             (when vars
+               (push `(group-n 1 (symbol ,@vars)) result))
+             (when result
+               `((or ,@result)))))))
+    "A regexp that matches lua builtin functions & variables."))
 
 (eval-and-compile
   (defun lua-make-delimited-matcher (elt-regexp sep-regexp end-regexp)
@@ -563,7 +561,7 @@ Groups 6-9 can be used in any of argument regexps."
       (1 font-lock-constant-face))
 
     ;; Highlight lua builtin functions and variables
-    (,lua--builtins
+    (,lua--builtin-regexp
      (1 font-lock-builtin-face) (2 font-lock-builtin-face nil noerror))
 
     ("^[ \t]*\\_<for\\_>"
