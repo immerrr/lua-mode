@@ -15,6 +15,7 @@ TESTS += test/electric-mode-test.el
 TESTS += test/indentation-test.el
 TESTS += test/strings-and-comments-test.el
 TESTS += test/generic-test.el
+TESTS += test/inferior-test.el
 
 default:
 	@echo version is $(VERSION)

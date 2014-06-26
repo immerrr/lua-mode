@@ -59,6 +59,8 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
 
 (defmacro with-lua-buffer (&rest body)
   `(with-temp-buffer
+     (set (make-local-variable 'lua-process) nil)
+     (set (make-local-variable 'lua-process-buffer) nil)
      (switch-to-buffer (current-buffer))
      (lua-mode)
      (font-lock-fontify-buffer)
