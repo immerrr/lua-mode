@@ -115,19 +115,19 @@ this_should_be_unindented_three = etc"))
 
 (ert-deftest lua-indentation-dot-and-colon-continuation ()
   (should-lua-indent "\
-foo
+foo123
    .bar:baz(xyz)")
   (should-lua-indent "\
-foo.
+foo123.
    bar:baz(xyz)")
   (should-lua-indent "\
-foo.bar
+foo123.bar
    :baz(xyz)")
   (should-lua-indent "\
-foo.bar:
+foo123.bar:
    baz(xyz)")
   (should-lua-indent "\
-foo.bar
+foo123.bar
    .baz
    .qux
    :quux(xyz)"))
@@ -144,6 +144,46 @@ a = foo BINOP
       (should-lua-indent (replace-regexp-in-string "BINOP" binop "\
 a = foo
    BINOP bar" 'fixedcase)))))
+
+
+(ert-deftest lua-indentation-ellipsis ()
+  (should-lua-indent "\
+function x(...)
+   a, b = 1, ...
+   return b
+end"))
+
+
+(ert-deftest lua-indentation-unop-continuation ()
+  :expected-result :failed
+  (should-lua-indent "\
+foo = bar
+   -#some_str")
+
+  (cl-dolist (unop '("-" "#" "not "))
+    (should-lua-indent (replace-regexp-in-string "UNOP" unop  "\
+foobar(qux,
+       UNOPquux)" 'fixedcase))
+    (should-lua-indent (replace-regexp-in-string "UNOP" unop "\
+foobar(qux, xyzzy
+          UNOPquux)" 'fixedcase))
+    (should-lua-indent (replace-regexp-in-string "UNOP" unop "\
+foobar(
+   UNOPquux)" 'fixedcase))
+    (should-lua-indent (replace-regexp-in-string "UNOP" unop "\
+x = {qux,
+     UNOPquux}" 'fixedcase))
+    (should-lua-indent (replace-regexp-in-string "UNOP" unop "\
+x = {qux;
+     UNOPquux}" 'fixedcase))
+    (should-lua-indent (replace-regexp-in-string "UNOP" unop "\
+x = {qux, xyzzy
+        UNOPquux}" 'fixedcase))
+    (should-lua-indent (replace-regexp-in-string "UNOP" unop "\
+x = {
+   UNOPquux
+}" 'fixedcase))))
+
 
 
 (ert-deftest lua-indentation-return-continuation ()
