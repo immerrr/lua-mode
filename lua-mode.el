@@ -651,7 +651,8 @@ Groups 6-9 can be used in any of argument regexps."
 
 (defvar lua-sexp-alist '(("then" . "end")
                          ("function" . "end")
-                         ("do" . "end")))
+                         ("do" . "end")
+                         ("repeat" . "until")))
 
 (defvar lua-mode-abbrev-table nil
   "Abbreviation table used in lua-mode buffers.")
