@@ -766,12 +766,12 @@ If point is not inside a comment, return nil."
 If point is not inside string or comment, return nil."
   (save-excursion (elt (syntax-ppss pos) 8)))
 
-;; They're propertized as follows:
-;; 1. generic-comment
-;; 2. generic-string
-;; 3. equals signs
 (defconst lua-ml-begin-regexp
-  "\\(?:\\(?1:-\\)-\\[\\|\\(?2:\\[\\)\\)\\(?3:=*\\)\\[")
+  ;; Make sure groups 1 and 2 are single-characters, because they are used
+  ;; directly to put syntax properties on.
+  (lua-rx (seq (or (seq (group-n 1 "-") "-[") (group-n 2 "["))
+               (group-n 3 (* "=")) "["))
+  "Regexp that matches beginning of multiline literals.")
 
 
 (defun lua-try-match-multiline-end (end)
