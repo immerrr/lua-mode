@@ -1666,9 +1666,8 @@ When called interactively, switch to the process buffer."
 (defun lua-kill-process ()
   "Kill lua subprocess and its buffer."
   (interactive)
-  (when lua-process-buffer
-    (kill-buffer lua-process-buffer)
-    (setq lua-process-buffer nil)))
+  (when (buffer-live-p lua-process-buffer)
+    (kill-buffer lua-process-buffer)))
 
 (defun lua-set-lua-region-start (&optional arg)
   "Set start of region for use with `lua-send-lua-region'."
