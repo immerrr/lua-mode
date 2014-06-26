@@ -160,25 +160,30 @@ end"))
 foo = bar
    -#some_str")
 
-  (should-lua-indent "\
+  (cl-dolist (unop '("-" "#" "not "))
+    (should-lua-indent (replace-regexp-in-string "UNOP" unop  "\
 foobar(qux,
-       -quux)")
-
-  (should-lua-indent "\
+       UNOPquux)" 'fixedcase))
+    (should-lua-indent (replace-regexp-in-string "UNOP" unop "\
 foobar(qux, xyzzy
-          -quux)")
+          UNOPquux)" 'fixedcase))
+    (should-lua-indent (replace-regexp-in-string "UNOP" unop "\
+foobar(
+   UNOPquux)" 'fixedcase))
+    (should-lua-indent (replace-regexp-in-string "UNOP" unop "\
+x = {qux,
+     UNOPquux}" 'fixedcase))
+    (should-lua-indent (replace-regexp-in-string "UNOP" unop "\
+x = {qux;
+     UNOPquux}" 'fixedcase))
+    (should-lua-indent (replace-regexp-in-string "UNOP" unop "\
+x = {qux, xyzzy
+        UNOPquux}" 'fixedcase))
+    (should-lua-indent (replace-regexp-in-string "UNOP" unop "\
+x = {
+   UNOPquux
+}" 'fixedcase))))
 
-  (should-lua-indent "\
-foobar(qux,
-       #quux)")
-
-  (should-lua-indent "\
-foobar(qux,
-       not quux)")
-
-  (should-lua-indent "\
-foobar(qux, xyzzy and
-          not quux)"))
 
 
 (ert-deftest lua-indentation-return-continuation ()
