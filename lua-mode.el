@@ -137,6 +137,8 @@
       ;;  :rx (seq (or (seq (+ digit) (opt ".") (* digit))
       ;;               (seq (* digit) (opt ".") (+ digit)))
       ;;           (opt (regexp "[eE][+-]?[0-9]+"))))
+
+      (lua-not-op-class (not (any "-+*/^.=<>~:")))
       (lua-assignment-op (seq "=" (or buffer-end (not (any "=")))))
       (lua-token (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
                      ">" "=" ";" ":" "," "." ".." "..."))
@@ -1073,22 +1075,13 @@ Returns final value of point as integer or nil if operation failed."
                   (lua-comment-or-string-p))
         (throw 'found (point))))))
 
-(eval-when-compile
-  (defconst lua-operator-class
-    "-+*/^.=<>~:"))
-
 (defconst lua-cont-eol-regexp
-  (eval-when-compile
-    (concat
-     "\\(\\_<"
-     (regexp-opt '("and" "or" "not" "in" "for" "while"
-                   "local" "function" "if" "until" "elseif" "return") t)
-     "\\_>\\|"
-     "\\(^\\|[^" lua-operator-class "]\\)"
-     (regexp-opt '("+" "-" "*" "/" "%" "^" ".." "=="
-                   "=" "<" ">" "<=" ">=" "~=" "." ":" ) t)
-     "\\)"
-     "\\s *\\="))
+  (lua-rx (seq (or (symbol "and" "or" "not" "in" "for" "while"
+                           "local" "function" "if" "until" "elseif" "return")
+                   (seq (or line-start lua-not-op-class)
+                        (or "+" "-" "*" "/" "%" "^" ".." "=="
+                            "=" "<" ">" "<=" ">=" "~=" "." ":")))
+               ws point))
   "Regexp that matches the ending of a line that needs continuation
 
 This regexp starts from eol and looks for a binary operator or an unclosed
@@ -1096,16 +1089,10 @@ block intro (i.e. 'for' without 'do' or 'if' without 'then') followed by
 an optional whitespace till the end of the line.")
 
 (defconst lua-cont-bol-regexp
-  (eval-when-compile
-    (concat
-     "\\=\\s *"
-     "\\(\\_<"
-     (regexp-opt '("and" "or" "not") t)
-     "\\_>\\|"
-     (regexp-opt '("+" "-" "*" "/" "%" "^" ".." "=="
-                   "=" "<" ">" "<=" ">=" "~=" "." ":") t)
-     "\\($\\|[^" lua-operator-class "]\\)"
-     "\\)"))
+  (lua-rx (seq point ws (or (symbol "and" "or" "not")
+                            (seq (or "+" "-" "*" "/" "%" "^" ".." "=="
+                                     "=" "<" ">" "<=" ">=" "~=" "." ":")
+                                 (or line-end lua-not-op-class)))))
   "Regexp that matches a line that continues previous one
 
 This regexp means, starting from point there is an optional whitespace followed
@@ -1138,12 +1125,9 @@ previous one even though it looked like an end-of-statement.")
       (re-search-forward lua-cont-bol-regexp line-end t))))
 
 (defconst lua-block-starter-regexp
-  (eval-when-compile
-    (concat
-     "\\(\\_<"
-     (regexp-opt '("do" "while" "repeat" "until" "if" "then"
-                   "else" "elseif" "end" "for" "local") t)
-     "\\_>\\)")))
+  (lua-rx (symbol "do" "while" "repeat" "until" "if" "then"
+                  "else" "elseif" "end" "for" "local")))
+
 
 (defun lua-first-token-starts-block-p ()
   "Returns true if the first token on this line is a block starter token."
