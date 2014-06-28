@@ -929,20 +929,16 @@ BACKWARDS-MATCH-REGEXP is a regexp that matches all possble tokens when going ba
 TOKEN-TYPE determines where the token occurs on a statement. open indicates that the token appears at start, close indicates that it appears at end, middle indicates that it is a middle type token, and middle-or-open indicates that it can appear both as a middle or an open type.")
 
 (defconst lua-indentation-modifier-regexp
-  ;; The absence of else is deliberate, since it does not modify the
-  ;; indentation level per se. It only may cause the line, in which the
-  ;; else is, to be shifted to the left.
-  (concat
-   "\\(\\_<"
-   (regexp-opt '("do" "function" "repeat" "then" "if" "else" "elseif" "for" "while") t)
-   "\\_>\\|"
-   (regexp-opt '("{" "(" "["))
-   "\\)\\|\\(\\_<"
-   (regexp-opt '("end" "until") t)
-   "\\_>\\|"
-   (regexp-opt '("]" ")" "}"))
-   "\\)")
-  )
+  (lua-rx (or
+           (group-n 1 (or (symbol "do" "function" "repeat" "then" "if" "else"
+                                  "elseif" "for" "while")
+                          (any "{([")))
+           (group-n 2 (or (symbol "end" "until")
+                          (any "})]")))))
+  "Matcher for all tokens that (may) modify indentation.
+
+Group 1 must match block-open tokens, group 2 must match block-close tokens")
+
 
 (defun lua-get-block-token-info (token)
   "Returns the block token info entry for TOKEN from lua-block-token-alist"
