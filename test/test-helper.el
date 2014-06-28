@@ -1,6 +1,7 @@
 (require 'ert)
 (require 'lua-mode)
 
+
 (defun get-str-faces (str)
   "Find contiguous spans of non-default faces in STR.
 
@@ -11,13 +12,25 @@ E.g. for properly fontified Lua string \"local x = 100\" it should return
 "
   (let ((pos 0)
         nextpos
-        result prop)
+        result prop newprop)
     (while pos
-      (setq nextpos (next-single-property-change pos 'face str)
-            prop (get-text-property pos 'face str))
-      (when prop
-        (push (substring-no-properties str pos nextpos) result)
-        (push prop result))
+      (setq nextpos (next-property-change pos str)
+            newprop (or (get-text-property pos 'face str)
+                        (get-text-property pos 'font-lock-face str)))
+      (when (not (equal prop newprop))
+        (setq prop newprop)
+
+        (when (listp prop)
+          (when (eq (car-safe (last prop)) 'default)
+            (setq prop (butlast prop)))
+          (when (= 1 (length prop))
+            (setq prop (car prop)))
+          (when (symbolp prop)
+            (when (eq prop 'default)
+              (setq prop nil))))
+        (when prop
+          (push (substring-no-properties str pos nextpos) result)
+          (push prop result)))
       (setq pos nextpos))
     (nreverse result)))
 
@@ -28,6 +41,12 @@ E.g. for properly fontified Lua string \"local x = 100\" it should return
     (insert str)
     (font-lock-fontify-buffer)
     (buffer-string)))
+
+(defun get-buffer-line-faces ()
+  (font-lock-fontify-buffer)
+  (mapcar 'get-str-faces
+          (split-string (buffer-string) "\n" nil)))
+
 
 (defun lua-get-line-faces (str)
   "Find contiguous spans of non-default faces in each line of STR.
@@ -59,12 +78,15 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
 
 (defmacro with-lua-buffer (&rest body)
   `(with-temp-buffer
+     (lua-mode)
      (set (make-local-variable 'lua-process) nil)
      (set (make-local-variable 'lua-process-buffer) nil)
-     (switch-to-buffer (current-buffer))
-     (lua-mode)
      (font-lock-fontify-buffer)
-     ,@body))
+     (pop-to-buffer (current-buffer))
+     (unwind-protect
+      (progn ,@body)
+      (when (buffer-live-p lua-process-buffer)
+        (lua-kill-process)))))
 
 (defun lua-get-indented-strs (strs)
   (butlast
