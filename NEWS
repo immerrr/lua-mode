@@ -1,4 +1,14 @@
-* dev
+* release v20140514
+
+** add support for Lua 5.2 goto statements
+
+** when indenting, don't anchor to block-open tokens
+   somefunc({
+            ^
+            don't indent next line relative to this brace
+
+** fix several `indent-new-comment-line'-related bugs
+
 ** skip shebang line when sending to inferior buffer (issue #61)
 
 ** rewrite lua-send-region to use "loadstring" rather than "dofile"
