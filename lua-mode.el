@@ -383,7 +383,9 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
   :group 'lua)
 
 (defcustom lua-traceback-line-re
-  "^\\(?:[\t ]*\\|.*>[\t ]+\\)\\([^\n\t ]+\\):\\([0-9]+\\):"
+  ;; This regexp skips prompt and meaningless "stdin:N:" prefix when looking
+  ;; for actual file-line locations.
+  "^\\(?:[\t ]*\\|.*>[\t ]+\\)\\(?:stdin:[0-9]+:[\t ]*\\)?\\(?:stdin:[0-9]+:\\|\\([^\n\t ]*\\):\\([0-9]+\\):\\)"
   "Regular expression that describes tracebacks and errors."
   :type 'regexp
   :group 'lua)
@@ -1640,17 +1642,17 @@ When called interactively, switch to the process buffer."
       (accept-process-output (get-buffer-process (current-buffer)))
       (goto-char (point-max)))
     ;; send initialization code
-    (comint-simple-send nil lua-process-init-code)
+    (lua-send-string lua-process-init-code)
 
     ;; enable error highlighting in stack traces
     (require 'compile)
     (make-local-variable 'compilation-error-regexp-alist)
     (setq compilation-error-regexp-alist
-          (cons '("^\t*\\([^:\n]+\\):\\([^:\n]+\\):" 1 2)
+          (cons (list lua-traceback-line-re 1 2)
                 ;; Remove 'gnu entry from error regexp alist, it somehow forces
                 ;; leading TAB to be recognized as part of filename in Emacs23.
                 (delq 'gnu compilation-error-regexp-alist)))
-    (compilation-shell-minor-mode))
+    (compilation-shell-minor-mode 1))
 
   ;; when called interactively, switch to process buffer
   (if (lua--called-interactively-p 'any)
@@ -1664,7 +1666,7 @@ When called interactively, switch to the process buffer."
   lua-process)
 
 (defun lua-kill-process ()
-  "Kill lua subprocess and its buffer."
+  "Kill Lua subprocess and its buffer."
   (interactive)
   (when (buffer-live-p lua-process-buffer)
     (kill-buffer lua-process-buffer)))
@@ -1679,8 +1681,14 @@ When called interactively, switch to the process buffer."
   (interactive)
   (set-marker lua-region-end (or arg (point))))
 
+(defun lua-send-string (str)
+  "Send STR plus a newline to Lua subprocess.
+
+If `lua-process' is nil or dead, start a new process first."
+  (comint-simple-send (lua-get-create-process) str))
+
 (defun lua-send-current-line ()
-  "Send current line to lua subprocess, found in `lua-process'.
+  "Send current line to Lua subprocess, found in `lua-process'.
 If `lua-process' is nil or dead, start a new process first."
   (interactive)
   (lua-send-region (line-beginning-position) (line-end-position)))
@@ -1734,7 +1742,7 @@ Otherwise, return START."
                   (lua-make-lua-string region-str)
                   (lua-make-lua-string lua-file)
                   lineno)))
-    (comint-simple-send (lua-get-create-process) command)
+    (lua-send-string command)
     (when lua-always-show (lua-show-process-buffer))))
 
 (defun lua-prompt-line ()
