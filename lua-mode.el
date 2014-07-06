@@ -338,15 +338,21 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
  key like `{' is pressed")
 (make-variable-buffer-local 'lua-electric-flag)
 
-(defcustom lua-prompt-regexp "[^\n]*\\(>[\t ]+\\)+$"
+(defcustom lua-prompt-regexp (lua-rx (* nonl) (+ (group ">" ws+)) line-end)
   "Regexp which matches the Lua program's prompt."
   :type  'regexp
   :group 'lua)
 
 (defcustom lua-traceback-line-re
-  ;; This regexp skips prompt and meaningless "stdin:N:" prefix when looking
-  ;; for actual file-line locations.
-  "^\\(?:[\t ]*\\|.*>[\t ]+\\)\\(?:stdin:[0-9]+:[\t ]*\\)?\\(?:stdin:[0-9]+:\\|\\([^\n\t ]*\\):\\([0-9]+\\):\\)"
+  (lua-rx line-start
+          ;; skip prompts that may occur when sending multiple lines
+          (* (seq (* nonl) ">" ws+))
+          ;; skip meaningless stdin:N: reference
+          (opt ws "stdin:" (+ digit) ":")
+          ;; match filename
+          ws (group (* (not (any "\n\t ")))) ":"
+          ;; match line number
+          (group (+ digit)) ":")
   "Regular expression that describes tracebacks and errors."
   :type 'regexp
   :group 'lua)
