@@ -16,7 +16,7 @@
      (should (get-buffer-window cur-buf)))))
 
 (ert-deftest lua-hide-process-buffer-doesnt-signal-on-killed-process ()
-  :expected-result :failed
+  :expected-result (if (eq emacs-major-version 24) :failed :passed)
   (with-lua-buffer
    (let ((cur-buf (current-buffer)))
      (lua-start-process)

@@ -351,6 +351,17 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
   :type 'regexp
   :group 'lua)
 
+(defvar lua--process-buffer-p nil
+  "If this buffer-local variable is non-nil, it's a lua-process-buffer.")
+(make-variable-buffer-local 'lua--process-buffer-p)
+
+(defadvice compilation-error-properties
+  (around lua--error-properties-skip-stdin activate)
+  "Don't highlight stdin:N: file references in error tracebacks."
+  (unless (and lua--process-buffer-p
+               (string-equal "stdin" (match-string-no-properties file)))
+    ad-do-it))
+
 (defcustom lua-indent-string-contents nil
   "If non-nil, contents of multiline string will be indented.
 Otherwise leading amount of whitespace on each line is preserved."
@@ -1581,6 +1592,7 @@ When called interactively, switch to the process buffer."
 
     ;; enable error highlighting in stack traces
     (require 'compile)
+    (setq lua--process-buffer-p t)
     (make-local-variable 'compilation-error-regexp-alist)
     (setq compilation-error-regexp-alist
           (cons (list lua-traceback-line-re 1 2)
