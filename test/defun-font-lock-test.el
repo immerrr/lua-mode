@@ -107,3 +107,89 @@ JUNKgoto foo
 :: foo ::"
    '(nil ;; don't font lock "foo"
      (":: foo ::" constant))))
+
+
+(ert-deftest lua-font-lock-func-args ()
+  (should-lua-font-lock-equal
+   "\
+function a(a1, a2)
+end"
+   '(("function" keyword "a" function-name
+      "a1" variable-name "a2" variable-name)
+     ("end" keyword)))
+  (should-lua-font-lock-equal
+   "\
+local function b(b1, b2)
+end"
+   '(("local" keyword "function" keyword "b" function-name
+      "b1" variable-name "b2" variable-name)
+     ("end" keyword)))
+  (should-lua-font-lock-equal
+   "\
+c = function(c1, c2)
+end"
+   '(("c" function-name "function" keyword
+      "c1" variable-name "c2" variable-name)
+     ("end" keyword)))
+  (should-lua-font-lock-equal
+   "\
+local d = function(d1, d2)
+end"
+   '(("local" keyword "d" function-name "function" keyword
+      "d1" variable-name "d2" variable-name)
+     ("end" keyword)))
+
+  (should-lua-font-lock-equal
+   "\
+function foo.bar._baz(e1, e2)
+end"
+   '(("function" keyword "foo.bar._baz" function-name
+      "e1" variable-name "e2" variable-name)
+     ("end" keyword))))
+
+
+(ert-deftest lua-font-lock-func-args-multiple-lines ()
+   (should-lua-font-lock-equal
+    "\
+function foo(
+  a1, a2
+  ,a3)
+end"
+    '(("function" keyword "foo" function-name)
+      ("a1" variable-name "a2" variable-name)
+      ("a3" variable-name)
+      ("end" keyword)))
+   (should-lua-font-lock-equal
+    "\
+function foo.bar.baz(
+  b1, b2
+  ,b3)
+end"
+    '(("function" keyword "foo.bar.baz" function-name)
+      ("b1" variable-name "b2" variable-name)
+      ("b3" variable-name)
+      ("end" keyword))))
+
+
+(ert-deftest lua-font-lock-func-args-with-comments ()
+  (should-lua-font-lock-equal
+   "\
+function a(--[[foobarbaz]] a2, --qux
+           a3)
+end"
+   '(("function" keyword "a" function-name
+      "-" comment-delimiter "[[foobarbaz]" comment
+      "a2" variable-name "--" comment-delimiter "qux" comment)
+     ("a3" variable-name)
+     ("end" keyword))))
+
+
+(ert-deftest lua-font-lock-anonymous-func-args ()
+  (should-lua-font-lock-equal
+   "\
+x = foobar(function(foo,
+                    bar)
+end)"
+   '(("function" keyword "foo" variable-name)
+     ("bar" variable-name)
+     ("end" keyword))))
