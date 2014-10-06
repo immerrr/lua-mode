@@ -871,8 +871,21 @@ If none can be found before reaching LIMIT, return nil."
   (or (lua-try-match-multiline-end limit)
       (lua-try-match-multiline-begin limit)))
 
+(defun lua-remove-syntax-table-property (limit)
+  "Remove syntax-table property on given region.
+
+This is a workaround for `font-lock-default-fontify-region'
+sometimes forgetting to unpropertize region which may cause
+multiline recognition to fail.
+
+Returns nil so that it's only called once as a syntactic keyword.
+"
+  (remove-text-properties (point) limit '(syntax-table))
+  nil)
+
 (defvar lua-font-lock-syntactic-keywords
-  '((lua-match-multiline-literal-bounds
+  '((lua-remove-syntax-table-property nil)
+    (lua-match-multiline-literal-bounds
      (1 "!" nil noerror)
      (2 "|" nil noerror))))
 
