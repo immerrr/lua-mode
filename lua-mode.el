@@ -703,27 +703,31 @@ Groups 6-9 can be used in any of argument regexps."
   :abbrev-table lua-mode-abbrev-table
   :syntax-table lua-mode-syntax-table
   :group 'lua
-
   (setq comint-prompt-regexp lua-prompt-regexp)
-  (set (make-local-variable 'font-lock-defaults)
-       `(lua-font-lock-keywords ;; keywords
-         nil                    ;; keywords-only
-         nil                    ;; case-fold
-         nil                    ;; syntax-alist
-         nil                    ;; syntax-begin
-         ;; initialize font-lock buffer-local variables
-         (font-lock-syntactic-keywords  . lua-font-lock-syntactic-keywords)
-         (font-lock-extra-managed-props . (syntax-table))
-         (parse-sexp-lookup-properties  . t)
-         ;; initialize the rest of buffer-local variables
-         (beginning-of-defun-function   . lua-beginning-of-proc)
-         (end-of-defun-function         . lua-end-of-proc)
-         (indent-line-function          . lua-indent-line)
-         (comment-start                 . ,lua-comment-start)
-         (comment-start-skip            . ,lua-comment-start-skip)
-         (comment-use-syntax            . t)
-         (comment-use-global-state      . t)
-         (imenu-generic-expression      . ,lua-imenu-generic-expression)))
+
+
+  (setq-local font-lock-defaults             
+	      '(lua-font-lock-keywords ;; keywords	
+		nil		       ;; keywords-only 
+		nil		       ;; case-fold	
+		nil		       ;; syntax-alist	
+		nil		       ;; syntax-begin	
+		(font-lock-syntactic-keywords  . lua-font-lock-syntactic-keywords)
+		(font-lock-extra-managed-props . (syntax-table))		  
+		(parse-sexp-lookup-properties  . t)				  
+		)
+	      )
+
+
+  (setq-local indent-line-function           'lua-indent-line)
+  (setq-local beginning-of-defun-function    'lua-beginning-of-proc)
+  (setq-local end-of-defun-function          'lua-end-of-proc)
+  (setq-local comment-start                  'lua-comment-start)
+  (setq-local comment-start-skip             'lua-comment-start-skip)
+  (setq-local comment-use-syntax             t)
+  (setq-local comment-use-global-state       t)
+  (setq-local imenu-generic-expression       lua-imenu-generic-expression)
+  
 
   ;; setup menu bar entry (XEmacs style)
   (if (and (featurep 'menubar)
