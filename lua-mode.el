@@ -198,6 +198,11 @@ element is itself expanded with `lua-rx-to-string'. "
 
 
 (eval-and-compile
+  (if (fboundp 'setq-local)
+      (defalias 'lua--setq-local 'setq-local)
+    (defmacro lua--setq-local (var val)
+      `(set (make-local-variable (quote ,var)) ,val)))
+
   ;; Backward compatibility for Emacsen < 24.1
   (defalias 'lua--prog-mode
     (if (fboundp 'prog-mode) 'prog-mode 'fundamental-mode))
@@ -706,28 +711,25 @@ Groups 6-9 can be used in any of argument regexps."
   (setq comint-prompt-regexp lua-prompt-regexp)
 
 
-  (setq-local font-lock-defaults             
-	      '(lua-font-lock-keywords ;; keywords	
-		nil		       ;; keywords-only 
-		nil		       ;; case-fold	
-		nil		       ;; syntax-alist	
-		nil		       ;; syntax-begin	
-		(font-lock-syntactic-keywords  . lua-font-lock-syntactic-keywords)
-		(font-lock-extra-managed-props . (syntax-table))		  
-		(parse-sexp-lookup-properties  . t)				  
-		)
-	      )
+  (lua--setq-local font-lock-defaults '(lua-font-lock-keywords ;; keywords
+                                        nil                    ;; keywords-only
+                                        nil                    ;; case-fold
+                                        nil                    ;; syntax-alist
+                                        nil                    ;; syntax-begin
+                                        ))
+  (lua--setq-local
+   font-lock-syntactic-keywords 'lua-font-lock-syntactic-keywords)
+  (lua--setq-local font-lock-extra-managed-props  '(syntax-table))
+  (lua--setq-local parse-sexp-lookup-properties   t)
+  (lua--setq-local indent-line-function           'lua-indent-line)
+  (lua--setq-local beginning-of-defun-function    'lua-beginning-of-proc)
+  (lua--setq-local end-of-defun-function          'lua-end-of-proc)
+  (lua--setq-local comment-start                  lua-comment-start)
+  (lua--setq-local comment-start-skip             lua-comment-start-skip)
+  (lua--setq-local comment-use-syntax             t)
+  (lua--setq-local comment-use-global-state       t)
+  (lua--setq-local imenu-generic-expression       lua-imenu-generic-expression)
 
-
-  (setq-local indent-line-function           'lua-indent-line)
-  (setq-local beginning-of-defun-function    'lua-beginning-of-proc)
-  (setq-local end-of-defun-function          'lua-end-of-proc)
-  (setq-local comment-start                  'lua-comment-start)
-  (setq-local comment-start-skip             'lua-comment-start-skip)
-  (setq-local comment-use-syntax             t)
-  (setq-local comment-use-global-state       t)
-  (setq-local imenu-generic-expression       lua-imenu-generic-expression)
-  
 
   ;; setup menu bar entry (XEmacs style)
   (if (and (featurep 'menubar)
@@ -750,6 +752,7 @@ Groups 6-9 can be used in any of argument regexps."
                    ,(regexp-opt (mapcar 'car lua-sexp-alist) 'words) ;start
                    ,(regexp-opt (mapcar 'cdr lua-sexp-alist) 'words) ;end
                    nil lua-forward-sexp))))
+
 
 
 ;;;###autoload
