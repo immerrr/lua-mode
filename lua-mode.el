@@ -213,47 +213,6 @@ element is itself expanded with `lua-rx-to-string'. "
   (defalias 'lua--cl-labels
     (if (fboundp 'cl-labels) 'cl-labels 'flet))
 
-  ;; for Emacsen < 22.1
-  (defalias 'lua--with-no-warnings
-    (if (fboundp 'with-no-warnings) 'with-no-warnings 'progn))
-
-  ;; provide backward compatibility for Emacs < 23.2
-  ;; called-interactively-p receives an argument starting from Emacs 23.2
-  ;; In Emacs 22 & Emacs 23.1 it didn't expect an argument
-  ;; In Emacs 21 it was called interactively-p
-  (condition-case nil
-      (progn (called-interactively-p nil)
-             ;; if first call succeeds, make lua-called-interactively-p an alias
-             (defalias 'lua--called-interactively-p 'called-interactively-p))
-
-    (wrong-number-of-arguments
-     ;; wrong number of arguments means it's 22.1 <= Emacs < 23.2
-     ;;
-     ;; Newer and smarter Emacsen will warn about obsolete functions
-     ;; and/or wrong number of arguments. Turning these warnings off,
-     ;; since it's backward-compatibility-oriented code anyway.
-     (lua--with-no-warnings
-       (defun lua--called-interactively-p (kind)
-         "Return t if containing function was called interactively.
-
-This function provides lua-mode backward compatibility for
-pre-23.2 Emacsen."
-         (if (eq kind 'interactive)
-             (interactive-p)
-           (called-interactively-p)))))
-
-    ;; if not, it's probably < 22.1, provide partial compatibility
-    ;;
-    ;; Once again, turning obsolete-function warnings off (see above).
-    (error
-     (lua--with-no-warnings
-       (defun lua--called-interactively-p (&rest opts)
-         "Return t if containing function was called interactively.
-
-This function provides lua-mode backward compatibility for pre-22
-Emacsen."
-         (interactive-p)))))
-
   ;; backward compatibility for Emacsen < 23.3
   ;; Emacs 23.3 introduced with-silent-modifications macro
   (if (fboundp 'with-silent-modifications)
@@ -1696,7 +1655,7 @@ When called interactively, switch to the process buffer."
     (compilation-shell-minor-mode 1))
 
   ;; when called interactively, switch to process buffer
-  (if (lua--called-interactively-p 'any)
+  (if (called-interactively-p 'any)
       (switch-to-buffer lua-process-buffer)))
 
 (defun lua-get-create-process ()
