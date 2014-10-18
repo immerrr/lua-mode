@@ -717,8 +717,13 @@ Groups 6-9 can be used in any of argument regexps."
                                         nil                    ;; syntax-alist
                                         nil                    ;; syntax-begin
                                         ))
-  (lua--setq-local
-   font-lock-syntactic-keywords 'lua-font-lock-syntactic-keywords)
+
+  (if (boundp 'syntax-propertize-function)
+      (lua--setq-local syntax-propertize-function
+                       'lua--propertize-multiline-bounds)
+    (with-no-warnings
+     (lua--setq-local
+      font-lock-syntactic-keywords 'lua-font-lock-syntactic-keywords)))
   (lua--setq-local font-lock-extra-managed-props  '(syntax-table))
   (lua--setq-local parse-sexp-lookup-properties   t)
   (lua--setq-local indent-line-function           'lua-indent-line)
@@ -895,6 +900,22 @@ Returns nil so that it's only called once as a syntactic keyword.
     (lua-match-multiline-literal-bounds
      (1 "!" nil noerror)
      (2 "|" nil noerror))))
+
+
+(defun lua--propertize-multiline-bounds (start end)
+  "Put text properties on beginnings and ends of multiline literals.
+
+Intended to be used as a `syntax-propertize-function'."
+  (save-excursion
+    (goto-char start)
+    (while (lua-match-multiline-literal-bounds end)
+      (when (match-beginning 1)
+        (put-text-property (match-beginning 1) (match-end 1)
+                           'syntax-table (string-to-syntax "!")))
+      (when (match-beginning 2)
+        (put-text-property (match-beginning 2) (match-end 2)
+                           'syntax-table (string-to-syntax "|"))))))
+
 
 (defun lua-indent-line ()
   "Indent current line for Lua mode.
