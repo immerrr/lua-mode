@@ -6,26 +6,28 @@
 
 
 (ert-deftest lua-hide-process-buffer-doesnt-switch-current-window ()
-  :expected-result :failed
-
   (with-lua-buffer
    (let ((cur-buf (current-buffer)))
      (should (get-buffer-window cur-buf))
-
+     (lua-start-process)
      (lua-hide-process-buffer)
      (should (get-buffer-window cur-buf)))))
 
 (ert-deftest lua-hide-process-buffer-doesnt-signal-on-killed-process ()
-  :expected-result :failed
   (with-lua-buffer
    (let ((cur-buf (current-buffer)))
      (lua-start-process)
      (lua-kill-process)
-
      (lua-hide-process-buffer)
      (should (get-buffer-window cur-buf)))))
 
-
+(ert-deftest lua-hide-process-buffer-standalone ()
+  (with-lua-buffer
+    (let ((cur-buf (current-buffer)))
+      ;; lua-process-buffer should be nil
+      (lua-hide-process-buffer)
+      (should (get-buffer-window cur-buf)))))
+         
 (ert-deftest lua-runtime-error-msg-is-fontified ()
   :expected-result (if (eq 23 emacs-major-version) :failed :passed)
   (with-lua-buffer
