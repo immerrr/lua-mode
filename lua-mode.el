@@ -1692,7 +1692,9 @@ Otherwise, return START."
          (lua-file (or (buffer-file-name) (buffer-name)))
          (region-str (buffer-substring-no-properties start end))
          (command
-          (format "luamode_loadstring(%s, %s, %s)"
+          ;; Print empty line before executing the code so that the first line
+          ;; of output doesn't end up on the same line as current prompt.
+          (format "print(''); luamode_loadstring(%s, %s, %s);\n"
                   (lua-make-lua-string region-str)
                   (lua-make-lua-string lua-file)
                   lineno)))
