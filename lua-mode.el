@@ -1066,7 +1066,7 @@ TOKEN-TYPE determines where the token occurs on a statement. open indicates that
       maybe-found-pos)))
 
 (defun lua-goto-matching-block-token (&optional parse-start direction)
-  "Find block begion/end token matching the one at the point.
+  "Find block region/end token matching the one at the point.
 This function moves the point to the token that matches the one
 at the current point. Returns the point position of the first character of
 the matching token if successful, nil otherwise."
