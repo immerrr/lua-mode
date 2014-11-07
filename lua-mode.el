@@ -1316,19 +1316,18 @@ return it."
   "Return appropriate indentation for current line as Lua code."
   ;; Algorithm: indentation is computed from current line and previous line.
   ;; Current line:
-  ;; - one level on every unmatched closer if first token is a closer
-  ;; - one level if first token is 'middle
+  ;; -1 on every unmatched closer if first token is a closer
+  ;; -1 if first token is 'middle
   ;; Previous line:
-  ;; + one level on every unmatched opener
-  ;; + one level if first token is a 'middle
-  ;; - one level on every unmatched closer if first token is not a closer (if
-  ;;   fist token is a 'middle, then first unmatched closer is actually closing
-  ;;   the middle).
+  ;; +1 on every unmatched opener
+  ;; +1 if first token is a 'middle
+  ;; -1 on every unmatched closer if first token is not a closer (if first token
+  ;;  is a 'middle, then first unmatched closer is actually closing the middle).
   ;;
   ;; To this we add
   ;; + previous line indentation
-  ;; + one level if previous line is not a continuation and current-line is
-  ;; - one level if previous line is a continuation and current-line is not
+  ;; +1 if previous line is not a continuation and current-line is
+  ;; -1 if previous line is a continuation and current-line is not
   (save-excursion
     (back-to-indentation)
     (let* ((continuing-p (lua-is-continuing-statement-p))
