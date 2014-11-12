@@ -25,6 +25,7 @@
 ;;; Code:
 
 (require 'smie)
+(require 'lua-mode)
 
 (defconst lua-smie-grammar
   ;; Problems:
@@ -131,52 +132,19 @@
         (message "token: %s" tok)
 	tok)))))
 
-(defun lua-syntax-propertize (start end)
-  (goto-char start)
-  (lua-syntax-propertize-end end)
-  (funcall
-   (syntax-propertize-rules
-    ("\\(-\\)-\\[=*\\[" (1 (prog1 "!" (lua-syntax-propertize-end end))))
-    ("\\(\\[\\)=*\\["   (1 (prog1 "|" (lua-syntax-propertize-end end)))))
-   start end))
-
-(defun lua-syntax-propertize-end (end)
-  (let ((ppss (syntax-ppss)))
-    (cond
-     ((eq t (nth 3 ppss))               ;Long-bracket string.
-      (if (search-forward (concat "]" (save-excursion
-                                        (goto-char (1+ (nth 8 ppss)))
-                                        (looking-at "=*")
-                                        (match-string 0))
-                                  "]")
-                          end 'move)
-          (put-text-property (1- (point)) (point)
-                             'syntax-table (string-to-syntax "|"))))
-     ((eq 'syntax-table (nth 7 ppss))   ;Long-bracket comment.
-      (if (search-forward (concat "]" (save-excursion
-                                        (goto-char (nth 8 ppss))
-                                        (skip-chars-forward "-")
-                                        (forward-char 1)
-                                        (looking-at "=*")
-                                        (match-string 0))
-                                  "]")
-                          end 'move)
-          (put-text-property (1- (point)) (point)
-                             'syntax-table (string-to-syntax "!")))))))
-
-(defvar lua-font-lock-keywords
-  ())
-
-(defvar lua-smie-syntax-table
-  (let ((st (make-syntax-table)))
-    (modify-syntax-entry ?- ". 12" st)
-    (modify-syntax-entry ?\n ">" st)
-    st))
-
 ;;;###autoload
 (define-derived-mode lua-smie-mode prog-mode "Lua[SMIE]"
   "Simple major mode for LUA."
-  (setq-local syntax-propertize-function #'lua-syntax-propertize)
+  :syntax-table lua-mode-syntax-table
+  (setq-local syntax-propertize-function #'lua--propertize-multiline-bounds)
+  (setq-local font-lock-extra-managed-props  '(syntax-table))
+  (setq-local parse-sexp-lookup-properties   t)
+  (setq-local comment-start                  lua-comment-start)
+  (setq-local comment-start-skip             lua-comment-start-skip)
+  (setq-local comment-use-syntax             t)
+  (setq-local comment-use-global-state       t)
+
+
   (setq-local font-lock-defaults '(lua-font-lock-keywords))
   (setq-local comment-start "-- ")
   (setq-local smie-indent-basic 3)
