@@ -757,10 +757,6 @@ This function replaces previous prefix-key binding with a new one."
 If point is not inside a comment, return nil."
   (and parsing-state (nth 4 parsing-state) (nth 8 parsing-state)))
 
-(defun lua-comment-p (&optional pos)
-  "Returns true if the point is in a comment."
-  (save-excursion (elt (syntax-ppss pos) 4)))
-
 (defun lua-comment-or-string-p (&optional pos)
   "Returns true if the point is in a comment or string."
   (save-excursion (let ((parse-result (syntax-ppss pos)))
