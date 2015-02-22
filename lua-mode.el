@@ -222,8 +222,19 @@ Should be a list of strings."
   :type 'boolean
   :group 'lua)
 
-(defcustom lua-search-url-prefix "http://www.lua.org/manual/5.1/manual.html#pdf-"
-  "*URL at which to search for documentation on a word"
+(defcustom lua-documentation-function 'browse-url
+  "Function used to fetch the Lua reference manual."
+  :type `(radio (function-item browse-url)
+                ,@(when (fboundp 'eww) '((function-item eww)))
+                ,@(when (fboundp 'w3m-browse-url) '((function-item w3m-browse-url)))
+                (function :tag "Other function"))
+  :group 'lua)
+
+(defcustom lua-documentation-url
+  (or (and (file-readable-p "/usr/share/doc/lua/manual.html")
+           "file:///usr/share/doc/lua/manual.html")
+      "http://www.lua.org/manual/5.1/manual.html")
+  "URL pointing to the Lua reference manual."
   :type 'string
   :group 'lua)
 
@@ -1790,7 +1801,8 @@ Create a Lua process if one doesn't already exist."
 (defun lua-search-documentation ()
   "Search Lua documentation for the word at the point."
   (interactive)
-  (browse-url (concat lua-search-url-prefix (lua-funcname-at-point))))
+  (let ((url (concat lua-documentation-url "#pdf-" (lua-funcname-at-point))))
+    (funcall lua-documentation-function url)))
 
 (defun lua-toggle-electric-state (&optional arg)
   "Toggle the electric indentation feature.
