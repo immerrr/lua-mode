@@ -228,6 +228,9 @@ Should be a list of strings."
   :group 'lua)
 
 
+(defconst lua--prettify-symbols-alist
+  '(("function"  . ?λ)))
+
 (defvar lua-process nil
   "The active Lua subprocess")
 
@@ -683,6 +686,7 @@ Groups 6-9 can be used in any of argument regexps."
   (lua--setq-local comment-use-syntax             t)
   (lua--setq-local comment-use-global-state       t)
   (lua--setq-local imenu-generic-expression       lua-imenu-generic-expression)
+  (lua--setq-local prettify-symbols-alist         lua--prettify-symbols-alist)
 
 
   ;; setup menu bar entry (XEmacs style)
