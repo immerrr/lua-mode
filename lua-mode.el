@@ -1537,6 +1537,11 @@ If not, return nil."
        ;; 4. if there's no previous line, indentation is 0
        0))))
 
+(defvar lua--beginning-of-defun-re
+  (lua-rx-to-string '(: bol (? (symbol "local") ws+) lua-funcheader))
+  "Lua top level (matches only at the beginning of line) function header regex.")
+
+
 (defun lua-beginning-of-proc (&optional arg)
   "Move backward to the beginning of a lua proc (or similar).
 
@@ -1548,11 +1553,11 @@ Returns t unless search stops due to beginning or end of buffer."
   (or arg (setq arg 1))
 
   (while (and (> arg 0)
-              (re-search-backward "^function[ \t]" nil t))
+              (re-search-backward lua--beginning-of-defun-re nil t))
     (setq arg (1- arg)))
 
   (while (and (< arg 0)
-              (re-search-forward "^function[ \t]" nil t))
+              (re-search-forward lua--beginning-of-defun-re nil t))
     (beginning-of-line)
     (setq arg (1+ arg)))
 

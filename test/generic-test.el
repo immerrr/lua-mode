@@ -19,3 +19,53 @@
       "--[[end here]] end"))
    (lua-forward-sexp)
    (should (looking-back (rx "--[[end here]] end")))))
+
+(ert-deftest lua-beginning-of-defun-different-headers ()
+  (with-lua-buffer
+   (lua-insert-goto-<>
+    '("function foobar()"
+      "<>"
+      "end"))
+   (beginning-of-defun)
+   (should (looking-at "function foobar()")))
+
+  (with-lua-buffer
+   (lua-insert-goto-<>
+    '("local function foobar()"
+      "<>"
+      "end"))
+   (beginning-of-defun)
+   (should (looking-at "local function foobar()")))
+
+  (with-lua-buffer
+   (lua-insert-goto-<>
+    '("local foobar = function()"
+      "<>"
+      "end"))
+   (beginning-of-defun)
+   (should (looking-at "local foobar = function()")))
+
+  (with-lua-buffer
+   (lua-insert-goto-<>
+    '("foobar = function()"
+      "<>"
+      "end"))
+   (beginning-of-defun)
+   (should (looking-at "foobar = function()"))))
+
+(ert-deftest lua-beginning-of-defun-accepts-dots-and-colons ()
+   (with-lua-buffer
+    (lua-insert-goto-<>
+     '("foo.bar = function (x,y,z)"
+       "<>"
+       "end"))
+    (beginning-of-defun)
+    (should (looking-at "foo\\.bar = function (x,y,z)")))
+
+   (with-lua-buffer
+    (lua-insert-goto-<>
+     '("function foo.bar:baz (x,y,z)"
+       "<>"
+       "end"))
+    (beginning-of-defun)
+    (should (looking-at "function foo.bar:baz (x,y,z)"))))

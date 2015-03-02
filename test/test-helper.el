@@ -77,6 +77,7 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
   (mapconcat (lambda (x) (concat x "\n")) strs ""))
 
 (defmacro with-lua-buffer (&rest body)
+  (declare (debug (&rest form)))
   `(with-temp-buffer
      (lua-mode)
      (set (make-local-variable 'lua-process) nil)
