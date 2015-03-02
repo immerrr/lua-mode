@@ -457,9 +457,10 @@ traceback location."
             ("package" . ("config" "cpath" "loaded" "loaders" "loadlib" "path"
                           "preload" "searchers" "searchpath" "seeall"))
             ("string" . ("byte" "char" "dump" "find" "format" "gmatch" "gsub"
-                         "len" "lower" "match" "rep" "reverse" "sub" "upper"))
-            ("table" . ("concat" "insert" "maxn" "pack" "remove" "sort" "unpack"
-                        )))))
+                         "len" "lower" "match" "rep" "reverse" "sub" "upper"
+                         "pack" "unpack" "packsize"))
+            ("table" . ("concat" "insert" "maxn" "pack" "remove" "sort"
+                        "unpack" "move")))))
 
       (lua--cl-labels
        ((module-name-re (x)
@@ -491,7 +492,7 @@ traceback location."
 
   "A regexp that matches lua builtin functions & variables.
 
-This is a compilation of 5.1 and 5.2 builtins taken from the
+This is a compilation of 5.1, 5.2 and 5.3 builtins taken from the
 index of respective Lua reference manuals.")
 
 (eval-and-compile
@@ -1147,18 +1148,21 @@ Returns final value of point as integer or nil if operation failed."
 
 (eval-when-compile
   (defconst lua-operator-class
-    "-+*/^.=<>~:"))
+    "-+*/^.=<>~:&|"))
 
 (defconst lua-cont-eol-regexp
   (eval-when-compile
     (concat
      "\\(\\_<"
      (regexp-opt '("and" "or" "not" "in" "for" "while"
-                   "local" "function" "if" "until" "elseif" "return") t)
+                   "local" "function" "if" "until" "elseif" "return")
+                 t)
      "\\_>\\|"
      "\\(^\\|[^" lua-operator-class "]\\)"
      (regexp-opt '("+" "-" "*" "/" "%" "^" ".." "=="
-                   "=" "<" ">" "<=" ">=" "~=" "." ":" ) t)
+                   "=" "<" ">" "<=" ">=" "~=" "." ":"
+                   "&" "|" "~" ">>" "<<" "~")
+                 t)
      "\\)"
      "\\s *\\="))
   "Regexp that matches the ending of a line that needs continuation
@@ -1175,7 +1179,9 @@ an optional whitespace till the end of the line.")
      (regexp-opt '("and" "or" "not") t)
      "\\_>\\|"
      (regexp-opt '("+" "-" "*" "/" "%" "^" ".." "=="
-                   "=" "<" ">" "<=" ">=" "~=" "." ":") t)
+                   "=" "<" ">" "<=" ">=" "~=" "." ":"
+                   "&" "|" "~" ">>" "<<" "~")
+                 t)
      "\\($\\|[^" lua-operator-class "]\\)"
      "\\)"))
   "Regexp that matches a line that continues previous one
