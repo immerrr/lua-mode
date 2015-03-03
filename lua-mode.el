@@ -1637,7 +1637,8 @@ This function just searches for a `end' at the beginning of a line."
 (defvar lua-process-init-code
   (mapconcat
    'identity
-   '("function luamode_loadstring(str, displayname, lineoffset)"
+   '("local loadstring = loadstring or load"
+     "function luamode_loadstring(str, displayname, lineoffset)"
      "  if lineoffset > 1 then"
      "    str = string.rep('\\n', lineoffset - 1) .. str"
      "  end"
