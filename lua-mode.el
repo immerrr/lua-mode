@@ -440,7 +440,8 @@ traceback location."
             "type" "unpack" "xpcall" "self"
             ("bit32" . ("arshift" "band" "bnot" "bor" "btest" "bxor" "extract"
                         "lrotate" "lshift" "replace" "rrotate" "rshift"))
-            ("coroutine" . ("create" "resume" "running" "status" "wrap" "yield"))
+            ("coroutine" . ("create" "isyieldable" "resume" "running" "status"
+                            "wrap" "yield"))
             ("debug" . ("debug" "getfenv" "gethook" "getinfo" "getlocal"
                         "getmetatable" "getregistry" "getupvalue" "getuservalue"
                         "setfenv" "sethook" "setlocal" "setmetatable"
@@ -450,17 +451,20 @@ traceback location."
                      "read" "stderr" "stdin" "stdout" "tmpfile" "type" "write"))
             ("math" . ("abs" "acos" "asin" "atan" "atan2" "ceil" "cos" "cosh"
                        "deg" "exp" "floor" "fmod" "frexp" "huge" "ldexp" "log"
-                       "log10" "max" "min" "modf" "pi" "pow" "rad" "random"
-                       "randomseed" "sin" "sinh" "sqrt" "tan" "tanh"))
+                       "log10" "max" "maxinteger" "min" "mininteger" "modf" "pi"
+                       "pow" "rad" "random" "randomseed" "sin" "sinh" "sqrt"
+                       "tan" "tanh" "tointeger" "type" "ult"))
             ("os" . ("clock" "date" "difftime" "execute" "exit" "getenv"
                      "remove"  "rename" "setlocale" "time" "tmpname"))
             ("package" . ("config" "cpath" "loaded" "loaders" "loadlib" "path"
                           "preload" "searchers" "searchpath" "seeall"))
             ("string" . ("byte" "char" "dump" "find" "format" "gmatch" "gsub"
-                         "len" "lower" "match" "rep" "reverse" "sub" "upper"
-                         "pack" "unpack" "packsize"))
-            ("table" . ("concat" "insert" "maxn" "pack" "remove" "sort"
-                        "unpack" "move")))))
+                         "len" "lower" "match" "pack" "packsize" "rep" "reverse"
+                         "sub" "unpack" "upper"))
+            ("table" . ("concat" "insert" "maxn" "move" "pack" "remove" "sort"
+                        "unpack"))
+            ("utf8" . ("char" "charpattern" "codepoint" "codes" "len"
+                       "offset")))))
 
       (lua--cl-labels
        ((module-name-re (x)
