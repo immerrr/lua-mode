@@ -1816,6 +1816,7 @@ issues with process-send-string and large regions."
   (interactive)
   (let* ((lua-file (or (buffer-file-name) (buffer-name)))
          (command (format "print(''); dofile('%s');" lua-file)))
+    (lua-send-buffer)
     (lua-send-string command)))
 
 (defun lua-restart-with-whole-file ()
