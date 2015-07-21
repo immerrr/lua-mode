@@ -1810,9 +1810,13 @@ Otherwise, return START."
 (defalias 'lua-send-proc 'lua-send-defun)
 
 (defun lua-send-buffer ()
-  "Send whole buffer to lua subprocess."
+  "Send whole buffer to lua subprocess by saving the buffer 
+to disk and calling dofile(). This manuevers around buffering 
+issues with process-send-string and large regions."
   (interactive)
-  (lua-send-region (point-min) (point-max)))
+  (let* ((lua-file (or (buffer-file-name) (buffer-name)))
+         (command (format "print(''); dofile('%s');" lua-file)))
+    (lua-send-string command)))
 
 (defun lua-restart-with-whole-file ()
   "Restart lua subprocess and send whole file as input."
