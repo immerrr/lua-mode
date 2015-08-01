@@ -683,6 +683,7 @@ Groups 6-9 can be used in any of argument regexps."
     (modify-syntax-entry ?\" "\"")
 
     ;; single-character binary operators: punctuation
+    (modify-syntax-entry ?# ".")
     (modify-syntax-entry ?+ ".")
     (modify-syntax-entry ?* ".")
     (modify-syntax-entry ?/ ".")
@@ -1456,6 +1457,8 @@ This function just searches for a `end' at the beginning of a line."
           (replace-match "\\\\\\&" t)))
       (concat "'" (buffer-string) "'"))))
 
+
+(defalias 'run-lua #'lua-start-process)
 (defun lua-start-process (&optional name program startfile &rest switches)
   "Start a lua process named NAME, running PROGRAM.
 PROGRAM defaults to NAME, which defaults to `lua-default-application'.
