@@ -72,11 +72,11 @@ bar = 20"))
   (should-lua-indent "\
 a =
    {
-   }
+}
 
 b =
    {
-   },
+},
 
 
 a = {
@@ -92,23 +92,23 @@ this_should_be_unindented()
 -- here foobar should be indented as simple continuation statement
 a = a +
    dosmth(
-   ) +
+) +
    foobar
 
 a =
    do_smth(
-      do_smth_arg
-   )
+   do_smth_arg
+)
 
 b =
    {
-      table_elt0_indented,
-      table_elt1_indented
-   }
+   table_elt0_indented,
+   table_elt1_indented
+}
 
 this_should_be_unindented_too =
    {
-   }
+}
 
 this_should_be_unindented_three = etc"))
 
@@ -189,18 +189,18 @@ x = {
 (ert-deftest lua-indentation-return-continuation ()
   (should-lua-indent "\
 return
-   123")
+123")
 
   (should-lua-indent "\
 do
    return
-      123
+   123
 end")
 
   (should-lua-indent "\
 do
    return
-      x +
+   x +
       y
 end")
 
@@ -380,8 +380,8 @@ foobar(
 
   (should-lua-indent "\
 foobar(a,
-       b,
-       c)")
+   b,
+   c)")
 
   (should-lua-indent "\
 foobar{
@@ -391,7 +391,7 @@ foobar{
 
 (ert-deftest lua-indentation-funcall-with-nested-table ()
   :expected-result :failed
-    (should-lua-indent "\
+  (should-lua-indent "\
 foobar({
    a, b, c
 })")
@@ -438,10 +438,10 @@ foobar(
 (ert-deftest lua-indentation-continuation-with-functioncall ()
   (should-lua-indent "\
 x = foo(123,
-        456)
+   456)
    + bar(
-      qux,
-      quux)"))
+   qux,
+   quux)"))
 
 (ert-deftest lua-indentation-conditional ()
   (should-lua-indent "\
@@ -483,12 +483,73 @@ if foo then a = a + 1 else
 end"))
 
 (ert-deftest lua-indentation-defun ()
-  ;; 	 [local] function funcname funcbody
-  ;; FIXME: add
-  )
+  (should-lua-indent "\
+local function foo (arg1, arg2) bar end
+")
 
-(ert-deftest lua-indentation-alignment ()
-  ;; FIXME: add
+  (should-lua-indent "\
+local function
+   foo (arg1, arg2) bar end
+")
+
+  (should-lua-indent "\
+local
+   function foo (arg1, arg2) bar end
+")
+
+  (should-lua-indent "\
+local
+   function foo (arg1, arg2) bar
+end
+")
+
+  (should-lua-indent "\
+local function foo (arg1, arg2)
+   bar
+end
+")
+
+  (should-lua-indent "\
+local function foo (arg1,
+      arg2)
+   bar
+end
+")
+
+  (should-lua-indent "\
+local function foo (
+      arg1,
+      arg2)
+   bar
+end
+")
+
+
+  (should-lua-indent "\
+local function foo (
+      arg1,
+      arg2
+   )
+   bar
+end
+")
+
+  (should-lua-indent "\
+local function foo
+   ( arg1, arg2
+   )
+   bar
+end
+")
+
+
+  (should-lua-indent "\
+local function foo
+   ( arg1, arg2 )
+   bar
+end
+")
+
   )
 
 (ert-deftest lua-indentation-tablector ()
@@ -496,8 +557,25 @@ end"))
   )
 
 (ert-deftest lua-indentation-continuation-spans-over-empty-lines ()
-  ;; FIXME: add
-  ;; FIXME: check comment-only lines too
+  (should-lua-indent "\
+var = 1 +
+
+   2
+")
+
+  (should-lua-indent "\
+var = 1 + -- comment
+
+   2
+")
+
+
+  (should-lua-indent "\
+var = 1 +
+   -- comment
+   2
+")
+
   )
 
 
@@ -509,7 +587,6 @@ end"))
 
 
 (ert-deftest lua-indentation-block-intro-continuation ()
-  :expected-result :failed
   (should-lua-indent "\
 while
    foo do
@@ -519,14 +596,15 @@ end
 a = 0")
 
   (should-lua-indent "\
-for k, v
-   in pairs(bar) do a = a + 1 end
+for k, v in
+   pairs(bar) do a = a + 1 end
 
 a = 0")
 
-  (should-lua-indent "\
-for k, v
-   in pairs(bar) do a = a + 1 end
+    (should-lua-indent "\
+for
+   k, v in
+   pairs(bar) do a = a + 1 end
 
 a = 0")
 
@@ -628,7 +706,7 @@ end")
 
   (should-lua-indent "\
 -- 5.2.0-beta-rc2
-::redo:: 
+::redo::
 for x=1,10 do
    for y=1,10 do
       if not f(x,y) then goto continue end
@@ -651,3 +729,41 @@ local b, bt = [[
            g()
          ::b::
 ]]"))
+
+(ert-deftest lua-indentation-engine-rewrite ()
+  ;; This test is a demonstration of the indentation engine rewrite done in
+  ;; November 2014.
+  (should-lua-indent "\
+foobar('arg1', function ()
+      print('foobar')
+end)
+")
+
+  (should-lua-indent "\
+foobar('arg1', function ()
+      print('foobar')
+   end
+)
+")
+
+  (should-lua-indent "\
+foobar('arg1', function ()
+      if foo then print('foobar') end end
+)
+")
+
+  (should-lua-indent "\
+b =
+   {
+}
+")
+
+  (should-lua-indent "\
+foo = bar + baz(
+)
+
+foo = baz(
+)
+")
+
+  )
