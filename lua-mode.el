@@ -1667,6 +1667,10 @@ This function just searches for a `end' at the beginning of a line."
           (replace-match "\\\\\\&" t)))
       (concat "'" (buffer-string) "'"))))
 
+;;;###autoload
+(defalias 'run-lua #'lua-start-process)
+
+;;;###autoload
 (defun lua-start-process (&optional name program startfile &rest switches)
   "Start a lua process named NAME, running PROGRAM.
 PROGRAM defaults to NAME, which defaults to `lua-default-application'.
