@@ -95,6 +95,11 @@
 
 ;; rx-wrappers for Lua
 
+(eval-when-compile
+  ;; Silence compilation warning about `compilation-error-regexp-alist' defined
+  ;; in compile.el.
+  (require 'compile))
+
 (eval-and-compile
   (defvar lua-rx-constituents)
   (defvar rx-parent)
