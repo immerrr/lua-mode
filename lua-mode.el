@@ -727,7 +727,8 @@ Groups 6-9 can be used in any of argument regexps."
   (lua--setq-local comment-start                  lua-comment-start)
   (lua--setq-local comment-start-skip             lua-comment-start-skip)
   (lua--setq-local comment-use-syntax             t)
-  (lua--setq-local comment-use-global-state       t)
+  (with-no-warnings
+    (lua--setq-local comment-use-global-state     t))
   (lua--setq-local imenu-generic-expression       lua-imenu-generic-expression)
 
 
