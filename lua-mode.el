@@ -723,8 +723,8 @@ Groups 6-9 can be used in any of argument regexps."
     (with-no-warnings
       ;; font-lock-syntactic-keywords are deprecated since 24.1
       (lua--setq-local
-       font-lock-syntactic-keywords 'lua-font-lock-syntactic-keywords)))
-  (lua--setq-local font-lock-extra-managed-props  '(syntax-table))
+       font-lock-syntactic-keywords 'lua-font-lock-syntactic-keywords)
+      (lua--setq-local font-lock-extra-managed-props  '(syntax-table))))
   (lua--setq-local parse-sexp-lookup-properties   t)
   (lua--setq-local indent-line-function           'lua-indent-line)
   (lua--setq-local beginning-of-defun-function    'lua-beginning-of-proc)
