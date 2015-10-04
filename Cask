@@ -4,7 +4,7 @@
 (package "lua-mode" "dev" "Major mode for editing Lua")
 
 (development
- (depends-on "s")
+ (depends-on "buttercup")
  (depends-on "cl-lib"))
 
 ;; Local Variables:

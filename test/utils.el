@@ -1,5 +1,17 @@
-(require 'ert)
 (require 'lua-mode)
+(require 'buttercup)
+
+
+(defun to-be-fontified-as (text faces)
+  (let ((expected-faces (lua-mk-font-lock-faces faces))
+        (result-faces (lua-get-line-faces text)))
+    (cons (equal expected-faces result-faces)
+          (format "Expected %S to be fontified as %s" text faces))))
+
+
+(buttercup-define-matcher :to-be-fontified-as (text faces)
+  (to-be-fontified-as text faces))
+
 
 
 (defun get-str-faces (str)
@@ -94,6 +106,7 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
    (split-string
     (with-lua-buffer
      (insert (replace-regexp-in-string "^\\s *" "" (lua-join-lines strs)))
+     (font-lock-fontify-buffer)
      (indent-region (point-min) (point-max))
      (buffer-substring-no-properties
       (point-min) (point-max)))
@@ -117,8 +130,8 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
       (buffer-substring-no-properties (point-min) (point-max)))
      "\n" nil)))
 
-(defmacro should-lua-indent (str)
-  `(let ((strs (split-string ,str "\n"))
-         (indent-tabs-mode nil))
-     (should
-      (equal strs (lua-get-indented-strs strs)))))
+(defun lua--reindent-like (str)
+  (let ((strs (split-string str "\n"))
+        (indent-tabs-mode nil)
+        (font-lock-verbose nil))
+    (equal strs (lua-get-indented-strs strs))))

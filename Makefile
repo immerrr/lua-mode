@@ -5,26 +5,21 @@ DISTFILE = lua-mode-$(VERSION).zip
 
 # EMACS value may be overridden
 EMACS?=emacs
+EMACS_MAJOR_VERSION=$(shell $(EMACS) -batch -eval '(princ emacs-major-version)')
+LUA_MODE_ELC=lua-mode.$(EMACS_MAJOR_VERSION).elc
 
 EMACS_BATCH=cask exec $(EMACS) --batch -Q
-
-TESTS=
-TESTS += test/defun-font-lock-test.el
-TESTS += test/builtin-font-lock-test.el
-TESTS += test/electric-mode-test.el
-TESTS += test/indentation-test.el
-TESTS += test/strings-and-comments-test.el
-TESTS += test/generic-test.el
-TESTS += test/inferior-test.el
 
 default:
 	@echo version is $(VERSION)
 
+%.$(EMACS_MAJOR_VERSION).elc: %.elc
+	mv $< $@
+
 %.elc: %.el
 	$(EMACS_BATCH) -f batch-byte-compile $<
 
-compile: lua-mode.elc
-
+compile: $(LUA_MODE_ELC)
 
 dist:
 	rm -f $(DISTFILE) && \
@@ -34,15 +29,11 @@ dist:
 # check both regular and compiled versions
 test: test-compiled test-uncompiled
 
-test-compiled: compile
-	$(EMACS_BATCH) -l test/ert.el \
-		-l lua-mode.elc \
-		$(addprefix -l ,$(TESTS)) -f ert-run-tests-batch-and-exit
+test-compiled: $(LUA_MODE_ELC)
+	EMACS=$(EMACS) cask exec buttercup -l $(LUA_MODE_ELC)
 
 test-uncompiled:
-	$(EMACS_BATCH) -l test/ert.el \
-		-l lua-mode.el \
-		$(addprefix -l ,$(TESTS)) -f ert-run-tests-batch-and-exit
+	EMACS=$(EMACS) cask exec buttercup -l lua-mode.el
 
 release:
 	git fetch && \
