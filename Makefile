@@ -54,4 +54,4 @@ release:
 
 
 tryout:
-	cask exec $(EMACS) -Q -l lua-mode.el test.lua
+	cask exec $(EMACS) -Q -l init-tryout.el test.lua
