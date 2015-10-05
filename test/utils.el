@@ -1,12 +1,31 @@
+;; -*- flycheck-disabled-checkers: (emacs-lisp-checkdoc) -*-
+
 (require 'lua-mode)
 (require 'buttercup)
 
 
 (defun to-be-fontified-as (text faces)
   (let ((expected-faces (lua-mk-font-lock-faces faces))
-        (result-faces (lua-get-line-faces text)))
-    (cons (equal expected-faces result-faces)
-          (format "Expected %S to be fontified as %s" text faces))))
+        (result-faces (lua-get-line-faces text))
+        (lineno 1))
+    (when (/= (length expected-faces) (length result-faces))
+        (buttercup-fail "\
+Fontification check failed for:
+%S
+  Text contains %d lines, face list contains %d lines"
+                        text (length result-faces) (length expected-faces)))
+    (while expected-faces
+      (unless (equal (car expected-faces) (car result-faces))
+        (buttercup-fail "\
+Fontification check failed on line %d for:
+%S
+  Result faces:   %S
+  Expected faces: %S"
+                        lineno text (car expected-faces) (car result-faces)))
+      (setq expected-faces (cdr expected-faces)
+            result-faces (cdr result-faces)
+            lineno (1+ lineno)))
+    (cons t "Fontification check passed")))
 
 
 (buttercup-define-matcher :to-be-fontified-as (text faces)
