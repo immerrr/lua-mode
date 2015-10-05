@@ -181,3 +181,34 @@ goto f12o"
   ;; of another variable
   (it "does not fontify after symbols ending with \"goto\""
     (expect "JUNKgoto foo" :to-be-fontified-as '(nil))))
+
+
+(describe "Fontification of LuaDoc keywords"
+  (it "works"
+    (expect "\
+-- @author foo baz
+-- @copyright foo baz
+-- @field foo baz
+-- @param foo baz
+-- @release foo baz
+-- @return foo baz
+-- @see foo baz
+-- @usage foo baz
+-- @class foo baz
+-- @description foo baz
+-- @name foo baz"
+            :to-be-fontified-as
+            '(("-- " comment-delimiter "@author" keyword " foo baz" comment)
+              ("-- " comment-delimiter "@copyright" keyword " foo baz" comment)
+              ("-- " comment-delimiter "@field" keyword " foo baz" comment)
+              ("-- " comment-delimiter "@param" keyword " " comment
+               "foo" variable-name " baz" comment)
+              ("-- " comment-delimiter "@release" keyword " foo baz" comment)
+              ("-- " comment-delimiter "@return" keyword " foo baz" comment)
+              ("-- " comment-delimiter "@see" keyword " foo baz" comment)
+              ("-- " comment-delimiter "@usage" keyword " foo baz" comment)
+              ("-- " comment-delimiter "@class" keyword
+               " " comment "foo" variable-name " baz" comment)
+              ("-- " comment-delimiter "@description" keyword " foo baz" comment)
+              ("-- " comment-delimiter "@name" keyword " " comment
+               "foo" variable-name " baz" comment)))))

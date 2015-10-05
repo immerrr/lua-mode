@@ -646,7 +646,15 @@ Groups 6-9 can be used in any of argument regexps."
       (3 font-lock-warning-face t noerror)))
 
     (,(lua-rx (or bol ";") ws lua-funcheader)
-     (1 font-lock-function-name-face)))
+     (1 font-lock-function-name-face))
+
+    (,(lua-rx (or (group-n 1
+                           "@" (symbol "author" "copyright" "field" "release"
+                                       "return" "see" "usage" "description"))
+                  (seq (group-n 1 "@" (symbol "param" "class" "name")) ws+
+                       (group-n 2 lua-name))))
+     (1 font-lock-keyword-face t)
+     (2 font-lock-variable-name-face t noerror)))
 
   "Default expressions to highlight in Lua mode.")
 
