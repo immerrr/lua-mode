@@ -228,7 +228,8 @@ for Emacsen that doesn't contain one (pre-23.3)."
 (defcustom lua-indent-level 3
   "Amount by which Lua subexpressions are indented."
   :type 'integer
-  :group 'lua)
+  :group 'lua
+  :safe #'integerp)
 
 (defcustom lua-comment-start "-- "
   "Default value of `comment-start'."
