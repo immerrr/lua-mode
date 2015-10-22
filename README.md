@@ -1,5 +1,7 @@
 # Lua mode
 
+[![Build Status](https://travis-ci.org/immerrr/lua-mode.svg?branch=master)](https://travis-ci.org/immerrr/lua-mode)
+
 **lua-mode** is a major mode for editing Lua sources in Emacs.
 
 
