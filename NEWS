@@ -1,5 +1,36 @@
-* dev
+* Release rel-20151025
+** allow setting lua-indent-level as file local variable (issue #108)
+
+** add luadoc keyword fontification (issue #71)
+
+** fix comments being spilled into the code (issue #25)
+
+** add `run-lua' alias for `lua-start-process' (issue #97)
+
 ** skip shebang line when sending to inferior buffer (issue #61)
+
+** add builtin functions and modules for Lua 5.3 (issue #90)
+
+** fix lua-beginning-of-proc matching (issue #85)
+
+** add `lua-documentation-function' to customize the way the documentation is
+   shown, rename `lua-search-url-prefix' to `lua-documentation-url',
+   auto-detect lua documentation installed in /usr/share/doc/lua (issue #82)
+
+** fix some errors with `lua-kill-process' (issue #69)
+
+** improve `next-error' integration in Lua subprocess buffer: "stdin:N:"
+   entries are no longer highlighted and no longer prompt for "stdin" files
+
+** add support for Lua 5.2 goto keyword (issue #66)
+
+** add support for local functions in imenu (issue #65)
+
+** fix font lock of functions with underscores (issue #63)
+
+** don't send shebang when sending lua buffer to subprocess (issue #61)
+
+** fix interaction with electric-pair-mode (issue #54)
 
 ** rewrite lua-send-region to use "loadstring" rather than "dofile"
    - sending code to processes on remote hosts is now supported
