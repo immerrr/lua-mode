@@ -1,4 +1,4 @@
-* Release rel-20151025
+* Release v20151025
 ** allow setting lua-indent-level as file local variable (issue #108)
 
 ** add luadoc keyword fontification (issue #71)
@@ -22,7 +22,16 @@
 ** improve `next-error' integration in Lua subprocess buffer: "stdin:N:"
    entries are no longer highlighted and no longer prompt for "stdin" files
 
-** add support for Lua 5.2 goto keyword (issue #66)
+* release v20140514
+
+** add support for Lua 5.2 goto statements
+
+** when indenting, don't anchor to block-open tokens
+   somefunc({
+            ^
+            don't indent next line relative to this brace
+
+** fix several `indent-new-comment-line'-related bugs
 
 ** add support for local functions in imenu (issue #65)
 
