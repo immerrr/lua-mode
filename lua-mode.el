@@ -313,16 +313,20 @@ Should be a list of strings."
 
 If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
 
+(defvar lua--electric-indent-chars
+  (mapcar #'string-to-char '("}" "]" ")")))
+
+
 (defvar lua-mode-map
   (let ((result-map (make-sparse-keymap))
         prefix-key)
-    (mapc (lambda (key_defn)
-            (define-key result-map (read-kbd-macro (car key_defn)) (cdr key_defn)))
-          ;; here go all the default bindings
-          ;; backquote enables evaluating certain symbols by comma
-          `(("}" . lua-electric-match)
-            ("]" . lua-electric-match)
-            (")" . lua-electric-match)))
+    (unless (boundp 'electric-indent-chars)
+      (mapc (lambda (electric-char)
+              (define-key result-map
+                (read-kbd-macro
+                 (char-to-string electric-char))
+                #'lua-electric-match))
+            lua--electric-indent-chars))
     (define-key result-map [menu-bar lua-mode] (cons "Lua" lua-mode-menu))
 
     ;; FIXME: see if the declared logic actually works
@@ -664,9 +668,9 @@ Groups 6-9 can be used in any of argument regexps."
   "Imenu generic expression for lua-mode.  See `imenu-generic-expression'.")
 
 (defvar lua-sexp-alist '(("then" . "end")
-                         ("function" . "end")
-                         ("do" . "end")
-                         ("repeat" . "until")))
+                      ("function" . "end")
+                      ("do" . "end")
+                      ("repeat" . "until")))
 
 (defvar lua-mode-abbrev-table nil
   "Abbreviation table used in lua-mode buffers.")
@@ -744,6 +748,11 @@ Groups 6-9 can be used in any of argument regexps."
   (with-no-warnings
     (lua--setq-local comment-use-global-state     t))
   (lua--setq-local imenu-generic-expression       lua-imenu-generic-expression)
+  (when (boundp 'electric-indent-chars)
+    ;; If electric-indent-chars is not defined, electric indentation is done
+    ;; via `lua-mode-map'.
+    (lua--setq-local electric-indent-chars
+                  (append electric-indent-chars lua--electric-indent-chars)))
 
 
   ;; setup menu bar entry (XEmacs style)
@@ -779,7 +788,8 @@ Groups 6-9 can be used in any of argument regexps."
 (defun lua-electric-match (arg)
   "Insert character and adjust indentation."
   (interactive "P")
-  (self-insert-command (prefix-numeric-value arg))
+  (let (blink-paren-function)
+   (self-insert-command (prefix-numeric-value arg)))
   (if lua-electric-flag
       (lua-indent-line))
   (blink-matching-open))

@@ -11,6 +11,8 @@
   (it "works with curly braces"
     (with-lua-buffer
      (lua--setq-local blink-matching-paren nil)
+     (make-local-variable 'electric-indent-mode)
+     (electric-indent-mode 1)
      (execute-kbd-macro (kbd "return SPC foo SPC { M-j"))
      (execute-kbd-macro (kbd "'baz' M-j"))
      (expect (current-indentation) :to-be lua-indent-level)
@@ -21,6 +23,8 @@
   (it "works with parentheses"
     (with-lua-buffer
      (lua--setq-local blink-matching-paren nil)
+     (make-local-variable 'electric-indent-mode)
+     (electric-indent-mode 1)
      (execute-kbd-macro (kbd "return SPC foo SPC ( M-j"))
      (execute-kbd-macro (kbd "'baz' M-j"))
      (should (eq (current-indentation) lua-indent-level))
