@@ -436,6 +436,12 @@ traceback location."
     ["Search Documentation" lua-search-documentation t])
   "Emacs menu for Lua mode.")
 
+
+;; auto indent after typing keywords below
+(defconst lua-block-mid-keywords
+  '("else" "elseif" "until")
+  "Keywords where the indentation gets shallower in middle of block statements.")
+
 ;; the whole defconst is inside eval-when-compile, because it's later referenced
 ;; inside another eval-and-compile block
 (eval-and-compile
@@ -748,6 +754,9 @@ Groups 6-9 can be used in any of argument regexps."
   (with-no-warnings
     (lua--setq-local comment-use-global-state     t))
   (lua--setq-local imenu-generic-expression       lua-imenu-generic-expression)
+
+  (add-hook 'electric-indent-functions 'lua--electric-indent-p nil 'local)
+
   (when (boundp 'electric-indent-chars)
     ;; If electric-indent-chars is not defined, electric indentation is done
     ;; via `lua-mode-map'.
@@ -996,6 +1005,32 @@ Return the amount the indentation changed by."
                                         (match-string-no-properties 1))))
                0
              lua-indent-level))))))
+
+(defun lua--at-indentation-p (&optional point)
+  (save-excursion
+    (unless point (setq point (point)))
+    (forward-line 0)
+    (skip-chars-forward " \t")
+    (eq (point) point)))
+
+(defun lua--electric-indent-p (char)
+  (cond
+   ;; ((memq char ruby--electric-indent-chars)
+   ;;  ;; Reindent after typing a char affecting indentation.
+   ;;  (lua--at-indentation-p (1- (point))))
+   ;; ((memq (char-after) ruby--electric-indent-chars)
+   ;;  ;; Reindent after inserting something in front of the above.
+   ;;  (lua--at-indentation-p (1- (point))))
+   ((or (and (>= char ?a) (<= char ?z)) (memq char '(?_ ?? ?! ?:)))
+    (let ((pt (point)))
+      (save-excursion
+        (skip-chars-backward "[:alpha:]:_?!")
+        (and (lua--at-indentation-p)
+             (looking-at (regexp-opt (cons "end" lua-block-mid-keywords)))
+             ;; Outdent after typing a keyword.
+             (or (eq (match-end 0) pt)
+                 ;; Reindent if it wasn't a keyword after all.
+                 (eq (match-end 0) (1- pt)))))))))
 
 (defun lua-find-regexp (direction regexp &optional limit ignore-p)
   "Searches for a regular expression in the direction specified.
