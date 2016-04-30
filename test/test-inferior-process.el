@@ -142,3 +142,10 @@ function () end
           (kill-buffer buf))
         (delete-file fname)
         (kill-buffer "*lua*")))))
+
+(describe "String escaping"
+  (it "Escapes literal tabs"
+    (expect (string=
+	     (lua-make-lua-string "\
+	-- comment indented with a tab")
+	     "'\\t-- comment indented with a tab'"))))
