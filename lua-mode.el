@@ -192,8 +192,8 @@ element is itself expanded with `lua-rx-to-string'. "
       `(set (make-local-variable (quote ,var)) ,val)))
 
   ;; Backward compatibility for Emacsen < 24.1
-  (defalias 'lua--prog-mode
-    (if (fboundp 'prog-mode) 'prog-mode 'fundamental-mode))
+  (unless (fboundp 'prog-mode)
+    (define-derived-mode prog-mode fundamental-mode "Prog"))
 
   (defalias 'lua--cl-assert
     (if (fboundp 'cl-assert) 'cl-assert 'assert))
@@ -714,7 +714,7 @@ Groups 6-9 can be used in any of argument regexps."
   "`lua-mode' syntax table.")
 
 ;;;###autoload
-(define-derived-mode lua-mode lua--prog-mode "Lua"
+(define-derived-mode lua-mode prog-mode "Lua"
   "Major mode for editing Lua code."
   :abbrev-table lua-mode-abbrev-table
   :syntax-table lua-mode-syntax-table

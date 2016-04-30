@@ -71,3 +71,9 @@
         "end"))
      (beginning-of-defun)
      (expect (looking-at (rx "function foo.bar:baz (x,y,z)"))))))
+
+
+(describe "lua-mode"
+  (it "is derived from prog-mode"
+    (with-lua-buffer
+     (expect (derived-mode-p 'prog-mode)))))
