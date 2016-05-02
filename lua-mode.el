@@ -904,14 +904,12 @@ If none can be found before reaching LIMIT, return nil."
         (and (setq last-search-matched
                    (re-search-forward lua-ml-begin-regexp limit 'noerror))
 
-             ;; (1+ (match-beginning 0)) is required to handle triple-hyphen
-             ;; '---[[' situation: regexp matches starting from the second one,
-             ;; but it's not yet a comment, because it's a part of 2-character
-             ;; comment-start sequence, so if we try to detect if the opener is
-             ;; inside a comment from the second hyphen, it'll fail.  But the
-             ;; third one _is_ inside a comment and considering it instead will
-             ;; fix the issue. --immerrr
-             (lua-comment-or-string-start-pos (1+ (match-beginning 0)))))
+             (or (lua-comment-or-string-start-pos (match-beginning 0))
+                 ;; Handle triple-hyphen '---[[' situation: match-beginning is
+                 ;; BEFORE the second hyphen, but the comment would only starts
+                 ;; AFTER it.
+                 (and (eq ?- (char-after (match-beginning 0)))
+                      (eq ?- (char-before (match-beginning 0)))))))
 
     last-search-matched))
 
