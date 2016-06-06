@@ -769,6 +769,9 @@ Groups 6-9 can be used in any of argument regexps."
       (setq mode-popup-menu
             (cons (concat mode-name " Mode Commands") lua-emacs-menu)))
 
+  (make-variable-buffer-local 'completion-at-point-functions)
+  (add-to-list 'completion-at-point-functions 'lua-complete-function)
+
   ;; hideshow setup
   (unless (assq 'lua-mode hs-special-modes-alist)
     (add-to-list 'hs-special-modes-alist
@@ -1824,6 +1827,105 @@ If `lua-process' is nil or dead, start a new process first."
       (if (and (>= pos start) (< pos end))
           (lua-send-region start end)
         (error "Not on a function definition")))))
+
+(defun lua-completion-string-for (expr libs out-file)
+  "Construct a string of Lua code to write completions to `out-file'.
+
+The `expr' arg should be the input string (which may contain dots
+for table lookup), and `libs' should be a list of the format returned
+by `lua-local-libs', or nil."
+  (mapconcat 'identity
+             `("do"
+               "local clone = function(t)"
+               "  local n = {} for k,v in pairs(t) do n[k] = v end return n"
+               "end"
+
+               ;; Completion context starts as just a clone of _G.
+               "local top_ctx = clone(_G)"
+               ;; But then we take all matches of local x = require y from
+               ;; our code buffer and stuff them into the completion table too.
+               ,@(mapcar (lambda (l)
+                           (format "top_ctx['%s'] = require(%s)"
+                                   (car l) (cadr l))) libs)
+
+               ;; recursively delve into context based on input_parts
+               "local function cpl_for(input_parts, ctx, prefixes)"
+               "  if type(ctx) ~= \"table\" then return {} end"
+               "  if #input_parts == 0 and ctx ~= top_ctx then"
+               "    return ctx"
+               "  elseif #input_parts == 1 then" ; the last segment of input
+               "    local matches = {}"
+               "    for k in pairs(ctx) do"
+               "      if k:find('^' .. input_parts[1]) then"
+               "        local parts = clone(prefixes)"
+               "        table.insert(parts, k)"
+               "        table.insert(matches, table.concat(parts, '.'))"
+               "      end"
+               "    end"
+               "    return matches"
+               "  else" ; more segments of input remain; descend into ctx table
+               "    local token1 = table.remove(input_parts, 1)"
+               "    table.insert(prefixes, first_part)"
+               "    return cpl_for(input_parts, ctx[token1], prefixes)"
+               "  end"
+               "end"
+
+               ;; this is a table of the segments of the input
+               "local input = {"
+               ,@(mapcar (apply-partially 'format "'%s',")
+                         (split-string expr "\\.")) "}"
+               ;; spit it out to a file; lua-mode can't send data back to emacs
+               ,(format "local f = io.open('%s', 'w')" out-file)
+               "for _,l in ipairs(cpl_for(input, top_ctx, {})) do"
+               "  f:write(l .. string.char(10))"
+               "end"
+               "f:close()"
+               "end") "\n"))
+
+(defvar lua-local-require-completions nil
+  "During completion, scan file for local require calls for context.
+
+Defaults to nil because this will cause code to be loaded during completion.
+Loading arbitrary code can have unexpected side-effects, so use with caution.")
+
+(defvar lua-local-require-regexp
+  "^local\\s-+\\(\\w+\\)\\s-*=\\s-*require[( ]+\\([^ )\n]+\\)"
+  "A regexp to match lines where a library is required and put in a local.")
+
+(defun lua-local-libs ()
+  "Find all modules loaded with require which are stored in locals.
+
+Returns a list of lists where the car is the local name and the cadr
+is the string that is passed to require."
+  (save-excursion
+    (when lua-local-require-completions
+      (let ((libs nil))
+        (goto-char (point-min))
+        ;; find each match of "local x = require y" and save for later
+        (while (search-forward-regexp lua-local-require-regexp nil t)
+          (add-to-list 'libs (list (match-string-no-properties 1)
+                                   (match-string-no-properties 2))))
+        libs))))
+
+(defun lua-complete-function ()
+  "Completion function for `completion-at-point-functions'.
+
+Queries current lua subprocess for possible completions."
+  (let* ((start-of-expr (save-excursion
+                          (search-backward-regexp "[^\.a-zA-Z0-9_]") (point)))
+         (start-of-token (save-excursion (when (symbol-at-point)
+                                           (backward-word)) (point)))
+         (expr (buffer-substring-no-properties (1+ start-of-expr) (point)))
+         (libs (lua-local-libs))
+         (file (make-temp-file "lua-completions-")))
+    (lua-send-string (lua-completion-string-for expr libs file))
+    (sit-for 0.1)
+    (list start-of-token (point)
+          (when (file-exists-p file)
+            (with-temp-buffer
+              (insert-file-contents file)
+              (delete-file file)
+              (butlast (split-string (buffer-string) "\n")))))))
 
 (defun lua-maybe-skip-shebang-line (start)
   "Skip shebang (#!/path/to/interpreter/) line at beginning of buffer.
