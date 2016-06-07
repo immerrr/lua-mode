@@ -769,7 +769,7 @@ Groups 6-9 can be used in any of argument regexps."
       (setq mode-popup-menu
             (cons (concat mode-name " Mode Commands") lua-emacs-menu)))
 
-  (make-variable-buffer-local 'completion-at-point-functions)
+  (make-local-variable 'completion-at-point-functions)
   (add-to-list 'completion-at-point-functions 'lua-complete-function)
 
   ;; hideshow setup
@@ -1828,6 +1828,11 @@ If `lua-process' is nil or dead, start a new process first."
           (lua-send-region start end)
         (error "Not on a function definition")))))
 
+(defun lua-completion-trim-input (i)
+  (format "'%s'," (with-temp-buffer (insert i) (goto-char 0)
+                                   (replace-regexp "[[:space:]]" "")
+                                   (buffer-string))))
+
 (defun lua-completion-string-for (expr libs out-file)
   "Construct a string of Lua code to write completions to `out-file'.
 
@@ -1872,15 +1877,14 @@ by `lua-local-libs', or nil."
 
                ;; this is a table of the segments of the input
                "local input = {"
-               ,@(mapcar (apply-partially 'format "'%s',")
-                         (split-string expr "\\.")) "}"
+               ,@(mapcar 'lua-completion-trim-input (split-string expr "\\.")) "}"
                ;; spit it out to a file; lua-mode can't send data back to emacs
                ,(format "local f = io.open('%s', 'w')" out-file)
                "for _,l in ipairs(cpl_for(input, top_ctx, {})) do"
                "  f:write(l .. string.char(10))"
                "end"
                "f:close()"
-               "end") "\n"))
+               "end") " "))
 
 (defvar lua-local-require-completions nil
   "During completion, scan file for local require calls for context.
@@ -1902,30 +1906,46 @@ is the string that is passed to require."
       (let ((libs nil))
         (goto-char (point-min))
         ;; find each match of "local x = require y" and save for later
-        (while (search-forward-regexp lua-local-require-regexp nil t)
+        (while (lua-find-regexp 'forward lua-local-require-regexp)
           (add-to-list 'libs (list (match-string-no-properties 1)
                                    (match-string-no-properties 2))))
         libs))))
+
+(defun lua-start-of-expr ()
+  "Search backwards to find the beginning of the current expression.
+
+This is distinct from `backward-sexp' which treats . and : as a separator."
+  (save-excursion
+    (backward-sexp)
+    (let ((bos (point)))
+      (backward-char)
+      (when (string-match "[[:space:]]" (thing-at-point 'char))
+        (search-backward-regexp "[^\s-]" nil t)
+        (when (string= (thing-at-point 'char) "\n")
+          (backward-char)))
+      (if (member (thing-at-point 'char) '(":" "."))
+          (lua-start-of-expr)
+        bos))))
 
 (defun lua-complete-function ()
   "Completion function for `completion-at-point-functions'.
 
 Queries current lua subprocess for possible completions."
-  (let* ((start-of-expr (save-excursion
-                          (search-backward-regexp "[^\.a-zA-Z0-9_]") (point)))
+  (let* ((start-of-expr (lua-start-of-expr))
          (start-of-token (save-excursion (when (symbol-at-point)
-                                           (backward-word)) (point)))
-         (expr (buffer-substring-no-properties (1+ start-of-expr) (point)))
+                                           (backward-sexp)) (point)))
+         (expr (buffer-substring-no-properties start-of-expr (point)))
          (libs (lua-local-libs))
          (file (make-temp-file "lua-completions-")))
     (lua-send-string (lua-completion-string-for expr libs file))
     (sit-for 0.1)
-    (list start-of-token (point)
-          (when (file-exists-p file)
-            (with-temp-buffer
-              (insert-file-contents file)
-              (delete-file file)
-              (butlast (split-string (buffer-string) "\n")))))))
+    (unwind-protect
+        (list start-of-token (point)
+              (when (file-exists-p file)
+                (with-temp-buffer
+                  (insert-file-contents file)
+                  (butlast (split-string (buffer-string) "\n")))))
+      (delete-file file))))
 
 (defun lua-maybe-skip-shebang-line (start)
   "Skip shebang (#!/path/to/interpreter/) line at beginning of buffer.
