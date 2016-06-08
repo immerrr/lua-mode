@@ -1884,7 +1884,7 @@ by `lua-local-libs', or nil."
                "  f:write(l .. string.char(10))"
                "end"
                "f:close()"
-               "end") "\n"))
+               "end") " "))
 
 (defvar lua-local-require-completions nil
   "During completion, scan file for local require calls for context.
