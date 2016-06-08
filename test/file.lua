@@ -1,0 +1,1 @@
+return {abc = 123, def = 456}

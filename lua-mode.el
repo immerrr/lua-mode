@@ -1884,7 +1884,7 @@ by `lua-local-libs', or nil."
                "  f:write(l .. string.char(10))"
                "end"
                "f:close()"
-               "end") " "))
+               "end") "\n"))
 
 (defvar lua-local-require-completions nil
   "During completion, scan file for local require calls for context.
@@ -1918,9 +1918,9 @@ This is distinct from `backward-sexp' which treats . and : as a separator."
   (save-excursion
     (backward-sexp)
     (let ((bos (point)))
-      (backward-char)
+      (when (> (point) 1) (backward-char))
       (when (string-match "[[:space:]]" (thing-at-point 'char))
-        (search-backward-regexp "[^\s-]" nil t)
+        (search-backward-regexp "[^\n\s-]" nil t)
         (when (string= (thing-at-point 'char) "\n")
           (backward-char)))
       (if (member (thing-at-point 'char) '(":" "."))
