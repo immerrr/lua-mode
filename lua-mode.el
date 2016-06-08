@@ -1932,15 +1932,14 @@ This is distinct from `backward-sexp' which treats . and : as a separator."
 
 Queries current lua subprocess for possible completions."
   (let* ((start-of-expr (lua-start-of-expr))
-         (start-of-token (save-excursion (when (symbol-at-point)
-                                           (backward-sexp)) (point)))
          (expr (buffer-substring-no-properties start-of-expr (point)))
          (libs (lua-local-libs))
          (file (make-temp-file "lua-completions-")))
     (lua-send-string (lua-completion-string-for expr libs file))
     (sit-for 0.1)
     (unwind-protect
-        (list start-of-token (point)
+        (list (save-excursion (when (symbol-at-point)
+                                (backward-sexp)) (point)) (point)
               (when (file-exists-p file)
                 (with-temp-buffer
                   (insert-file-contents file)
