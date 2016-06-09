@@ -1854,7 +1854,7 @@ by `lua-local-libs', or nil."
                                    (car l) (cadr l))) libs)
 
                ;; recursively delve into context based on input_parts
-               "local function cpl_for(input_parts, ctx, prefixes)"
+               "local function cpl_for(input_parts, ctx)"
                "  if type(ctx) ~= \"table\" then return {} end"
                "  if #input_parts == 0 and ctx ~= top_ctx then"
                "    return ctx"
@@ -1862,16 +1862,13 @@ by `lua-local-libs', or nil."
                "    local matches = {}"
                "    for k in pairs(ctx) do"
                "      if k:find('^' .. input_parts[1]) then"
-               "        local parts = clone(prefixes)"
-               "        table.insert(parts, k)"
-               "        table.insert(matches, table.concat(parts, '.'))"
+               "        table.insert(matches, k)"
                "      end"
                "    end"
                "    return matches"
                "  else" ; more segments of input remain; descend into ctx table
                "    local token1 = table.remove(input_parts, 1)"
-               "    table.insert(prefixes, first_part)"
-               "    return cpl_for(input_parts, ctx[token1], prefixes)"
+               "    return cpl_for(input_parts, ctx[token1])"
                "  end"
                "end"
 
@@ -1880,7 +1877,7 @@ by `lua-local-libs', or nil."
                ,@(mapcar 'lua-completion-trim-input (split-string expr "\\.")) "}"
                ;; spit it out to a file; lua-mode can't send data back to emacs
                ,(format "local f = io.open('%s', 'w')" out-file)
-               "for _,l in ipairs(cpl_for(input, top_ctx, {})) do"
+               "for _,l in ipairs(cpl_for(input, top_ctx)) do"
                "  f:write(l .. string.char(10))"
                "end"
                "f:close()"
