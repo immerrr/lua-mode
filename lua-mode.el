@@ -1778,54 +1778,59 @@ When called interactively, switch to the process buffer."
   (interactive)
   (set-marker lua-region-end (or arg (point))))
 
-(defun lua-send-string (str)
-  "Load STR plus a newline into Lua subprocess.
+(defun lua-send-string (chunk-str)
+  "Load CHUNK-STR plus a newline into Lua subprocess.
 
 If `lua-process' is nil or dead, start a new process first."
-  (let ((tmp-file (make-temp-file "luamode" nil ".tmp"))
+  (let ((str (if (string-equal (substring chunk-str -1) "\n")
+                 chunk-str
+               (concat chunk-str "\n")))
         (lua-process (lua-get-create-process)))
-    ;; write data into temporary file
-    (with-temp-buffer
-      (insert (if (string-equal (substring str -1) "\n")
-                  str
-                (concat str "\n")))
-      (write-file tmp-file))
-    ;; evaluate data in the temporary file and then remove it
-    (process-send-string
-     lua-process
-     (format (concat
-              "\n"
-              "local tmp = '%s';"
-              "local res, e = pcall(function () "
-              "  local do_loadstring = loadstring or load;"
-              ""
-              "  local f, e = io.open(tmp, 'r');" ; open temporary file
-              "  if e then "
-              "    os.remove(tmp);"
-              "    error(e);"
-              "    return;"
-              "  end "
-              ""
-              "  local cont, e = f:read('*all');" ; read all data
-              "  if e then "
-              "    os.remove(tmp);"
-              "    error(e);"
-              "    return;"
-              "  end "
-              ""
-              "  f:close(); f = nil;" ; close and remove file
-              "  os.remove(tmp);"
-              ""
-              "  local f, e = do_loadstring(cont);" ; handle chunk
-              "  if e then "
-              "    error(e);"
-              "    return;"
-              "  end "
-              ""
-              "  return f();" ; execute chunk
-              "end);"
-              "if e then _, _ = os.remove(tmp); error(e); end" ; handle error, if any
-              "\n") tmp-file))))
+    (if (<= (length str) 500) ; handle "short" strings directly
+        (process-send-string lua-process str)
+      (let ((tmp-file (make-temp-file "luamode" nil ".tmp"))) ; handle long strings via temporary files
+        ;; write data into temporary file
+        (with-temp-buffer
+          (insert (if (string-equal (substring str -1) "\n")
+                      str
+                    (concat str "\n")))
+          (write-file tmp-file))
+        ;; evaluate data in the temporary file and then remove it
+        (process-send-string
+         lua-process
+         (format (concat
+                  "\n"
+                  "local tmp = '%s';"
+                  "local res, e = pcall(function () "
+                  "  local do_loadstring = loadstring or load;"
+                  ""
+                  "  local f, e = io.open(tmp, 'r');" ; open temporary file
+                  "  if e then "
+                  "    os.remove(tmp);"
+                  "    error(e);"
+                  "    return;"
+                  "  end "
+                  ""
+                  "  local cont, e = f:read('*all');" ; read all data
+                  "  if e then "
+                  "    os.remove(tmp);"
+                  "    error(e);"
+                  "    return;"
+                  "  end "
+                  ""
+                  "  f:close(); f = nil;" ; close and remove file
+                  "  os.remove(tmp);"
+                  ""
+                  "  local f, e = do_loadstring(cont);" ; handle chunk
+                  "  if e then "
+                  "    error(e);"
+                  "    return;"
+                  "  end "
+                  ""
+                  "  return f();" ; execute chunk
+                  "end);"
+                  "if e then _, _ = os.remove(tmp); error(e); end" ; handle error, if any
+                  "\n") tmp-file))))))
 
 (defun lua-send-current-line ()
   "Send current line to Lua subprocess, found in `lua-process'.
