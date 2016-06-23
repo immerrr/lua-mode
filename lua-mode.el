@@ -1791,9 +1791,7 @@ If `lua-process' is nil or dead, start a new process first."
       (let ((tmp-file (make-temp-file "luamode" nil ".tmp"))) ; handle long strings via temporary files
         ;; write data into temporary file
         (with-temp-buffer
-          (insert (if (string-equal (substring str -1) "\n")
-                      str
-                    (concat str "\n")))
+          (insert str)
           (write-file tmp-file))
         ;; evaluate data in the temporary file and then remove it
         (process-send-string
