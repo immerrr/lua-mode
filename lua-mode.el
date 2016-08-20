@@ -780,7 +780,7 @@ Groups 6-9 can be used in any of argument regexps."
 
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.lua$" . lua-mode))
+(add-to-list 'auto-mode-alist '("\\.lua\\'" . lua-mode))
 
 ;;;###autoload
 (add-to-list 'interpreter-mode-alist '("lua" . lua-mode))
