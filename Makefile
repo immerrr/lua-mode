@@ -8,7 +8,7 @@ EMACS?=emacs
 EMACS_MAJOR_VERSION=$(shell $(EMACS) -batch -eval '(princ emacs-major-version)')
 LUA_MODE_ELC=lua-mode.$(EMACS_MAJOR_VERSION).elc
 
-EMACS_BATCH=cask exec $(EMACS) --batch -Q
+EMACS_BATCH=$(EMACS) --batch -Q
 
 default:
 	@echo version is $(VERSION)
@@ -25,15 +25,29 @@ dist:
 	rm -f $(DISTFILE) && \
 	git archive --format=zip -o $(DISTFILE) --prefix=lua-mode/ HEAD
 
-.PHONY: test-compiled test-uncompiled
+.PHONY: test-compiled-nocask test-uncompiled-nocask test-compiled test-uncompiled
 # check both regular and compiled versions
+test-nocask: test-compiled-nocask test-uncompiled-nocask
+
 test: test-compiled test-uncompiled
+
+test-compiled-nocask: $(LUA_MODE_ELC)
+	$(EMACS) -batch -l $(LUA_MODE_ELC) -l buttercup -f buttercup-run-discover
+
+test-uncompiled-nocask:
+	$(EMACS) -batch -l lua-mode.el -l buttercup -f buttercup-run-discover
 
 test-compiled: $(LUA_MODE_ELC)
 	EMACS=$(EMACS) cask exec buttercup -l $(LUA_MODE_ELC)
 
 test-uncompiled:
 	EMACS=$(EMACS) cask exec buttercup -l lua-mode.el
+
+tryout:
+	cask exec $(EMACS) -Q -l init-tryout.el test.lua
+
+tryout-nocask:
+	$(EMACS) -Q -l init-tryout.el test.lua
 
 release:
 	git fetch && \
@@ -42,7 +56,3 @@ release:
 	woger lua-l lua-mode lua-mode "release $(VERSION)" "Emacs major mode for editing Lua files" release-notes-$(VERSION) http://github.com/immerrr/lua-mode/ && \
 	git push origin master
 	@echo 'Send update to ELPA!'
-
-
-tryout:
-	cask exec $(EMACS) -Q -l init-tryout.el test.lua
