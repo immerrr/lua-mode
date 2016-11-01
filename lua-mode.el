@@ -904,10 +904,20 @@ If none can be found before reaching LIMIT, return nil."
         (and (setq last-search-matched
                    (re-search-forward lua-ml-begin-regexp limit 'noerror))
 
+             ;; Handle triple-hyphen '---[[' situation in which the multiline
+             ;; opener should be skipped.
+             ;;
+             ;; In HYPHEN1-HYPHEN2-BRACKET1-BRACKET2 situation (match-beginning
+             ;; 0) points to HYPHEN1, but if there's another hyphen before
+             ;; HYPHEN1, standard syntax table will only detect comment-start
+             ;; at HYPHEN2.
+             ;;
+             ;; We could check for comment-start at HYPHEN2, but then we'd have
+             ;; to flush syntax-ppss cache to remove the result saying that at
+             ;; HYPHEN2 there's no comment or string, because under some
+             ;; circumstances that would hide the fact that we put a
+             ;; comment-start property at HYPHEN1.
              (or (lua-comment-or-string-start-pos (match-beginning 0))
-                 ;; Handle triple-hyphen '---[[' situation: match-beginning is
-                 ;; BEFORE the second hyphen, but the comment would only starts
-                 ;; AFTER it.
                  (and (eq ?- (char-after (match-beginning 0)))
                       (eq ?- (char-before (match-beginning 0)))))))
 
@@ -1692,7 +1702,7 @@ This function just searches for a `end' at the beginning of a line."
      "    str = string.rep('\\n', lineoffset - 1) .. str"
      "  end"
      ""
-     "  x, e = loadstring(str, '@'..displayname)"
+     "  local x, e = loadstring(str, '@'..displayname)"
      "  if e then"
      "    error(e)"
      "  end"
