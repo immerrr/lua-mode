@@ -810,12 +810,13 @@ Groups 6-9 can be used in any of argument regexps."
   ;; does not find a comment at the beginning of the empty line before the
   ;; comment and falls back to text-based filling ignoring comment-start and
   ;; spilling the comment into the code.
-  (while (and (not (eobp))
-              (progn (move-to-left-margin)
-                     (looking-at paragraph-separate)))
-    (forward-line 1))
-  (let ((fill-paragraph-handle-comment t))
-    (fill-paragraph justify region)))
+  (save-excursion
+    (while (and (not (eobp))
+                (progn (move-to-left-margin)
+                       (looking-at paragraph-separate)))
+      (forward-line 1))
+    (let ((fill-paragraph-handle-comment t))
+      (fill-paragraph justify region))))
 
 
 (defun lua-prefix-key-update-bindings ()
