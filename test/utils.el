@@ -32,6 +32,21 @@ Fontification check failed on line %d for:
   (to-be-fontified-as text faces))
 
 
+(buttercup-define-matcher :to-precede (pos regexp)
+  (save-excursion
+    (goto-char pos)
+    (let* ((precedes (looking-at regexp))
+           (substr-begin (min (point-max) pos))
+           (substr-end (min (point-max) (+ pos 100)))
+           (found-after (format "%S" (buffer-substring-no-properties
+                                      substr-begin substr-end ))))
+      (goto-char substr-end)
+      (when (eobp) (setq found-after (concat found-after " (end-of-buffer)")))
+      (cons precedes (format "Expected %s to see after point at %s: %S.  Found: %s"
+                             (if precedes "NOT" "")
+                             pos regexp found-after)))))
+
+
 
 (defun get-str-faces (str)
   "Find contiguous spans of non-default faces in STR.
