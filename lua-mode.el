@@ -700,6 +700,7 @@ Groups 6-9 can be used in any of argument regexps."
     (modify-syntax-entry ?\" "\"")
 
     ;; single-character binary operators: punctuation
+    (modify-syntax-entry ?# ".")
     (modify-syntax-entry ?+ ".")
     (modify-syntax-entry ?* ".")
     (modify-syntax-entry ?/ ".")
