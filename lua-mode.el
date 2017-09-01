@@ -1822,7 +1822,7 @@ If `lua-process' is nil or dead, start a new process first."
                    (point)))
           (end (progn (lua-end-of-proc) (point))))
 
-      ;; make sure point is in a function defintion before sending to
+      ;; make sure point is in a function definition before sending to
       ;; the subprocess
       (if (and (>= pos start) (< pos end))
           (lua-send-region start end)
