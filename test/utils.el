@@ -29,22 +29,22 @@ Fontification check failed on line %d for:
 
 
 (buttercup-define-matcher :to-be-fontified-as (text faces)
-  (to-be-fontified-as text faces))
+  (to-be-fontified-as (funcall text) (funcall faces)))
 
 
 (buttercup-define-matcher :to-precede (pos regexp)
   (save-excursion
-    (goto-char pos)
-    (let* ((precedes (looking-at regexp))
-           (substr-begin (min (point-max) pos))
-           (substr-end (min (point-max) (+ pos 100)))
+    (goto-char (funcall pos))
+    (let* ((precedes (looking-at (funcall regexp)))
+           (substr-begin (min (point-max) (funcall pos)))
+           (substr-end (min (point-max) (+ (funcall pos) 100)))
            (found-after (format "%S" (buffer-substring-no-properties
                                       substr-begin substr-end ))))
       (goto-char substr-end)
       (when (eobp) (setq found-after (concat found-after " (end-of-buffer)")))
       (cons precedes (format "Expected %s to see after point at %s: %S.  Found: %s"
                              (if precedes "NOT" "")
-                             pos regexp found-after)))))
+                             (funcall pos) (funcall regexp) found-after)))))
 
 
 
