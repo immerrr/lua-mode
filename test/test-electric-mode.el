@@ -10,7 +10,7 @@
 (describe "Test electric mode"
   (it "works with curly braces"
     (with-lua-buffer
-     (lua--setq-local blink-matching-paren nil)
+     (setq-local blink-matching-paren nil)
      (make-local-variable 'electric-indent-mode)
      (electric-indent-mode 1)
      (execute-kbd-macro (kbd "return SPC foo SPC { M-j"))
@@ -22,7 +22,7 @@
 
   (it "works with parentheses"
     (with-lua-buffer
-     (lua--setq-local blink-matching-paren nil)
+     (setq-local blink-matching-paren nil)
      (make-local-variable 'electric-indent-mode)
      (electric-indent-mode 1)
      (execute-kbd-macro (kbd "return SPC foo SPC ( M-j"))
@@ -77,9 +77,9 @@
       (let ((old-mode (if electric-pair-mode 1 0)))
         (unwind-protect
             (with-lua-buffer
-             (lua--setq-local blink-matching-paren nil)
-             (lua--setq-local electric-pair-skip-self t)
-             (lua--setq-local lua-electric-flag t)
+             (setq-local blink-matching-paren nil)
+             (setq-local electric-pair-skip-self t)
+             (setq-local lua-electric-flag t)
              (electric-pair-mode 1)
              (execute-kbd-macro "(")
              (should (string= (buffer-string) "()"))
