@@ -59,17 +59,17 @@
 ;; - Var `lua-documentation-function': function used to
 ;;   show documentation (`eww` is a viable alternative for Emacs 25)
 
-;; These are variables/commands that operate on Lua subprocess:
+;; These are variables/commands that operate on the Lua process:
 
 ;; - Var `lua-default-application':
-;;   command to start up the subprocess (REPL)
+;;   command to start the Lua process (REPL)
 ;; - Var `lua-default-command-switches':
-;;   arguments to pass to the subprocess on startup (make sure `-i` is there
+;;   arguments to pass to the Lua process on startup (make sure `-i` is there
 ;;   if you expect working with Lua shell interactively)
 ;; - Cmd `lua-start-process': start new REPL process, usually happens automatically
 ;; - Cmd `lua-kill-process': kill current REPL process
 
-;; These are variables/commands for interaction with Lua subprocess:
+;; These are variables/commands for interaction with the Lua process:
 
 ;; - Cmd `lua-show-process-buffer': switch to REPL buffer
 ;; - Cmd `lua-hide-process-buffer': hide window showing REPL buffer
@@ -221,7 +221,7 @@ for Emacsen that doesn't contain one (pre-23.3)."
 
 ;; Local variables
 (defgroup lua nil
-  "Major mode for editing lua code."
+  "Major mode for editing Lua code."
   :prefix "lua-"
   :group 'languages)
 
@@ -242,7 +242,7 @@ for Emacsen that doesn't contain one (pre-23.3)."
   :group 'lua)
 
 (defcustom lua-default-application "lua"
-  "Default application to run in lua subprocess."
+  "Default application to run in Lua process."
   :type '(choice (string)
                  (cons string integer))
   :group 'lua)
@@ -277,10 +277,10 @@ Should be a list of strings."
 
 
 (defvar lua-process nil
-  "The active Lua subprocess")
+  "The active Lua process")
 
 (defvar lua-process-buffer nil
-  "Buffer used for communication with Lua subprocess")
+  "Buffer used for communication with the Lua process")
 
 (defun lua--customize-set-prefix-key (prefix-key-sym prefix-key-val)
   (lua--cl-assert (eq prefix-key-sym 'lua-prefix-key))
@@ -404,7 +404,7 @@ Otherwise leading amount of whitespace on each line is preserved."
 (defcustom lua-jump-on-traceback t
   "*Jump to innermost traceback location in *lua* buffer.  When this
 variable is non-nil and a traceback occurs when running Lua code in a
-subprocess, jump immediately to the source code of the innermost
+process, jump immediately to the source code of the innermost
 traceback location."
   :type 'boolean
   :group 'lua)
@@ -505,7 +505,7 @@ traceback location."
                    "\\|")
         "\\)"))))
 
-  "A regexp that matches lua builtin functions & variables.
+  "A regexp that matches Lua builtin functions & variables.
 
 This is a compilation of 5.1, 5.2 and 5.3 builtins taken from the
 index of respective Lua reference manuals.")
@@ -614,7 +614,7 @@ Groups 6-9 can be used in any of argument regexps."
     (,(lua-rx (symbol (seq "goto" ws+ (group-n 1 lua-name))))
       (1 font-lock-constant-face))
 
-    ;; Highlight lua builtin functions and variables
+    ;; Highlight Lua builtin functions and variables
     (,lua--builtins
      (1 font-lock-builtin-face) (2 font-lock-builtin-face nil noerror))
 
@@ -1640,7 +1640,7 @@ If not, return nil."
 
 
 (defun lua-beginning-of-proc (&optional arg)
-  "Move backward to the beginning of a lua proc (or similar).
+  "Move backward to the beginning of a Lua proc (or similar).
 
 With argument, do it that many times.  Negative arg -N
 means move forward to Nth following beginning of proc.
@@ -1661,7 +1661,7 @@ Returns t unless search stops due to beginning or end of buffer."
   (zerop arg))
 
 (defun lua-end-of-proc (&optional arg)
-  "Move forward to next end of lua proc (or similar).
+  "Move forward to next end of Lua proc (or similar).
 With argument, do it that many times.  Negative argument -N means move
 back to Nth preceding end of proc.
 
@@ -1733,7 +1733,7 @@ This function just searches for a `end' at the beginning of a line."
 
 ;;;###autoload
 (defun lua-start-process (&optional name program startfile &rest switches)
-  "Start a lua process named NAME, running PROGRAM.
+  "Start a Lua process named NAME, running PROGRAM.
 PROGRAM defaults to NAME, which defaults to `lua-default-application'.
 When called interactively, switch to the process buffer."
   (interactive)
@@ -1776,7 +1776,7 @@ When called interactively, switch to the process buffer."
   lua-process)
 
 (defun lua-kill-process ()
-  "Kill Lua subprocess and its buffer."
+  "Kill Lua process and its buffer."
   (interactive)
   (when (buffer-live-p lua-process-buffer)
     (kill-buffer lua-process-buffer)))
@@ -1792,7 +1792,7 @@ When called interactively, switch to the process buffer."
   (set-marker lua-region-end (or arg (point))))
 
 (defun lua-send-string (str)
-  "Send STR plus a newline to Lua subprocess.
+  "Send STR plus a newline to the Lua process.
 
 If `lua-process' is nil or dead, start a new process first."
   (unless (string-equal (substring str -1) "\n")
@@ -1800,13 +1800,13 @@ If `lua-process' is nil or dead, start a new process first."
   (process-send-string (lua-get-create-process) str))
 
 (defun lua-send-current-line ()
-  "Send current line to Lua subprocess, found in `lua-process'.
+  "Send current line to the Lua process, found in `lua-process'.
 If `lua-process' is nil or dead, start a new process first."
   (interactive)
   (lua-send-region (line-beginning-position) (line-end-position)))
 
 (defun lua-send-defun (pos)
-  "Send the function definition around point to lua subprocess."
+  "Send the function definition around point to the Lua process."
   (interactive "d")
   (save-excursion
     (let ((start (if (save-match-data (looking-at "^function[ \t]"))
@@ -1822,7 +1822,7 @@ If `lua-process' is nil or dead, start a new process first."
           (end (progn (lua-end-of-proc) (point))))
 
       ;; make sure point is in a function definition before sending to
-      ;; the subprocess
+      ;; the process
       (if (and (>= pos start) (< pos end))
           (lua-send-region start end)
         (error "Not on a function definition")))))
@@ -1867,7 +1867,7 @@ Otherwise, return START."
           (match-end 0)))))
 
 (defun lua-send-lua-region ()
-  "Send preset lua region to lua subprocess."
+  "Send preset Lua region to Lua process."
   (interactive)
   (unless (and lua-region-start lua-region-end)
     (error "lua-region not set"))
@@ -1876,12 +1876,12 @@ Otherwise, return START."
 (defalias 'lua-send-proc 'lua-send-defun)
 
 (defun lua-send-buffer ()
-  "Send whole buffer to lua subprocess."
+  "Send whole buffer to Lua process."
   (interactive)
   (lua-send-region (point-min) (point-max)))
 
 (defun lua-restart-with-whole-file ()
-  "Restart lua subprocess and send whole file as input."
+  "Restart Lua process and send whole file as input."
   (interactive)
   (lua-kill-process)
   (lua-send-buffer))
