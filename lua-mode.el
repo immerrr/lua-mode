@@ -1768,9 +1768,8 @@ When called interactively, switch to the process buffer."
 
 (defun lua-get-create-process ()
   "Return active Lua process creating one if necessary."
-  (or (and (comint-check-proc lua-process-buffer)
-           lua-process)
-      (lua-start-process))
+  (unless (comint-check-proc lua-process-buffer)
+    (lua-start-process))
   lua-process)
 
 (defun lua-kill-process ()
