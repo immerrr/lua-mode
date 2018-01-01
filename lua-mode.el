@@ -1776,7 +1776,8 @@ When called interactively, switch to the process buffer."
   "Kill Lua process and its buffer."
   (interactive)
   (when (buffer-live-p lua-process-buffer)
-    (kill-buffer lua-process-buffer)))
+    (kill-buffer lua-process-buffer)
+    (setq lua-process-buffer nil)))
 
 (defun lua-set-lua-region-start (&optional arg)
   "Set start of region for use with `lua-send-lua-region'."
