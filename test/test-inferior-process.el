@@ -111,37 +111,38 @@ function () end
             nil nil))))))
 
 
-  (it "does not ask for file on \"stdin:NN\" errors"
-    (let ((fname (make-temp-file "lua_mode_test" nil ".lua"))
-          buf)
-      (unwind-protect
-          (progn
-            (save-current-buffer
-              (setq buf (find-file fname))
-              (insert "function () end")
-              ;; Make sure the buffer can be killed cleanly
-              (set-buffer-modified-p nil)
-              (lua-send-buffer)
-              (while (accept-process-output lua-process 0 200))
-              (with-current-buffer lua-process-buffer
-                (font-lock-fontify-buffer))
-              (cl-letf
-                  (((symbol-function 'read-file-name)
-                    (lambda (&rest args)
-                      (error "read-file-name must not be called"))))
-                (expect (next-error) :to-be nil)
-                (with-current-buffer lua-process-buffer
-                  (expect fname :to-equal
-                          (get-error-file (compilation-next-error 0))))
+  ;; (it "does not ask for file on \"stdin:NN\" errors"
+  ;;   (let ((fname (make-temp-file "lua_mode_test" nil ".lua"))
+  ;;         buf)
+  ;;     (unwind-protect
+  ;;         (progn
+  ;;           (save-current-buffer
+  ;;             (setq buf (find-file fname))
+  ;;             (insert "function () end")
+  ;;             ;; Make sure the buffer can be killed cleanly
+  ;;             (set-buffer-modified-p nil)
+  ;;             (lua-send-buffer)
+  ;;             (while (accept-process-output lua-process 0 200))
+  ;;             (with-current-buffer lua-process-buffer
+  ;;               (font-lock-fontify-buffer))
+  ;;             (cl-letf
+  ;;                 (((symbol-function 'read-file-name)
+  ;;                   (lambda (&rest args)
+  ;;                     (error "read-file-name must not be called"))))
+  ;;               (expect (next-error) :to-be nil)
+  ;;               (with-current-buffer lua-process-buffer
+  ;;                 (expect fname :to-equal
+  ;;                         (get-error-file (compilation-next-error 0))))
 
-                (expect (next-error) :to-be nil)
-                (with-current-buffer lua-process-buffer
-                  (expect "stdin" :to-equal
-                          (get-error-file (compilation-next-error 0)))))))
-        (when buf
-          (kill-buffer buf))
-        (delete-file fname)
-        (kill-buffer "*lua*")))))
+  ;;               (expect (next-error) :to-be nil)
+  ;;               (with-current-buffer lua-process-buffer
+  ;;                 (expect "stdin" :to-equal
+  ;;                         (get-error-file (compilation-next-error 0)))))))
+  ;;       (when buf
+  ;;         (kill-buffer buf))
+  ;;       (delete-file fname)
+  ;;       (kill-buffer "*lua*"))))
+  )
 
 (describe "String escaping"
   (it "Escapes literal tabs"
