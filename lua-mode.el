@@ -1447,25 +1447,19 @@ one."
      ;; This regexp should answer the following questions:
      ;; 1. is there a left shifter regexp on that line?
      ;; 2. where does block-open token of that left shifter reside?
-     ;;
-     ;; NOTE: couldn't use `group-n' keyword of `rx' macro, because it was
-     ;; introduced in Emacs 24.2 only, so for the sake of code clarity the named
-     ;; groups don't really match anything, they just report the position of the
-     ;; match.
-     (or (seq (regexp "\\_<local[ \t]+") (regexp "\\(?1:\\)function\\_>"))
-         (seq (eval lua--function-name-rx) (* blank) (regexp "\\(?1:\\)[{(]"))
-         (seq (or
-               ;; assignment statement prefix
-               (seq (* nonl) (not (any "<=>~")) "=" (* blank))
-               ;; return statement prefix
-               (seq word-start "return" word-end (* blank)))
-              (regexp "\\(?1:\\)")
+     (or (seq (group-n 1 symbol-start "local" (+ blank)) "function" symbol-end)
+
+         (seq (group-n 1 (eval lua--function-name-rx) (* blank)) (any "{("))
+         (seq (group-n 1 (or
+                          ;; assignment statement prefix
+                          (seq (* nonl) (not (any "<=>~")) "=" (* blank))
+                          ;; return statement prefix
+                          (seq word-start "return" word-end (* blank))))
               ;; right hand side
               (or "{"
                   "function"
-                  (seq
-                   (eval lua--function-name-rx) (* blank)
-                   (regexp "\\(?1:\\)") (any "({")))))))
+                  (seq (group-n 1 (eval lua--function-name-rx) (* blank))
+                       (any "({")))))))
 
   "Regular expression that matches left-shifter expression.
 
