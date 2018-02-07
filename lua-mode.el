@@ -1829,9 +1829,8 @@ If `lua-process' is nil or dead, start a new process first."
         (error "Not on a function definition")))))
 
 (defun lua-completion-trim-input (i)
-  (format "'%s'," (with-temp-buffer (insert i) (goto-char 0)
-                                   (replace-regexp "[[:space:]]" "")
-                                   (buffer-string))))
+  (format "'%s'," (replace-regexp-in-string "[[:space:]]" "" i)))
+
 
 (defun lua-completion-string-for (expr libs out-file)
   "Construct a string of Lua code to write completions to `out-file'.
@@ -1935,12 +1934,17 @@ Queries current lua subprocess for possible completions."
     (lua-send-string (lua-completion-string-for expr libs file))
     (sit-for 0.1)
     (unwind-protect
-        (list (save-excursion (when (symbol-at-point)
-                                (backward-sexp)) (point)) (point)
+        (list (save-excursion
+                (when (symbol-at-point) (backward-sexp))
+                (point))
+              (point)
               (when (file-exists-p file)
                 (with-temp-buffer
                   (insert-file-contents file)
-                  (butlast (split-string (buffer-string) "\n")))))
+                  (butlast (split-string
+                            (buffer-substring-no-properties
+                             (point-min) (point-max))
+                            "\n")))))
       (delete-file file))))
 
 (defun lua-maybe-skip-shebang-line (start)
