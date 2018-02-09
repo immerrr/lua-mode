@@ -1832,7 +1832,7 @@ If `lua-process' is nil or dead, start a new process first."
   (format "'%s'," (replace-regexp-in-string "[[:space:]]" "" i)))
 
 
-(defun lua-completion-string-for (expr libs out-file)
+(defun lua-completion-string-for (expr libs locals out-file)
   "Construct a string of Lua code to write completions to `out-file'.
 
 The `expr' arg should be the input string (which may contain dots
@@ -1851,6 +1851,10 @@ by `lua-local-libs', or nil."
                ,@(mapcar (lambda (l)
                            (format "top_ctx['%s'] = require(%s)"
                                    (car l) (cadr l))) libs)
+               ;; Top-level locals should also provide completion candidates.
+               ;; We don't know anything about what they contain, so just
+               ;; initialize them to an empty table for 1-level completion.
+               ,@(mapcar (apply-partially 'format "top_ctx['%s'] = {}") locals)
 
                ;; recursively delve into context based on input_parts
                "local function cpl_for(input_parts, ctx)"
@@ -1889,8 +1893,12 @@ Defaults to nil because this will cause code to be loaded during completion.
 Loading arbitrary code can have unexpected side-effects, so use with caution.")
 
 (defvar lua-local-require-regexp
-  "^local\\s-+\\(\\w+\\)\\s-*=\\s-*require[( ]+\\([^ )\n]+\\)"
+  "^local\\s-+\\([^ \n]+\\)\\s-*=\\s-*require[( ]+\\([^ )\n]+\\)"
   "A regexp to match lines where a library is required and put in a local.")
+
+(defvar lua-top-level-local-regexp
+  "^local\\s-+\\([^ \n]+\\)\\s-*="
+  "A regexp to match top-level local definitions")
 
 (defun lua-local-libs ()
   "Find all modules loaded with require which are stored in locals.
@@ -1906,6 +1914,17 @@ is the string that is passed to require."
           (add-to-list 'libs (list (match-string-no-properties 1)
                                    (match-string-no-properties 2))))
         libs))))
+
+(defun lua-top-level-locals (lib-names)
+  "Return a list of all top-level locals in the file for completion targets."
+  (save-excursion
+    (let ((locals nil))
+      (goto-char (point-min))
+      (while (lua-find-regexp 'forward lua-top-level-local-regexp)
+        (let ((local (match-string-no-properties 1)))
+          (when (not (member local lib-names))
+            (add-to-list 'locals local))))
+      locals)))
 
 (defun lua-start-of-expr ()
   "Search backwards to find the beginning of the current expression.
@@ -1931,8 +1950,9 @@ Queries current lua subprocess for possible completions."
          (expr (buffer-substring-no-properties start-of-expr (point)))
          (expr (car (last (split-string expr "\n")))) ; avoid multi-line input
          (libs (lua-local-libs))
+         (locals (lua-top-level-locals (mapcar 'car libs)))
          (file (make-temp-file "lua-completions-")))
-    (lua-send-string (lua-completion-string-for expr libs file))
+    (lua-send-string (lua-completion-string-for expr libs locals file))
     (sit-for 0.1)
     (unwind-protect
         (list (save-excursion
