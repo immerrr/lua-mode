@@ -201,7 +201,8 @@ element is itself expanded with `lua-rx-to-string'. "
 
 (defcustom lua-default-application "lua"
   "Default application to run in Lua process."
-  :type 'string
+  :type '(choice (string)
+                 (cons string integer))
   :group 'lua)
 
 (defcustom lua-default-command-switches (list "-i")
@@ -1657,8 +1658,10 @@ When called interactively, switch to the process buffer."
   (interactive)
   (or switches
       (setq switches lua-default-command-switches))
-  (setq name (or name lua-default-application))
-  (setq program (or program name))
+  (setq name (or name (if (consp lua-default-application)
+                          (car lua-default-application)
+                        lua-default-application)))
+  (setq program (or program lua-default-application))
   (setq lua-process-buffer (apply 'make-comint name program startfile switches))
   (setq lua-process (get-buffer-process lua-process-buffer))
   (set-process-query-on-exit-flag lua-process nil)
