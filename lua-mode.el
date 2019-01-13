@@ -1022,6 +1022,15 @@ TOKEN-TYPE determines where the token occurs on a statement. open indicates that
   (lua-find-regexp 'backward lua-block-regexp))
 
 (defun lua-find-matching-token-word (token &optional direction)
+  "Find matching open- or close-token for TOKEN in DIRECTION.
+Point has to be exactly at the beginning of TOKEN, e.g. with | being point
+
+  {{ }|}  -- (lua-find-matching-token-word \"}\" 'backward) will return
+          -- the first {
+  {{ |}}  -- (lua-find-matching-token-word \"}\" 'backward) will find
+          -- the second {.
+
+DIRECTION has to be either 'forward or 'backward."
   (let* ((token-info (lua-get-block-token-info token))
          (match-type (lua-get-token-type token-info))
          ;; If we are on a middle token, go backwards. If it is a middle or open,
