@@ -86,11 +86,13 @@
 
 ;;; Code:
 (eval-when-compile
-  (require 'cl))
+  (require 'cl)
+  (require 'subr-x))
 
 (require 'comint)
 (require 'newcomment)
 (require 'rx)
+
 
 
 ;; rx-wrappers for Lua
@@ -1948,7 +1950,8 @@ This is distinct from `backward-sexp' which treats . and : as a separator."
 Queries current lua subprocess for possible completions."
   (let* ((start-of-expr (lua-start-of-expr))
          (expr (buffer-substring-no-properties start-of-expr (point)))
-         (expr (car (last (split-string expr "\n")))) ; avoid multi-line input
+         ;(expr (car (last (split-string expr "\n")))) ; avoid multi-line input
+	 (expr (string-join (split-string expr "\n") " ")) ; avoid multi-line input
          (libs (lua-local-libs))
          (locals (lua-top-level-locals (mapcar 'car libs)))
          (file (make-temp-file "lua-completions-")))
