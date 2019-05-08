@@ -44,9 +44,7 @@
      (insert "xy")
      (let ((lua-local-require-completions t))
        (run-lua)
-       (sit-for 1)
-       (completion-at-point)
-       (sit-for 1))
+       (completion-at-point))
      (expect (thing-at-point 'line) :to-equal "xyz")))
   (it "completes values nested in locally-required libraries"
     (with-lua-buffer
@@ -54,7 +52,7 @@
      (insert "xyz.ab")
      (let ((lua-local-require-completions t))
        (run-lua)
-       (sit-for 1)
        (completion-at-point)
-       (sit-for 1))
+       (with-current-buffer lua-process-buffer
+	 (message (buffer-string))))
      (expect (thing-at-point 'line) :to-equal "xyz.abc"))))
