@@ -52,7 +52,11 @@
      (insert "xyz.ab")
      (let ((lua-local-require-completions t))
        (run-lua)
+       (sit-for 5)
+       (accept-process-output lua-process)
        (completion-at-point)
+       (sit-for 5)
+       (accept-process-output lua-process)
        (with-current-buffer lua-process-buffer
 	 (message (buffer-string))))
      (expect (thing-at-point 'line) :to-equal "xyz.abc"))))
