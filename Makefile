@@ -12,7 +12,7 @@ EMACS_BATCH=$(EMACS) --batch -Q
 
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 mkfile_dir := $(dir $(mkfile_path))
-LUA_PATH= "$(mkfile_dir)test/?.lua"
+LUA_PATH = $(mkfile_dir)test/?.lua
 
 default:
 	@echo version is $(VERSION), LUA_PATH is $(LUA_PATH)
