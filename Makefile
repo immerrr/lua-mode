@@ -10,8 +10,12 @@ LUA_MODE_ELC=lua-mode.$(EMACS_MAJOR_VERSION).elc
 
 EMACS_BATCH=$(EMACS) --batch -Q
 
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+mkfile_dir := $(dir $(mkfile_path))
+LUA_PATH= "$(mkfile_dir)test/?.lua"
+
 default:
-	@echo version is $(VERSION)
+	@echo version is $(VERSION), LUA_PATH is $(LUA_PATH)
 
 %.$(EMACS_MAJOR_VERSION).elc: %.elc
 	mv $< $@

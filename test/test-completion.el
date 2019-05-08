@@ -40,7 +40,7 @@
 (describe "Test lua-complete-function with lua-local-require-regexp"
   (it "completes locally-required libraries"
     (with-lua-buffer
-     (insert "local xyz = require('test.file')\n")
+     (insert "local xyz = require('file')\n")
      (insert "xy")
      (let ((lua-local-require-completions t))
        (run-lua)
@@ -48,7 +48,7 @@
      (expect (thing-at-point 'line) :to-equal "xyz")))
   (it "completes values nested in locally-required libraries"
     (with-lua-buffer
-     (insert "local xyz = require('test.file')\n")
+     (insert "local xyz = require('file')\n")
      (insert "xyz.ab")
      (let ((lua-local-require-completions t))
        (run-lua)
