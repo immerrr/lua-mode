@@ -1780,8 +1780,8 @@ by `lua-local-libs', or nil."
                ;; But then we take all matches of local x = require y from
                ;; our code buffer and stuff them into the completion table too.
                ,@(mapcar (lambda (l)
-                           (format "top_ctx['%s'] = require(%s)"
-                                   (car l) (cadr l))) libs)
+                           (format "local got,req=pcall(require,%s) top_ctx['%s'] = got and req or true"
+                                   (cadr l) (car l))) libs)
                ;; Top-level locals should also provide completion candidates.
                ;; We don't know anything about what they contain, so just
                ;; initialize them to an empty table for 1-level completion.
