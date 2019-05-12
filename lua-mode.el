@@ -1991,21 +1991,20 @@ the string (less whitespace)."
 				       (substring x (car match))))
 		    completions)))))
 
+(defun lua--get-completions (expr libs locals)
+  (let ((command (lua-completion-string-for expr libs locals)))
+    (lua-send-command-output-to-buffer-and-wait command)
+    (butlast (split-string lua-shell-redirected-output "\n"))))
+
+
 (defun lua-complete-string (string)
   "Queries current lua subprocess for possible completions."
   (let*  ((expr (string-join ; collapse multi-line input
 		 (split-string string "[\r\n]") " "))
 	  (libs (lua-local-libs))
-	  (locals (lua-top-level-locals (mapcar 'car libs)))
-	  (command (lua-completion-string-for expr libs locals)))
-    (lua-send-command-output-to-buffer-and-wait command)
-    ;; debug
-    (message (concat "Checking for prompt: " (buffer-string)))
+	  (locals (lua-top-level-locals (mapcar 'car libs))))
+    (lua-mimic-whitespace string (lua--get-completions expr libs locals))))
 
-    (lua-mimic-whitespace string
-			  (butlast
-			   (split-string lua-shell-redirected-output "\n")))))
-  
 (defun lua-maybe-skip-shebang-line (start)
   "Skip shebang (#!/path/to/interpreter/) line at beginning of buffer.
 

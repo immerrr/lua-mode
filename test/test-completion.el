@@ -38,23 +38,30 @@
      (expect (buffer-string) :to-equal "table.\n  insert"))))
 
 (describe "Test lua-complete-function with lua-local-require-regexp"
+  :var(libs locals)
+
+  (before-all
+    (with-lua-buffer
+     (insert "local xyz = require('file')\n")
+     (let ((lua-local-require-completions t))
+       (setq libs (lua-local-libs)
+             locals (lua-top-level-locals (mapcar 'car libs))))))
+
+  (before-each
+    (lua-kill-process))
+
+  (it "initializes libs and locals correctly"
+    (expect libs :to-equal '(("xyz" "'file'")))
+    (expect locals :to-be nil))
+
   (it "completes locally-required libraries"
-    (with-lua-buffer
-     (insert "local xyz = require('file')\n")
-     (insert "xy")
-     (let ((lua-local-require-completions t))
-       (lua-get-create-process)
-       (completion-at-point))
-     (expect (thing-at-point 'line) :to-equal "xyz")))
-  (it "completes values nested in locally-required libraries"
-    (with-lua-buffer
-     (insert "local xyz = require('file')\n")
-     (insert "xyz.ab")
-     (let ((lua-local-require-completions t))
-       (message "ABOUT TO RUN LUA!!!")
-       (lua-get-create-process)
-       (message "ABOUT TO COMPLETE!!!")
-       (completion-at-point)		;should wait
-       (with-current-buffer lua-shell-output-buffer
-	 (message (concat "*lua* output buffer: " (buffer-string)))))
-     (expect (thing-at-point 'line) :to-equal "xyz.abc"))))
+    (expect (lua--get-completions "xy" libs locals)
+            :to-equal '("xyz")))
+
+  (it "completes single value from locally-required libraries"
+    (expect (lua--get-completions "xyz.ab" libs locals)
+            :to-equal '("abc")))
+
+  (it "completes multiple values from locally-required libraries"
+    (expect (sort (lua--get-completions "xyz." libs locals) #'string-lessp)
+            :to-equal '("abc" "def"))))
