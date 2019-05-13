@@ -1678,35 +1678,37 @@ When called interactively, switch to the process buffer."
   (setq name (or name (if (consp lua-default-application)
                           (car lua-default-application)
                         lua-default-application))
-	program (or program lua-default-application))
+	program (or program lua-default-application)
+        lua-process-buffer (apply 'make-comint name program startfile switches)
+        lua-process (get-buffer-process lua-process-buffer))
+  (set-process-query-on-exit-flag lua-process nil)
 
-  (let ((proc-buffer (apply 'make-comint name program startfile switches)))
+  (with-current-buffer lua-process-buffer
+    ;; Ensure process-related variables are set in the process buffer in a rare
+    ;; case when they are configured to be buffer-local in lua-mode buffer.
+    (setq lua-process-buffer (current-buffer)
+          lua-process (get-buffer-process lua-process-buffer))
 
-    (with-current-buffer proc-buffer
-      (setq lua-process (get-buffer-process proc-buffer))
-      (set-process-query-on-exit-flag lua-process nil)
-      (setq lua-process-buffer proc-buffer)
-    
-      ;; wait for prompt
-      (while (not (lua-prompt-line))
-	(accept-process-output)
-	(goto-char (point-max)))
+    ;; wait for prompt
+    (while (not (lua-prompt-line))
+      (accept-process-output)
+      (goto-char (point-max)))
 
 
-      ;; setup the hook locally for redirected command output
-      (add-hook 'comint-redirect-hook 'lua-finalize-output nil t)
+    ;; setup the hook locally for redirected command output
+    (add-hook 'comint-redirect-hook 'lua-finalize-output nil t)
 
-      ;; send initialization code (waiting for it to run)
-      (lua-send-command-output-to-buffer-and-wait lua-process-init-code)
+    ;; send initialization code (waiting for it to run)
+    (lua-send-command-output-to-buffer-and-wait lua-process-init-code)
 
-      ;; enable error highlighting in stack traces
-      (require 'compile)
-      (setq lua--repl-buffer-p t)
-      (make-local-variable 'compilation-error-regexp-alist)
-      (setq compilation-error-regexp-alist
-	    (cons (list lua-traceback-line-re 1 2)
-		  compilation-error-regexp-alist))
-      (compilation-shell-minor-mode 1)))
+    ;; enable error highlighting in stack traces
+    (require 'compile)
+    (setq lua--repl-buffer-p t)
+    (make-local-variable 'compilation-error-regexp-alist)
+    (setq compilation-error-regexp-alist
+	  (cons (list lua-traceback-line-re 1 2)
+		compilation-error-regexp-alist))
+    (compilation-shell-minor-mode 1))
 
   ;; when called interactively, switch to process buffer
   (if (called-interactively-p 'any)

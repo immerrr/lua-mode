@@ -5,8 +5,39 @@
 (require 'cl-lib)
 
 
+(describe "Basic process tests"
+  (after-each
+    (lua-kill-process)
+    (setq lua-process nil))
+
+  (it "sets process-related variables in with-lua-buffer to be buffer-local"
+    (with-lua-buffer
+     (expect (local-variable-p 'lua-process) :to-be t)
+     (expect (local-variable-p 'lua-process-buffer) :to-be t))
+    ;; outside with-lua-buffer they should remain non-local
+    (expect (local-variable-p 'lua-process) :not :to-be t)
+    (expect (local-variable-p 'lua-process-buffer) :not :to-be t))
+
+  (it "sets expected variables outside the process-buffer"
+    (with-lua-buffer
+     (lua-start-process)
+     (expect lua-process-buffer :not :to-be nil)
+     (expect lua-process :not :to-be nil)
+     (expect (process-query-on-exit-flag lua-process) :to-be nil)))
+
+  (it "sets expected variables inside the process-buffer"
+    (with-lua-buffer
+     (lua-start-process)
+     (expect lua-process-buffer :not :to-be nil)
+     (with-current-buffer lua-process-buffer
+       (expect lua-process-buffer :not :to-be nil)
+       (expect lua-process :not :to-be nil)))))
+
+
+
 
 (describe "Hiding process buffer does not switch current window"
+
   (it "when process is active"
     (with-lua-buffer
      (let ((cur-buf (current-buffer)))
