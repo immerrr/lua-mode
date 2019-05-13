@@ -1678,35 +1678,30 @@ When called interactively, switch to the process buffer."
   (setq name (or name (if (consp lua-default-application)
                           (car lua-default-application)
                         lua-default-application))
-	program (or program lua-default-application)
-	lua-process-buffer (apply 'make-comint name program startfile switches))
+	program (or program lua-default-application))
 
-  (message "Starting with buffer: %s, proc: %s" lua-process-buffer lua-process)
-
-  (with-current-buffer lua-process-buffer
-    ;; wait for prompt
-    (while (not (lua-prompt-line))
-      ;;debug: why is lua-process-buffer nil here, when it is set above!!??!??!!
-      (message "Waiting for lua prompt: (proc: %s) (line: %s) (buf: %s)" lua-process (lua-prompt-line) lua-process-buffer)
-      (accept-process-output)
-      (sit-for 0.1)
-      (goto-char (point-max)))
-
-    (setq lua-process (get-buffer-process (current-buffer)))
-    ;;debug
-    (message ">> Prompt found: (proc: %s) (line: %s) (buf: %s) (cur-buf: %s)"
-	     lua-process (lua-prompt-line) lua-process-buffer (current-buffer))
-
+  (let ((proc-buffer (apply 'make-comint name program startfile switches)))
+    (message "\n\nStarting with buffer: %s, proc: %s, cur-buf: %s"
+	     proc-buffer lua-process (current-buffer))
+    (with-current-buffer proc-buffer
+      (setq lua-process-buffer proc-buffer)
     
-    (set-process-query-on-exit-flag lua-process nil)
+      ;; wait for prompt
+      (while (not (lua-prompt-line))
+	(accept-process-output)
+	(goto-char (point-max)))
 
+      (setq lua-process (get-buffer-process lua-process-buffer))
+      ;;debug
+      (message ">> Prompt found: (proc: %s) (line: %s) (buf: %s) (cur-buf: %s)"
+	       lua-process (lua-prompt-line) lua-process-buffer (current-buffer))
+      (set-process-query-on-exit-flag lua-process nil)
 
+      ;; setup the hook for redirected command output
+      (add-hook 'comint-redirect-hook 'lua-finalize-output nil t)
 
-    ;; setup the hook for redirected command output
-    (add-hook 'comint-redirect-hook 'lua-finalize-output nil t)
-
-    ;; send initialization code (waiting for it to run)
-    (lua-send-command-output-to-buffer-and-wait lua-process-init-code)
+      ;; send initialization code (waiting for it to run)
+      (lua-send-command-output-to-buffer-and-wait lua-process-init-code))
 
     ;; enable error highlighting in stack traces
     (require 'compile)
@@ -1763,7 +1758,7 @@ When called interactively, switch to the process buffer."
   "Absolute pathname for temporary lua file for dofile'ing regions/long commands")
 
 (defun lua-shell-temp-file ()
-  "Returns a temp file, creating it if necessary"
+  "Returns a temp file for running lua commands, creating it if necessary"
   (or lua-shell-temp-file
       (setq lua-shell-temp-file
 	      (make-temp-file "lua-command-"))))
@@ -1809,7 +1804,7 @@ redirect-buffer's contents) when the output is complete."
 	(erase-buffer)
 	(insert command))
       (setq command (concat "dofile(\"" lua-shell-temp-file "\")")))
-
+    (message "Send-string: >>>\n%s\n<<< %s %s" str process redirect-buffer)
     (if redirect-buffer
 	(comint-redirect-send-command-to-process command redirect-buffer
 						 process nil t)
@@ -1958,9 +1953,8 @@ This is distinct from `backward-sexp' which treats . and : as a separator."
           (lua-start-of-expr)
         bos))))
 
-
 (defconst lua-cached-completion
-  (completion-table-dynamic 'lua-complete-string))
+  (completion-table-with-cache 'lua-complete-string))
 (defun lua-complete-function ()
   "Completion function for `completion-at-point-functions'.
 Maps the expression and provides a cached function returning completion table."
@@ -1972,10 +1966,6 @@ Maps the expression and provides a cached function returning completion table."
       ;;             (insert-file-contents file)
       ;; 		  (message (concat "GOT RESULTS: >" (buffer-string) "<"))
       ;; (delete-file file))))
-
-(defun lua-shell-read-completions ()
-  "Pull completions from the last output"
-  )
 
 (defun lua-finalize-output ()
   "Callback for comint-redirect-send-command
@@ -2004,11 +1994,14 @@ the string (less whitespace)."
 (defun lua-complete-string (string)
   "Queries current lua subprocess for possible completions."
   (let*  ((expr (string-join ; collapse multi-line input
-		 (split-string string "\n") " "))
+		 (split-string string "[\r\n]") " "))
 	  (libs (lua-local-libs))
 	  (locals (lua-top-level-locals (mapcar 'car libs)))
 	  (command (lua-completion-string-for expr libs locals)))
-    (lua-send-command-output-to-buffer-and-wait command) 
+    (lua-send-command-output-to-buffer-and-wait command)
+    ;; debug
+    (message (concat "Checking for prompt: " (buffer-string)))
+
     (lua-mimic-whitespace string
 			  (butlast
 			   (split-string lua-shell-redirected-output "\n")))))
@@ -2049,8 +2042,6 @@ Otherwise, return START."
   (save-excursion
     (save-match-data
       (forward-line 0)
-      ; debug
-      (message (concat "Checking for prompt: " (buffer-string)))
       (if (looking-at comint-prompt-regexp)
           (match-end 0)))))
 
