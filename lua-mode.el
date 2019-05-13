@@ -1724,6 +1724,8 @@ When called interactively, switch to the process buffer."
   "Kill Lua process and its buffer."
   (interactive)
   (when (buffer-live-p lua-process-buffer)
+    (with-current-buffer lua-process-buffer
+      (comint-redirect-cleanup))
     (kill-buffer lua-process-buffer)
     (setq lua-process-buffer nil)))
 
