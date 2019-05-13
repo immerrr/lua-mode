@@ -1979,9 +1979,9 @@ Reads and sets output from lua-shell-output-buffer"
   "Reproduce the whitespace pattern of the initial completion string. 
 Lua ignores whitespace, so we must complete across it.  Assumes
 string does not start with whitespace and that all completions start with
-the string (less whitespace)."
+the string (modulo whitespace)."
   (let (ind matches (end 0))
-    (while (setq ind (string-match "[\n[:space:]]+" string end))
+    (while (setq ind (string-match "[\r\n[:space:]]+" string end))
       (setq end (match-end 0))
       (push (cons ind (match-string 0 string)) matches)) 
     (dolist (match (reverse matches) completions)
