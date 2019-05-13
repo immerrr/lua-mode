@@ -1681,7 +1681,10 @@ When called interactively, switch to the process buffer."
 	program (or program lua-default-application))
 
   (let ((proc-buffer (apply 'make-comint name program startfile switches)))
+
     (with-current-buffer proc-buffer
+      (setq lua-process (get-buffer-process proc-buffer))
+      (set-process-query-on-exit-flag lua-process nil)
       (setq lua-process-buffer proc-buffer)
     
       ;; wait for prompt
@@ -1689,26 +1692,21 @@ When called interactively, switch to the process buffer."
 	(accept-process-output)
 	(goto-char (point-max)))
 
-      (setq lua-process (get-buffer-process lua-process-buffer))
-      ;;debug
-      (message ">> Prompt found: (proc: %s) (line: %s) (buf: %s) (cur-buf: %s)"
-	       lua-process (lua-prompt-line) lua-process-buffer (current-buffer))
-      (set-process-query-on-exit-flag lua-process nil)
 
-      ;; setup the hook for redirected command output
+      ;; setup the hook locally for redirected command output
       (add-hook 'comint-redirect-hook 'lua-finalize-output nil t)
 
       ;; send initialization code (waiting for it to run)
-      (lua-send-command-output-to-buffer-and-wait lua-process-init-code))
+      (lua-send-command-output-to-buffer-and-wait lua-process-init-code)
 
-    ;; enable error highlighting in stack traces
-    (require 'compile)
-    (setq lua--repl-buffer-p t)
-    (make-local-variable 'compilation-error-regexp-alist)
-    (setq compilation-error-regexp-alist
-          (cons (list lua-traceback-line-re 1 2)
-                compilation-error-regexp-alist))
-    (compilation-shell-minor-mode 1))
+      ;; enable error highlighting in stack traces
+      (require 'compile)
+      (setq lua--repl-buffer-p t)
+      (make-local-variable 'compilation-error-regexp-alist)
+      (setq compilation-error-regexp-alist
+	    (cons (list lua-traceback-line-re 1 2)
+		  compilation-error-regexp-alist))
+      (compilation-shell-minor-mode 1)))
 
   ;; when called interactively, switch to process buffer
   (if (called-interactively-p 'any)
