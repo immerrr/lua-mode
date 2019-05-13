@@ -1681,8 +1681,6 @@ When called interactively, switch to the process buffer."
 	program (or program lua-default-application))
 
   (let ((proc-buffer (apply 'make-comint name program startfile switches)))
-    (message "\n\nStarting with buffer: %s, proc: %s, cur-buf: %s"
-	     proc-buffer lua-process (current-buffer))
     (with-current-buffer proc-buffer
       (setq lua-process-buffer proc-buffer)
     
@@ -1804,7 +1802,7 @@ redirect-buffer's contents) when the output is complete."
 	(erase-buffer)
 	(insert command))
       (setq command (concat "dofile(\"" lua-shell-temp-file "\")")))
-    (message "Send-string: >>>\n%s\n<<< %s %s" str process redirect-buffer)
+    ;(message "Send-string: >>>\n%s\n<<< %s %s" str process redirect-buffer)
     (if redirect-buffer
 	(comint-redirect-send-command-to-process command redirect-buffer
 						 process nil t)
