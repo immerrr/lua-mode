@@ -1949,8 +1949,8 @@ This is distinct from `backward-sexp' which treats . and : as a separator."
           (lua-start-of-expr)
         bos))))
 
-(defconst lua-cached-completion
-  (completion-table-with-cache 'lua-complete-string))
+(defconst lua-cached-completion		;can't cache because we don't return complete list
+  (completion-table-dynamic 'lua-complete-string))
 (defun lua-complete-function ()
   "Completion function for `completion-at-point-functions'.
 Maps the expression and provides a cached function returning completion table."
@@ -1966,7 +1966,7 @@ Maps the expression and provides a cached function returning completion table."
 (defun lua-finalize-output ()
   "Callback for comint-redirect-send-command
 Reads and sets output from lua-shell-output-buffer"
-  (with-current-buffer lua-shell-output-buffer
+  (with-current-buffer (get-buffer-create lua-shell-output-buffer)
     (setq lua-shell-redirect-completed t
 	  lua-shell-redirected-output (buffer-substring-no-properties
 				       (point-min) (point-max)))))
@@ -1991,7 +1991,6 @@ the string (modulo whitespace)."
   (let ((command (lua-completion-string-for expr libs locals)))
     (lua-send-command-output-to-buffer-and-wait command)
     (butlast (split-string lua-shell-redirected-output "\n"))))
-
 
 (defun lua-complete-string (string)
   "Queries current lua subprocess for possible completions."
