@@ -1935,7 +1935,6 @@ is the string that is passed to require."
 
 (defun lua-start-of-expr ()
   "Search backwards to find the beginning of the current expression.
-
 This is distinct from `backward-sexp' which treats . and : as a separator."
   (save-excursion
     (backward-sexp)
@@ -1949,7 +1948,8 @@ This is distinct from `backward-sexp' which treats . and : as a separator."
           (lua-start-of-expr)
         bos))))
 
-(defconst lua-cached-completion		;can't cache because we don't return complete list
+(defconst lua-cached-completion
+  ;;can't use with-cache because we don't return full completion list
   (completion-table-dynamic 'lua-complete-string))
 (defun lua-complete-function ()
   "Completion function for `completion-at-point-functions'.
