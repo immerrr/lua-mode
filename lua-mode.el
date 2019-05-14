@@ -1681,7 +1681,6 @@ When called interactively, switch to the process buffer."
 	program (or program lua-default-application))
 
   (let ((proc-buffer (apply 'make-comint name program startfile switches)))
-
     (with-current-buffer proc-buffer
       (setq lua-process (get-buffer-process proc-buffer))
       (set-process-query-on-exit-flag lua-process nil)
@@ -1691,7 +1690,6 @@ When called interactively, switch to the process buffer."
       (while (not (lua-prompt-line))
 	(accept-process-output)
 	(goto-char (point-max)))
-
 
       ;; setup the hook locally for redirected command output
       (add-hook 'comint-redirect-hook 'lua-finalize-output nil t)
@@ -1722,6 +1720,8 @@ When called interactively, switch to the process buffer."
   "Kill Lua process and its buffer."
   (interactive)
   (when (buffer-live-p lua-process-buffer)
+    (with-current-buffer lua-process-buffer
+      (comint-redirect-cleanup))
     (kill-buffer lua-process-buffer)
     (setq lua-process-buffer nil)))
 
