@@ -1749,6 +1749,9 @@ When called interactively, switch to the process buffer."
     (lua-start-process))
   lua-process)
 
+(defvar lua-shell-output-buffer nil
+  "Buffer for redirected output")
+
 (defun lua-kill-process ()
   "Kill Lua process and its buffer (along with any output buffer)."
   (interactive)
@@ -1789,7 +1792,6 @@ When called interactively, switch to the process buffer."
 (add-hook 'kill-buffer-hook 'lua-shell-delete-temp-file nil 'local)
 (add-hook 'kill-emacs-hook 'lua-shell-delete-temp-file)
 
-(defvar lua-shell-output-buffer nil)
 (defvar lua-shell-redirected-output nil)
 (defun lua-send-command-output-to-buffer-and-wait (command)
   "Send a command accumulating output in the output buffer,
@@ -1802,7 +1804,7 @@ output will be left in lua-shell-redirected-output."
       (with-current-buffer lua-shell-output-buffer (erase-buffer))
       (lua-send-string command lua-shell-output-buffer)
       (while (and (not comint-redirect-completed) (< (incf cnt 1) 40))
-	(accept-process-output lua-process 0.02))
+	(accept-process-output lua-process 0.02)))))
 
 (defvar lua-shell-last-command nil
   "The last command sent to lua")
@@ -1969,15 +1971,6 @@ This is distinct from `backward-sexp' which treats . and : as a separator."
           (lua-start-of-expr)
         bos))))
 
-(defconst lua-completion-function
-  ;;can't use with-cache because we don't return full completion list
-  (completion-table-dynamic 'lua-complete-string))
-(defun lua-complete-function ()
-  "Completion function for `completion-at-point-functions'.
-Maps the expression and provides a cached function returning completion table."
-  (let ((start-of-expr (lua-start-of-expr)))
-    (list start-of-expr (point) lua-completion-function)))
-
 (defun lua-finalize-output ()
   "Callback for comint-redirect-send-command
 Reads and sets output from lua-shell-output-buffer, 
@@ -2008,16 +2001,27 @@ the string."
 (defun lua--get-completions (expr libs locals)
   (let ((command (lua-completion-string-for expr libs locals)))
     (lua-send-command-output-to-buffer-and-wait command)
-    (cl-remove-if (lambda (x) (string-match "^[[:space:]]*$" x))
-	       (split-string lua-shell-redirected-output "\n"))))
+    (if lua-shell-redirected-output
+	(cl-remove-if (lambda (x) (string-match "^[[:space:]]*$" x))
+		      (split-string lua-shell-redirected-output "[\r\n]")))))
 
 (defun lua-complete-string (string)
   "Queries current lua subprocess for possible completions."
-  (let*  ((expr (string-join ; collapse multi-line input
-		 (split-string string "[\r\n]") " "))
-	  (libs (lua-local-libs))
-	  (locals (lua-top-level-locals (mapcar 'car libs))))
-    (lua-mimic-whitespace string (lua--get-completions expr libs locals))))
+  (with-current-buffer lua-process-buffer
+    (let*  ((expr (string-join ; collapse multi-line input
+		   (split-string string "[\r\n]") " "))
+	    (libs (lua-local-libs))
+	    (locals (lua-top-level-locals (mapcar 'car libs))))
+      (lua-mimic-whitespace string (lua--get-completions expr libs locals)))))
+
+(defconst lua-completion-function
+  ;;can't use with-cache because we don't return full completion list
+  (completion-table-dynamic 'lua-complete-string))
+(defun lua-complete-function ()
+  "Completion function for `completion-at-point-functions'.
+Maps the expression and provides a cached function returning completion table."
+  (let ((start-of-expr (lua-start-of-expr)))
+    (list start-of-expr (point) lua-completion-function)))
 
 (defun lua-maybe-skip-shebang-line (start)
   "Skip shebang (#!/path/to/interpreter/) line at beginning of buffer.
