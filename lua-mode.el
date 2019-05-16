@@ -1822,6 +1822,9 @@ output will be left in lua-shell-redirected-output."
 	       (current-buffer) cnt
 	       (current-buffer) lua-process (local-variable-p 'lua-process)
 	       lua-shell-redirected-output))))
+
+(defvar lua-shell-last-command nil
+  "The last command sent to lua")
 (defun lua-send-string (str &optional redirect-buffer)
   "Send STR to the Lua process, possibly via dofile.
 If `lua-process' is nil or dead, start a new process first.  If
@@ -1841,6 +1844,7 @@ redirect-buffer's contents) when the output is complete."
 	(insert command))
       (setq command (concat "dofile(\"" lua-shell-temp-file "\")")))
     ;(message "Send-string: >>>\n%s\n<<< %s %s" str process redirect-buffer)
+    (setq lua-shell-last-command command)
     (if redirect-buffer
 	(comint-redirect-send-command-to-process command redirect-buffer
 						 process nil t)
@@ -1999,11 +2003,15 @@ Maps the expression and provides a cached function returning completion table."
 
 (defun lua-finalize-output ()
   "Callback for comint-redirect-send-command
-Reads and sets output from lua-shell-output-buffer"
-  (with-current-buffer (get-buffer-create lua-shell-output-buffer)
-    (setq lua-shell-redirect-completed t
-	  lua-shell-redirected-output (buffer-substring-no-properties
-				       (point-min) (point-max)))))
+Reads and sets output from lua-shell-output-buffer, 
+after clearing any copy of the input from beginning."
+  (let ((output (with-current-buffer lua-shell-output-buffer
+		  (buffer-substring-no-properties
+		   (point-min) (point-max)))))
+    (with-current-buffer lua-process-buffer
+      (message ">>>>>>FINALIZING: %s" lua-shell-last-command)
+      (setq lua-shell-redirected-output
+	    (string-remove-prefix lua-shell-last-command output)))))
 
 (defun lua-mimic-whitespace (string completions)
   "Reproduce the whitespace pattern of the initial completion string. 
