@@ -5,15 +5,14 @@
 (require 'cl-lib)
 
 
-
 (describe "Hiding process buffer does not switch current window"
   (it "when process is active"
     (with-lua-buffer
-     (let ((cur-buf (current-buffer)))
-       (expect (get-buffer-window cur-buf))
+     (let* ((cur-buf (current-buffer))
+	   (win (get-buffer-window cur-buf)))
        (lua-start-process)
        (lua-hide-process-buffer)
-       (expect (get-buffer-window cur-buf)))))
+       (expect (get-buffer-window cur-buf) :to-equal win))))
 
   (it "and does not signal when process is already killed"
     (with-lua-buffer
