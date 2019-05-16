@@ -132,31 +132,14 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
      ;;   variables from leaking between tests
      ;; - ensure everything works even if the user detaches one of the buffers
      ;;   to have a separate inferior process
-     (setq lua-process-is-buffer-local t)
      (lua-mode)
+     (setq lua-process-is-buffer-local t)
      (font-lock-fontify-buffer)
      (pop-to-buffer (current-buffer))
      (unwind-protect
       (progn ,@body)
       (when (buffer-live-p lua-process-buffer)
         (lua-kill-process)))))
-
-(defmacro with-lua-buffer-no-kill (&rest body)
-  (declare (debug (&rest form)))
-  `(with-temp-buffer
-     ;; lua-process/-buffer variables are not buffer-local in lua-mode by
-     ;; default, so it might seem an unnecessary nuisance, but by making them
-     ;; local in tests we:
-     ;; - add another layer of encapsulation preventing process-related
-     ;;   variables from leaking between tests
-     ;; - ensure everything works even if the user detaches one of the buffers
-     ;;   to have a separate inferior process
-     (setq lua-process-is-buffer-local t)
-     (lua-mode)
-     (font-lock-fontify-buffer)
-     (pop-to-buffer (current-buffer))
-     (unwind-protect
-      (progn ,@body))))
 
 (defun lua-get-indented-strs (strs)
   (butlast
