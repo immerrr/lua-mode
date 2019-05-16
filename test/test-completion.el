@@ -41,27 +41,34 @@
   :var(libs locals)
 
   (before-all
-    (with-lua-buffer
-     (insert "local xyz = require('file')\n")
-     (let ((lua-local-require-completions t))
-       (setq libs (lua-local-libs)
-             locals (lua-top-level-locals (mapcar 'car libs))))))
+   (with-lua-buffer-no-kill
+    (insert "local xyz = require('file')\n")
+    (let ((lua-local-require-completions t))
+      (setq this-lua-buffer (current-buffer)
+	    libs (lua-local-libs)
+	    locals (lua-top-level-locals (mapcar 'car libs))))))
 
-  (before-each
-    (lua-kill-process))
+  (after-all
+   (with-current-buffer this-lua-buffer
+     (when (buffer-live-p lua-process-buffer)
+       (lua-kill-process))))
 
   (it "initializes libs and locals correctly"
-    (expect libs :to-equal '(("xyz" "'file'")))
-    (expect locals :to-be nil))
+      (with-current-buffer this-lua-buffer
+	(expect libs :to-equal '(("xyz" "'file'")))
+	(expect locals :to-be nil)))
 
   (it "completes locally-required libraries"
-    (expect (lua--get-completions "xy" libs locals)
-            :to-equal '("xyz")))
-
+      (with-current-buffer this-lua-buffer
+	(expect (lua--get-completions "xy" libs locals)
+		:to-equal '("xyz"))))
+      
   (it "completes single value from locally-required libraries"
-    (expect (lua--get-completions "xyz.ab" libs locals)
-            :to-equal '("abc")))
-
+      (with-current-buffer this-lua-buffer
+	(expect (lua--get-completions "xyz.ab" libs locals)
+		:to-equal '("abc"))))
+      
   (it "completes multiple values from locally-required libraries"
-    (expect (sort (lua--get-completions "xyz." libs locals) #'string-lessp)
-            :to-equal '("abc" "def"))))
+      (with-current-buffer this-lua-buffer
+	(expect (sort (lua--get-completions "xyz." libs locals) #'string-lessp)
+		:to-equal '("abc" "def")))))
