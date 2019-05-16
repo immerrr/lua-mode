@@ -25,6 +25,7 @@
   (it "when process is not started"
     (with-lua-buffer
      (let ((cur-buf (current-buffer)))
+       (lua-kill-process)
        (expect lua-process-buffer :to-be nil)
        (lua-hide-process-buffer)
        (expect (get-buffer-window cur-buf))))))
