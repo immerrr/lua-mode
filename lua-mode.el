@@ -240,6 +240,12 @@ Should be a list of strings."
   :type 'integer
   :group 'lua)
 
+
+(defcustom lua-process-is-buffer-local nil
+  "Whether each lua buffer should have a distinct lua process."
+  :type 'boolean
+  :group 'lua)
+
 (defvar lua-process nil
   "The active Lua process")
 
@@ -1664,6 +1670,24 @@ This function just searches for a `end' at the beginning of a line."
           (replace-match "\\\\\\&" t))))
       (concat "'" (buffer-string) "'"))))
 
+
+(defun lua-setup-local-variables ()
+  ;; if a separate lua process is requested for each lua buffer,
+  ;; consolidate the relevant buffer-local variables with the
+  ;; associated lua process buffer (while it exists).  Always access
+  ;; these variables (aside from lua-process-buffer) from
+  ;; the lua-process-buffer context
+  (when lua-process-is-buffer-local	
+    (make-local-variable 'lua-process-buffer) ;in calling buffer
+    (make-local-variable 'lua-process)
+    (dolist (var '(lua-process
+		   lua-process-buffer
+		   lua-shell-output-buffer
+		   lua-shell-redirected-output
+		   lua-shell-last-command))
+      (with-current-buffer lua-process-buffer (make-local-variable var))
+      (setf (buffer-local-value var lua-process-buffer) (symbol-value var)))))
+
 ;;;###autoload
 (defalias 'run-lua #'lua-start-process)
 
@@ -1710,6 +1734,8 @@ When called interactively, switch to the process buffer."
   (if (called-interactively-p 'any)
       (switch-to-buffer lua-process-buffer)))
 
+    ;; Maybe tie this process to this buffer
+    (lua-setup-local-variables)
 (defun lua-get-create-process ()
   "Return active Lua process creating one if necessary."
   (unless (comint-check-proc lua-process-buffer)

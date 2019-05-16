@@ -125,11 +125,6 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
 (defmacro with-lua-buffer (&rest body)
   (declare (debug (&rest form)))
   `(with-temp-buffer
-     (make-local-variable 'lua-process)
-     (make-local-variable 'lua-process-buffer)
-     (make-local-variable 'lua-shell-output-buffer)
-
-     (lua-mode)
      ;; lua-process/-buffer variables are not buffer-local in lua-mode by
      ;; default, so it might seem an unnecessary nuisance, but by making them
      ;; local in tests we:
@@ -137,6 +132,8 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
      ;;   variables from leaking between tests
      ;; - ensure everything works even if the user detaches one of the buffers
      ;;   to have a separate inferior process
+     (setq lua-process-is-buffer-local t)
+     (lua-mode)
      (font-lock-fontify-buffer)
      (pop-to-buffer (current-buffer))
      (unwind-protect
