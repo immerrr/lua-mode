@@ -5,7 +5,6 @@ addons:
     packages:
     - lua5.2
 env:
-  - EVM_EMACS=emacs-24.3-travis
   - EVM_EMACS=emacs-24.4-travis
   - EVM_EMACS=emacs-24.5-travis
   - EVM_EMACS=emacs-25.1-travis
