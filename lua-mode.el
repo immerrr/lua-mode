@@ -1721,8 +1721,7 @@ When called interactively, switch to the process buffer."
 
     ;; Maybe tie this process to this buffer
     (lua-setup-local-variables)
-    (message "\n>>>>>>>>>>>About to INIT in %s: %s" lua-process-buffer
-	     (comint-check-proc lua-process-buffer))
+    
     ;; send initialization code (waiting for it to run)
     (lua-send-command-output-to-buffer-and-wait lua-process-init-code)
 
@@ -1749,7 +1748,6 @@ When called interactively, switch to the process buffer."
 (defun lua-kill-process ()
   "Kill Lua process and its buffer (along with any output buffer)."
   (interactive)
-  (message "KILLING PROCESS IN %s WITH %s" (current-buffer) lua-process-buffer)
   (when (buffer-live-p lua-process-buffer)
     (with-current-buffer lua-process-buffer
       (comint-redirect-cleanup)
@@ -1769,21 +1767,6 @@ When called interactively, switch to the process buffer."
   (interactive)
   (set-marker lua-region-end (or arg (point))))
 
-
-;; (defun lua--output-filter (string)
-;;   "Filter the output of the lua process"
-;;   (setq lua-shell-accumulation
-;; 	(concat idlwave-shell-accumulation string)
-
-;;   (with-current-buffer lua-process-buffer
-;;     (goto-char (point-max))
-;;     (forward-line 0)
-;;     (when (string-matlua-prompt-regexp)
-;;       (let ((start (marker-position comint-last-input-end))
-;; 	    (end  (and comint-last-prompt (cdr comint-last-prompt))))
-;; 	(when (and start end (< start end))
-;; 	  (let ((new-output-chunk (buffer-substring-no-properties start end)))
-;; 	    (message (concat "New output arrived: " new-output-chunk))))))))
 (defvar lua-shell-temp-file nil
   "Absolute pathname for temporary lua file for dofile'ing regions/long commands")
 
@@ -1810,18 +1793,12 @@ and wait for the next prompt to appear. Blocks emacs, only use
 for instances where results are immediately needed.  Any lua
 output will be left in lua-shell-redirected-output."
   (let ((cnt 0))
-    (message "\n>>>>>>>> IN SEND-AND-WAIT: %s %s\n>>CMD: %s\n" (current-buffer) lua-process-buffer
-	     command)
     (with-current-buffer lua-process-buffer
       (setq lua-shell-output-buffer (get-buffer-create lua-shell-output-buffer-name))
       (with-current-buffer lua-shell-output-buffer (erase-buffer))
       (lua-send-string command lua-shell-output-buffer)
       (while (and (not comint-redirect-completed) (< (incf cnt 1) 40))
 	(accept-process-output lua-process 0.02))
-      (message ">>>>>>>>>>>FINISHING SEND-AND-WAIT (in %s, after %d): %s (%s, %s)\n::::\n%s\n::::"
-	       (current-buffer) cnt
-	       (current-buffer) lua-process (local-variable-p 'lua-process)
-	       lua-shell-redirected-output))))
 
 (defvar lua-shell-last-command nil
   "The last command sent to lua")
@@ -1831,9 +1808,6 @@ If `lua-process' is nil or dead, start a new process first.  If
 redirect-buffer is passed, redirect command output to that buffer,
 and optionally call callback (which could examine the
 redirect-buffer's contents) when the output is complete."
-  (message "\n>>>>>>>>IN SENDSTRING (buf %s, pbuf %s) - Proc alive: %s\n"
-	   (current-buffer) lua-process-buffer
-	   (comint-check-proc lua-process-buffer))
   (let (file
 	(command str)
 	(process (lua-get-create-process))
@@ -1843,7 +1817,6 @@ redirect-buffer's contents) when the output is complete."
 	(erase-buffer)
 	(insert command))
       (setq command (concat "dofile(\"" lua-shell-temp-file "\")")))
-    ;(message "Send-string: >>>\n%s\n<<< %s %s" str process redirect-buffer)
     (setq lua-shell-last-command command)
     (if redirect-buffer
 	(comint-redirect-send-command-to-process command redirect-buffer
@@ -2009,7 +1982,6 @@ after clearing any copy of the input from beginning."
 		  (buffer-substring-no-properties
 		   (point-min) (point-max)))))
     (with-current-buffer lua-process-buffer
-      (message ">>>>>>FINALIZING: %s" lua-shell-last-command)
       (setq lua-shell-redirected-output
 	    (string-remove-prefix lua-shell-last-command output)))))
 
