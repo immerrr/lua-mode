@@ -2007,11 +2007,11 @@ the string."
 
 (defun lua-complete-string (string)
   "Queries current lua subprocess for possible completions."
-  (with-current-buffer lua-process-buffer
-    (let*  ((expr (string-join ; collapse multi-line input
-		   (split-string string "[\r\n]") " "))
-	    (libs (lua-local-libs))
-	    (locals (lua-top-level-locals (mapcar 'car libs))))
+  (let*  ((expr (string-join ; collapse multi-line input
+		 (split-string string "[\r\n]") " "))
+	  (libs (lua-local-libs))
+	  (locals (lua-top-level-locals (mapcar 'car libs))))
+    (with-current-buffer lua-process-buffer
       (lua-mimic-whitespace string (lua--get-completions expr libs locals)))))
 
 (defconst lua-completion-function
