@@ -1702,10 +1702,14 @@ When called interactively, switch to the process buffer."
   ;; Set global/buffer-local variables
   (let* ((switches (or switches lua-default-command-switches))
 	 (name (or name (if (consp lua-default-application)
-			    (car lua-default-application)
+					(car lua-default-application)
 			  lua-default-application)))
 	 (program (or program lua-default-application))
-	 (process-buffer (apply 'make-comint name program startfile switches)))
+	 (process-buffer (apply 'make-comint-in-buffer name
+				(concat "*" (if lua-process-is-buffer-local
+						(concat name "[" (buffer-name) "]")
+					      name) "*")
+				program startfile switches)))
 
     ;; wait for prompt
     (with-current-buffer process-buffer
