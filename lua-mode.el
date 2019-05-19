@@ -1672,18 +1672,19 @@ This function just searches for a `end' at the beginning of a line."
 
 (defun lua-setup-local-variables ()
   ;; if a separate lua process is requested for each lua buffer,
-  ;; consolidate the relevant buffer-local variables with the
-  ;; associated lua process buffer (while it exists).  Always access
-  ;; these variables (aside from lua-process-buffer) from
-  ;; the lua-process-buffer context
+  ;; each lua file can have it's own process
   (when lua-process-is-buffer-local	
-    (make-local-variable 'lua-process-buffer) ;in calling buffer
-    (dolist (var '(lua-process-buffer
-		   lua-shell-output-buffer
-		   lua-shell-redirected-output
-		   lua-shell-last-command))
-      (with-current-buffer lua-process-buffer (make-local-variable var))
-      (setf (buffer-local-value var lua-process-buffer) (symbol-value var)))))
+    (make-local-variable 'lua-process-buffer)) ;in calling buffer
+
+  ;; consolidate the relevant variables with the associated lua
+  ;; process buffer (while it exists).  Always access these variables
+  ;; (aside from lua-process-buffer itself) from the
+  ;; lua-process-buffer buffer context.
+  (dolist (var '(lua-shell-output-buffer
+		 lua-shell-redirected-output
+		 lua-shell-last-command))
+    (with-current-buffer lua-process-buffer (make-local-variable var))
+    (setf (buffer-local-value var lua-process-buffer) (symbol-value var))))
 
 ;;;###autoload
 (defalias 'run-lua #'lua-start-process)
@@ -1717,7 +1718,7 @@ When called interactively, switch to the process buffer."
     (setq lua-process-buffer process-buffer) ;global value is last run
     (set-process-query-on-exit-flag (get-buffer-process process-buffer) nil)
 
-    ;; Maybe tie this process to this buffer
+    ;; Setup process variables, and maybe tie this process to this buffer
     (lua-setup-local-variables)
     
     ;; send initialization code (waiting for it to run)
