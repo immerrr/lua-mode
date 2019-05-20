@@ -1776,18 +1776,20 @@ output will be left in lua-shell-redirected-output."
   (let ((cnt 0)
 	(process (lua-get-create-process)))
     (with-current-buffer lua-process-buffer
-      (setq lua-shell-output-buffer (get-buffer-create lua-shell-output-buffer-name))
-      (with-current-buffer lua-shell-output-buffer (erase-buffer))
-      (lua-send-string command lua-shell-output-buffer)
-      (while (and (not comint-redirect-completed) (< (incf cnt 1) 40))
-	(accept-process-output process 0.02)))))
+    (unless (buffer-live-p lua-shell-output-buffer)
+      (setq lua-shell-output-buffer
+	    (get-buffer-create
+	     (generate-new-buffer lua-shell-output-buffer-name))))
+    (with-current-buffer lua-shell-output-buffer (erase-buffer))
+    (lua-send-string command lua-shell-output-buffer process)
+    (while (and (not comint-redirect-completed) (< (incf cnt 1) 40))
+      (accept-process-output process 0.03)))))
 
 (defun lua-send-string (str &optional redirect-buffer process)
   "Send STR to the Lua process, possibly via dofile.
 If necessary, start a new process first.  If optional argument
-redirect-buffer is passed, redirect command output to that
+REDIRECT-BUFFER is passed, redirect command output to that
 buffer, which calls comint-redirect-hook when the output is
-complete."
 complete.  If PROCESS not passed, get or create a process."
   (let (file
 	(command str)
