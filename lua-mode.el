@@ -1951,12 +1951,12 @@ This is distinct from `backward-sexp' which treats . and : as a separator."
   "Callback for comint-redirect-send-command
 Reads and sets output from lua-shell-output-buffer, 
 after clearing any copy of the input from beginning."
-  (let ((output (with-current-buffer lua-shell-output-buffer
-		  (buffer-substring-no-properties
-		   (point-min) (point-max)))))
-    (with-current-buffer lua-process-buffer
-      (setq lua-shell-redirected-output
-	    (string-remove-prefix lua-shell-last-command output)))))
+  (let ((output ;always in the process buffer here
+	 (with-current-buffer lua-shell-output-buffer
+	   (buffer-substring-no-properties
+	    (point-min) (point-max)))))
+    (setq lua-shell-redirected-output
+	  (string-remove-prefix lua-shell-last-command output))))
 
 (defun lua-mimic-whitespace (string completions)
   "Reproduce the whitespace pattern of the initial completion string. 
