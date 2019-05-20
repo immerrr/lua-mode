@@ -1718,9 +1718,9 @@ When called interactively, switch to the process buffer."
       (compilation-shell-minor-mode 1)))
 
   ;; when called interactively, switch to process buffer
-  (if (called-interactively-p 'any)
-      (pop-to-buffer lua-process-buffer))
-  (get-buffer-process lua-process-buffer))
+  (prog1
+      (get-buffer-process lua-process-buffer)
+    (if (called-interactively-p 'any) (pop-to-buffer lua-process-buffer))))
 
 (defvar-local lua-shell-output-buffer nil
   "Buffer for redirected output")
