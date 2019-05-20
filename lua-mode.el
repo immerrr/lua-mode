@@ -1686,10 +1686,11 @@ When called interactively, switch to the process buffer."
 			      (car lua-default-application)
 			    (file-name-base lua-default-application))))
 	   (program (or program lua-default-application))
-	   (process-buffer (or (and (buffer-live-p lua-process-buffer)
-				    lua-process-buffer)
-			       (generate-new-buffer
-				(concat "*" name "*")))))
+	   (process-buffer (or (if (or (and (bufferp lua-process-buffer)
+					    (buffer-live-p lua-process-buffer))
+				       (stringp lua-process-buffer)) ;preset?
+				   lua-process-buffer)
+			       (generate-new-buffer (concat "*" name "*")))))
       (apply 'make-comint-in-buffer name process-buffer program
 	     startfile switches)
 
