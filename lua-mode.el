@@ -1888,7 +1888,7 @@ by `lua-local-libs', or nil."
                ;; spit it out to a file; lua-mode can't send data back to emacs
 
                "for _,l in ipairs(cpl_for(input, top_ctx,\"\")) do"
-               "  io.write(l,string.char(10))"
+               "  print(l)"
                "end"
                "end") " "))
 
