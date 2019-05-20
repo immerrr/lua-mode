@@ -1662,6 +1662,12 @@ This function just searches for a `end' at the beginning of a line."
           (replace-match "\\\\\\&" t))))
       (concat "'" (buffer-string) "'"))))
 
+;; Get and set process-related variables from within the process buffer
+(defsubst lua-proc-get (var)
+  (buffer-local-value var lua-process-buffer))
+(defsubst lua-proc-set (var val)
+  (setf (buffer-local-value var lua-process-buffer) val))
+
 ;;;###autoload
 (defalias 'run-lua #'lua-start-process)
 (defalias 'lua-get-create-process #'lua-start-process)
@@ -1695,8 +1701,8 @@ When called interactively, switch to the process buffer."
 	;; Set the redirect hook locally
 	(add-hook 'comint-redirect-hook 'lua-finalize-output nil t))
 
-      (setq lua-process-buffer process-buffer) ;global value is last run
       (set-process-query-on-exit-flag (get-buffer-process process-buffer) nil)
+      (setq lua-process-buffer process-buffer) 
       
       ;; send initialization code (waiting for it to run)
       (lua-send-command-output-to-buffer-and-wait lua-process-init-code)
@@ -1716,10 +1722,11 @@ When called interactively, switch to the process buffer."
     (if (called-interactively-p 'any) (pop-to-buffer lua-process-buffer))))
 
 (defvar-local lua-shell-output-buffer nil
-  "Buffer for redirected output")
+  "Buffer for redirected output, stored locally with process-buffer")
 (defvar-local lua-shell-last-command nil
-  "The last command sent to lua")
-(defvar-local lua-shell-redirected-output nil)
+  "The last command sent to lua, stored locally with process-buffer")
+(defvar-local lua-shell-redirected-output nil
+  "The output of the last redirected command, stored locally with process-buffer")
 
 (defun lua-kill-process ()
   "Kill Lua process and its buffer (along with any output buffer)."
@@ -1965,11 +1972,12 @@ the string."
 		    completions)))))
 
 (defun lua--get-completions (expr libs locals)
-  (let ((command (lua-completion-string-for expr libs locals)))
-    (lua-send-command-output-to-buffer-and-wait command)
-    (if lua-shell-redirected-output
+  (lua-send-command-output-to-buffer-and-wait
+   (lua-completion-string-for expr libs locals))
+  (let ((output (lua-proc-get 'lua-shell-redirected-output)))
+    (if output
 	(cl-remove-if (lambda (x) (string-match "^[[:space:]]*$" x))
-		      (split-string lua-shell-redirected-output "[\r\n]")))))
+		      (split-string output "[\r\n]")))))
 
 (defun lua-complete-string (string)
   "Queries current lua subprocess for possible completions."
@@ -1977,8 +1985,7 @@ the string."
 		 (split-string string "[\r\n]") " "))
 	  (libs (lua-local-libs))
 	  (locals (lua-top-level-locals (mapcar 'car libs))))
-    (with-current-buffer lua-process-buffer
-      (lua-mimic-whitespace string (lua--get-completions expr libs locals)))))
+    (lua-mimic-whitespace string (lua--get-completions expr libs locals))))
 
 (defconst lua-completion-function
   ;;can't use with-cache because we don't return full completion list
