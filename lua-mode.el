@@ -1679,7 +1679,6 @@ This function just searches for a `end' at the beginning of a line."
 PROGRAM defaults to NAME, which defaults to `lua-default-application'.
 When called interactively, switch to the process buffer."
   (interactive)
-	(switch-to-buffer lua-process-buffer))))
   (unless (and lua-process-buffer
 	       (comint-check-proc lua-process-buffer))
     ;; Start a new process
@@ -1720,6 +1719,7 @@ When called interactively, switch to the process buffer."
 
   ;; when called interactively, switch to process buffer
   (if (called-interactively-p 'any)
+      (pop-to-buffer lua-process-buffer))
   (get-buffer-process lua-process-buffer))
 
 (defvar-local lua-shell-output-buffer nil
