@@ -1738,8 +1738,7 @@ When called interactively, switch to the process buffer."
       (if (buffer-live-p lua-shell-output-buffer)
 	  (kill-buffer lua-shell-output-buffer)))
     (kill-buffer lua-process-buffer))
-  (setq lua-process-buffer nil		;buffer gone, but set it in calling buffer
-	lua-shell-output-buffer nil))
+  (setq lua-process-buffer nil)) ;buffer gone, but set it in calling buffer
 
 (defun lua-set-lua-region-start (&optional arg)
   "Set start of region for use with `lua-send-lua-region'."
