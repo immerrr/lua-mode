@@ -243,11 +243,6 @@ Should be a list of strings."
   :type 'string
   :group 'lua)
 
-(defcustom lua-process-is-buffer-local nil
-  "Whether each lua buffer should have a distinct lua process."
-  :type 'boolean
-  :group 'lua)
-
 (defvar lua-process-buffer nil
   "Buffer used for communication with the Lua process")
 
@@ -285,7 +280,6 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
 
 (defvar lua--electric-indent-chars
   (mapcar #'string-to-char '("}" "]" ")")))
-
 
 (defvar lua-mode-map
   (let ((result-map (make-sparse-keymap))
@@ -331,7 +325,6 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
 (defvar lua--repl-buffer-p nil
   "Buffer-local flag saying if this is a Lua REPL buffer.")
 (make-variable-buffer-local 'lua--repl-buffer-p)
-
 
 (defadvice compilation-find-file (around lua--repl-find-file
                                          (marker filename directory &rest formats)
