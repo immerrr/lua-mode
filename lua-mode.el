@@ -1782,15 +1782,16 @@ output will be left in lua-shell-redirected-output."
       (while (and (not comint-redirect-completed) (< (incf cnt 1) 40))
 	(accept-process-output process 0.02)))))
 
-(defun lua-send-string (str &optional redirect-buffer)
+(defun lua-send-string (str &optional redirect-buffer process)
   "Send STR to the Lua process, possibly via dofile.
 If necessary, start a new process first.  If optional argument
 redirect-buffer is passed, redirect command output to that
 buffer, which calls comint-redirect-hook when the output is
 complete."
+complete.  If PROCESS not passed, get or create a process."
   (let (file
 	(command str)
-	(process (lua-get-create-process))
+	(process (or process (lua-get-create-process)))
 	(comint-redirect-perform-sanity-check nil))
     (when (> (length str) lua-shell-maximum-command-length)
       (with-temp-file (lua-shell-temp-file)
