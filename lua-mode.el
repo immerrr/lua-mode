@@ -243,8 +243,6 @@ Should be a list of strings."
   :type 'string
   :group 'lua)
 
-(defvar lua-process nil
-  "The active Lua process")
 (defcustom lua-shell-maximum-completions 1000
   "The maximum number of completions items to request from lua.
 Reduce if completion performance on large tables suffers."
@@ -1684,6 +1682,7 @@ This function just searches for a `end' at the beginning of a line."
 
 ;;;###autoload
 (defalias 'run-lua #'lua-start-process)
+(defalias 'lua-get-create-process #'lua-start-process)
 
 ;;;###autoload
 (defun lua-start-process (&optional name program startfile &rest switches)
@@ -1691,41 +1690,52 @@ This function just searches for a `end' at the beginning of a line."
 PROGRAM defaults to NAME, which defaults to `lua-default-application'.
 When called interactively, switch to the process buffer."
   (interactive)
-  (or switches
-      (setq switches lua-default-command-switches))
-  (setq name (or name (if (consp lua-default-application)
-                          (car lua-default-application)
-                        lua-default-application)))
-  (setq program (or program lua-default-application))
-  (setq lua-process-buffer (apply 'make-comint name program startfile switches))
-  (setq lua-process (get-buffer-process lua-process-buffer))
-  (set-process-query-on-exit-flag lua-process nil)
-  (with-current-buffer lua-process-buffer
-    ;; wait for prompt
-    (while (not (lua-prompt-line))
-      (accept-process-output (get-buffer-process (current-buffer)))
-      (goto-char (point-max)))
-    ;; send initialization code
-    (lua-send-string lua-process-init-code)
+  (if (and lua-process-buffer
+	   (comint-check-proc lua-process-buffer))
+      (if (stringp lua-process-buffer) 	;good buffer, but still a string
+	  (setq lua-process-buffer (get-buffer lua-process-buffer)))
+    ;; Start a new process
+    (let* ((switches (or switches lua-default-command-switches))
+	   (name (or name (if (consp lua-default-application)
+			      (car lua-default-application)
+			    (file-name-base lua-default-application))))
+	   (program (or program lua-default-application))
+	   (process-buffer (or (if (or (and (bufferp lua-process-buffer)
+					    (buffer-live-p lua-process-buffer))
+				       (stringp lua-process-buffer)) ;preset?
+				   lua-process-buffer)
+			       (generate-new-buffer (concat "*" name "*")))))
+      (apply 'make-comint-in-buffer name process-buffer program
+	     startfile switches)
 
-    ;; enable error highlighting in stack traces
-    (require 'compile)
-    (setq lua--repl-buffer-p t)
-    (make-local-variable 'compilation-error-regexp-alist)
-    (setq compilation-error-regexp-alist
-          (cons (list lua-traceback-line-re 1 2)
-                compilation-error-regexp-alist))
-    (compilation-shell-minor-mode 1))
+      ;; wait for prompt
+      (with-current-buffer process-buffer
+	(while (not (lua-prompt-line))
+	  (accept-process-output)
+	  (goto-char (point-max)))
+	;; Set the redirect hook locally
+	(add-hook 'comint-redirect-hook 'lua-finalize-output nil t))
+
+      (set-process-query-on-exit-flag (get-buffer-process process-buffer) nil)
+      (setq lua-process-buffer process-buffer) 
+      
+      ;; send initialization code (waiting for it to run)
+      (lua-send-command-output-to-buffer-and-wait lua-process-init-code)
+
+      ;; enable error highlighting in stack traces
+      (require 'compile)
+      (setq lua--repl-buffer-p t)
+      (make-local-variable 'compilation-error-regexp-alist)
+      (setq compilation-error-regexp-alist
+	    (cons (list lua-traceback-line-re 1 2)
+		  compilation-error-regexp-alist))
+      (compilation-shell-minor-mode 1)))
 
   ;; when called interactively, switch to process buffer
-  (if (called-interactively-p 'any)
-      (switch-to-buffer lua-process-buffer)))
+  (prog1
+      (get-buffer-process lua-process-buffer)
+    (if (called-interactively-p 'any) (pop-to-buffer lua-process-buffer))))
 
-(defun lua-get-create-process ()
-  "Return active Lua process creating one if necessary."
-  (unless (comint-check-proc lua-process-buffer)
-    (lua-start-process))
-  lua-process)
 (defvar-local lua-shell-output-buffer nil
   "Buffer for redirected output, stored locally with process-buffer")
 (defvar-local lua-shell-last-command nil
