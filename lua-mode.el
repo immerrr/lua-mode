@@ -275,7 +275,6 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
 (defvar lua--electric-indent-chars
   (mapcar #'string-to-char '("}" "]" ")")))
 
-
 (defvar lua-mode-map
   (let ((result-map (make-sparse-keymap))
         prefix-key)
@@ -304,7 +303,7 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
  key like `{' is pressed")
 (make-variable-buffer-local 'lua-electric-flag)
 
-(defcustom lua-prompt-regexp "[^\n]*\\(>[\t ]+\\)+$"
+(defcustom lua-prompt-regexp "^\\(>[\t ]+\\)+"
   "Regexp which matches the Lua program's prompt."
   :type  'regexp
   :group 'lua)
@@ -320,7 +319,6 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
 (defvar lua--repl-buffer-p nil
   "Buffer-local flag saying if this is a Lua REPL buffer.")
 (make-variable-buffer-local 'lua--repl-buffer-p)
-
 
 (defadvice compilation-find-file (around lua--repl-find-file
                                          (marker filename directory &rest formats)
@@ -351,7 +349,6 @@ Usually, stdin:XX line number points to nowhere."
           (compilation-set-window (display-buffer (marker-buffer msg)) msg)
           (goto-char msg))
       ad-do-it)))
-
 
 (defcustom lua-indent-string-contents nil
   "If non-nil, contents of multiline string will be indented.
@@ -670,7 +667,6 @@ Groups 6-9 can be used in any of argument regexps."
   :syntax-table lua-mode-syntax-table
   :group 'lua
   (setq comint-prompt-regexp lua-prompt-regexp)
-
 
   (setq-local font-lock-defaults '(lua-font-lock-keywords ;; keywords
                                         nil                    ;; keywords-only
