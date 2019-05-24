@@ -1744,11 +1744,15 @@ When called interactively, switch to the process buffer."
   "The output of the last redirected command, stored locally with process-buffer")
 
 (defun lua-kill-process ()
-  "Kill Lua process and its buffer."
+  "Kill Lua process and its buffer (along with any output buffer)."
   (interactive)
   (when (buffer-live-p lua-process-buffer)
-    (kill-buffer lua-process-buffer)
-    (setq lua-process-buffer nil)))
+    (with-current-buffer lua-process-buffer
+      (comint-redirect-cleanup)
+      (if (buffer-live-p lua-shell-output-buffer)
+	  (kill-buffer lua-shell-output-buffer)))
+    (kill-buffer lua-process-buffer))
+  (setq lua-process-buffer nil)) ;buffer gone, but set it in calling buffer
 
 (defun lua-set-lua-region-start (&optional arg)
   "Set start of region for use with `lua-send-lua-region'."
@@ -2052,7 +2056,6 @@ Otherwise, return START."
 Create a Lua process if one doesn't already exist."
   (interactive)
   (display-buffer (process-buffer (lua-get-create-process))))
-
 
 (defun lua-hide-process-buffer ()
   "Delete all windows that display `lua-process-buffer'."
