@@ -1721,6 +1721,24 @@ If `lua-process' is nil or dead, start a new process first."
   (unless (string-equal (substring str -1) "\n")
     (setq str (concat str "\n")))
   (process-send-string (lua-get-create-process) str))
+(defvar lua-shell-temp-file nil
+  "Absolute pathname for temporary lua file for dofile'ing regions/long commands")
+
+(defun lua-shell-temp-file ()
+  "Returns a temp file for running lua commands, creating it if necessary"
+  (or lua-shell-temp-file
+      (setq lua-shell-temp-file
+	      (make-temp-file "lua-command-"))))
+
+(defun lua-shell-delete-temp-file ()
+  "Delete the temporary file."
+  (if (stringp lua-shell-temp-file)
+      (condition-case nil
+	  (delete-file lua-shell-temp-file)
+	(error nil))))
+(add-hook 'kill-buffer-hook 'lua-shell-delete-temp-file nil 'local)
+(add-hook 'kill-emacs-hook 'lua-shell-delete-temp-file)
+
 
 (defun lua-send-current-line ()
   "Send current line to the Lua process, found in `lua-process'.
