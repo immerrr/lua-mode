@@ -86,12 +86,11 @@
 
 ;;; Code:
 (eval-when-compile
-  (require 'cl))
-
+  (require 'cl)
+  (require 'subr-x))
 (require 'comint)
 (require 'newcomment)
 (require 'rx)
-
 
 ;; rx-wrappers for Lua
 
@@ -724,6 +723,9 @@ Groups 6-9 can be used in any of argument regexps."
   (if (boundp 'mode-popup-menu)
       (setq mode-popup-menu
             (cons (concat mode-name " Mode Commands") lua-emacs-menu)))
+
+  (make-local-variable 'completion-at-point-functions)
+  (add-to-list 'completion-at-point-functions 'lua-complete-function)
 
   ;; hideshow setup
   (unless (assq 'lua-mode hs-special-modes-alist)
@@ -1634,10 +1636,17 @@ This function just searches for a `end' at the beginning of a line."
           (forward-line)))
     ret))
 
+(defvar lua-process-complete-code-filename
+  (expand-file-name "emacs_lua_complete.lua"
+		    (file-name-directory load-file-name))
+  "Path to the associate lua completion function definition.")
 (defvar lua-process-init-code
   (mapconcat
    'identity
-   '("local loadstring = loadstring or load"
+   `(
+     ,(concat "dofile(\"" lua-process-complete-code-filename "\")")
+     "os.execute('stty -echo -onlcr')"
+     "local loadstring = loadstring or load"
      "function luamode_loadstring(str, displayname, lineoffset)"
      "  if lineoffset > 1 then"
      "    str = string.rep('\\n', lineoffset - 1) .. str"
@@ -1666,6 +1675,12 @@ This function just searches for a `end' at the beginning of a line."
 	 (t
           (replace-match "\\\\\\&" t))))
       (concat "'" (buffer-string) "'"))))
+
+;; Get and set process-related variables from within the process buffer
+(defsubst lua-proc-get (var)
+  (buffer-local-value var lua-process-buffer))
+(defsubst lua-proc-set (var val)
+  (setf (buffer-local-value var lua-process-buffer) val))
 
 ;;;###autoload
 (defalias 'run-lua #'lua-start-process)
@@ -1818,6 +1833,62 @@ complete.  If PROCESS not passed, get or create a process."
           (lua-send-region start end)
         (error "Not on a function definition")))))
 
+(defsubst lua-completion-trim-input (str)
+  (format "'%s'" (string-trim str)))
+
+(defun lua-completion-string-for (expr libs locals)
+  "Construct a string of Lua code to print completions.
+The `expr' arg should be the input string (which may contain dots
+for table lookup), and `libs' should be a list of the format returned
+by `lua-local-libs', or nil."
+  (apply 'concat
+	 `("__emacs_lua_complete({"
+	   ,(string-join
+	     (mapcar 'lua-completion-trim-input (split-string expr "\\.")) ",")
+	   "},{"
+	   ,(string-join
+	     (mapcar (lambda (l) (apply 'format "{var='%s',lib='%s'}" l)) libs) ",")
+	   "},{"
+	   ,(string-join (mapcar (apply-partially 'format "'%s'") locals) ",")
+	   "}," ,(number-to-string lua-shell-maximum-completions) ")")))
+
+(defvar lua-local-require-completions t
+  "During completion, scan file for local require calls for context.")
+
+(defvar lua-local-require-regexp
+  "^local\\s-+\\([^ \n]+\\)\\s-*=\\s-*require\\s-*(?\\s-*\\(['\"]?\\)\\([^)\n]+\\)\\2"
+  "A regexp to match lines where a library is required and put in a local.")
+
+(defvar lua-top-level-local-regexp
+  "^local\\s-+\\([^ \n]+\\)\\s-*="
+  "A regexp to match top-level local definitions")
+
+(defun lua-local-libs ()
+  "Find all modules loaded with require which are stored in locals.
+
+Returns a list of lists where the car is the local name and the cadr
+is the string that is passed to require."
+  (save-excursion
+    (when lua-local-require-completions
+      (let ((libs nil))
+        (goto-char (point-min))
+        ;; find each match of "local x = require y" and save for later
+        (while (lua-find-regexp 'forward lua-local-require-regexp)
+          (add-to-list 'libs (list (match-string-no-properties 1)
+                                   (match-string-no-properties 3))))
+        libs))))
+
+(defun lua-top-level-locals (lib-names)
+  "Return a list of all top-level locals in the file for completion targets."
+  (save-excursion
+    (let ((locals nil))
+      (goto-char (point-min))
+      (while (lua-find-regexp 'forward lua-top-level-local-regexp)
+        (let ((local (match-string-no-properties 1)))
+          (when (not (member local lib-names))
+            (add-to-list 'locals local))))
+      locals)))
+
 (defun lua-start-of-expr ()
   "Search backwards to find the beginning of the current expression.
 This is distinct from `backward-sexp' which treats . and : as a separator."
@@ -1832,6 +1903,81 @@ This is distinct from `backward-sexp' which treats . and : as a separator."
       (if (member (thing-at-point 'char) '(":" "."))
           (lua-start-of-expr)
         bos))))
+
+(defun lua-finalize-output ()
+  "Callback for comint-redirect-send-command
+Reads and sets output from lua-shell-output-buffer, 
+after clearing any copy of the input from beginning."
+  (setq lua-shell-redirected-output
+	(with-current-buffer lua-shell-output-buffer
+	  (buffer-substring-no-properties
+	   (point-min) (point-max)))))
+
+(defun lua-mimic-whitespace (string completions)
+  "Reproduce the whitespace pattern of the initial completion string. 
+Lua ignores whitespace, so we must complete across it.  Assumes
+string does not start with whitespace and that all completions start with
+the string."
+  (let (ind matches (end 0))
+    (while (setq ind (string-match "[\r\n[:space:]]+" string end))
+      (setq end (match-end 0))
+      (push (cons ind (match-string 0 string)) matches)) 
+    (dolist (match (reverse matches) completions)
+      (setq completions
+	    (mapcar (lambda(x) (concat (substring x 0 (car match))
+				       (cdr match)
+				       (substring x (car match))))
+		    completions)))))
+
+(defun lua--get-completions (expr libs locals)
+  (lua-send-command-output-to-buffer-and-wait
+   (lua-completion-string-for expr libs locals))
+  (let ((output (lua-proc-get 'lua-shell-redirected-output)))
+    (if output
+	(cl-remove-if (lambda (x) (string-match "^[[:space:]]*$" x))
+		      (split-string output "[\r\n]")))))
+
+(defun lua-complete-string (string)
+  "Queries current lua subprocess for possible completions."
+  (let*  ((expr (string-join ; collapse multi-line input
+		 (split-string string "[\r\n]") " "))
+	  (libs (lua-local-libs))
+	  (locals (lua-top-level-locals (mapcar 'car libs))))
+    (lua-mimic-whitespace string (lua--get-completions expr libs locals))))
+
+;; Sort completions with fewest .'s first
+(defun lua--sort-completions (list)
+  (sort list
+	(lambda (a b)
+	  (let ((sa (- (length a) (length (remove ?. a))))
+		(sb (- (length b) (length (remove ?. b)))))
+	    (if (eq sa sb) (string< a b) (< sa sb))))))
+
+(defvar lua-last-completed nil
+  "The last lua variable completed")
+(defvar lua-completions nil
+  "The list of completions for the last lua variable completed")
+(defun lua-sorted-completion-table (string pred action)
+  "Perform sorted, cached completion of lua global string.
+Suitable for a completion-at-point-functions function"
+  (cond
+   ((eq (car-safe action) 'boundaries) nil)
+   ((eq action 'metadata)
+    `(metadata (display-sort-function . ,#'lua--sort-completions)))
+   (t (or (when (and lua-last-completed
+		     (string-prefix-p lua-last-completed string))
+	    (complete-with-action action lua-completions string pred))
+	  (unless (eq action 'lambda) ; successful test-completions can be nil
+	    (setq lua-completions (lua-complete-string string)
+		  lua-last-completed string)
+	    (complete-with-action action lua-completions string pred))))))
+  
+(defun lua-complete-function ()
+  "Completion function for `completion-at-point-functions'.
+Maps the expression and provides a cached function returning completion table."
+  (let ((start-of-expr (lua-start-of-expr)))
+    (list start-of-expr (point) 'lua-sorted-completion-table)))
+
 (defun lua-maybe-skip-shebang-line (start)
   "Skip shebang (#!/path/to/interpreter/) line at beginning of buffer.
 
