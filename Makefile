@@ -1,6 +1,6 @@
 # Makefile for lua-mode
 
-VERSION="$(shell sed -nre '/^;; Version:/ { s/^;; Version:[ \t]+//; p }' lua-mode.el)"
+VERSION="$(shell perl -ne 'if(s/^;; Version:[ \t]+(.*)/$$1/){print; exit}' lua-mode.el)"
 DISTFILE = lua-mode-$(VERSION).zip
 
 # EMACS value may be overridden
