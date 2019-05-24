@@ -233,9 +233,24 @@ Should be a list of strings."
   :type 'string
   :group 'lua)
 
+(defcustom lua-shell-maximum-command-length
+  512
+  "The maximum length of a lua command"
+  :type 'integer
+  :group 'lua)
+
+(defcustom lua-shell-output-buffer-name " *lua-shell-output*"
+  "Scratch buffer for parsing redirected lua output."
+  :type 'string
+  :group 'lua)
 
 (defvar lua-process nil
   "The active Lua process")
+(defcustom lua-shell-maximum-completions 1000
+  "The maximum number of completions items to request from lua.
+Reduce if completion performance on large tables suffers."
+  :type 'integer
+  :group 'lua)
 
 (defvar lua-process-buffer nil
   "Buffer used for communication with the Lua process")
