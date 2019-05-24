@@ -1818,6 +1818,20 @@ complete.  If PROCESS not passed, get or create a process."
           (lua-send-region start end)
         (error "Not on a function definition")))))
 
+(defun lua-start-of-expr ()
+  "Search backwards to find the beginning of the current expression.
+This is distinct from `backward-sexp' which treats . and : as a separator."
+  (save-excursion
+    (backward-sexp)
+    (let ((bos (point)))
+      (when (> (point) 1) (backward-char))
+      (when (string-match "[[:space:]]" (thing-at-point 'char))
+        (search-backward-regexp "[^\n\s-]" nil t)
+        (when (string= (thing-at-point 'char) "\n")
+          (backward-char)))
+      (if (member (thing-at-point 'char) '(":" "."))
+          (lua-start-of-expr)
+        bos))))
 (defun lua-maybe-skip-shebang-line (start)
   "Skip shebang (#!/path/to/interpreter/) line at beginning of buffer.
 
