@@ -1636,7 +1636,8 @@ This function just searches for a `end' at the beginning of a line."
 
 (defvar lua-process-complete-code-filename
   (expand-file-name "emacs_lua_complete.lua"
-		    (file-name-directory load-file-name))
+		    (expand-file-name "scripts"
+		     (file-name-directory load-file-name)))
   "Path to the associate lua completion function definition.")
 (defvar lua-process-init-code
   (mapconcat
