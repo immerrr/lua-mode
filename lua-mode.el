@@ -1991,7 +1991,7 @@ Suitable for a completion-at-point-functions function"
   "Completion function for `completion-at-point-functions'.
 Maps the expression and provides a cached function returning completion table."
   (let ((start-of-expr (lua-start-of-expr)))
-    (list start-of-expr (point) 'lua-sorted-completion-table)))
+    (list start-of-expr (point) #'lua-sorted-completion-table)))
 
 (defun lua-maybe-skip-shebang-line (start)
   "Skip shebang (#!/path/to/interpreter/) line at beginning of buffer.
