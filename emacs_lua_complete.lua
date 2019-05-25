@@ -19,45 +19,45 @@
 --                      {"frank","beans"},5000)
 --
 -- Written 2019/05 J.D. Smith
-function __emacs_lua_complete(parts,libs,locals,limit)
+function __emacs_lua_complete(parts, libs, locals, limit)
    -- Setup a FIFO queue for breadth-first tree traversal
-   local queue={head=0,tail=0}
+   local queue = {head = 0, tail = 0}
    function queue:push(value)
-      self.tail=self.tail+1  self[self.tail]=value
+      self.tail = self.tail+1  self[self.tail] = value
    end
    function queue:pop()
-      self.head=self.head+1  return self[self.head]
+      self.head = self.head+1  return self[self.head]
    end
 
    -- Mirror the globals table
-   local globals,cnt,limit={},0,limit or 2000
+   local globals,cnt,limit = {}, 0, limit or 2000
    for k,v in pairs(_G) do globals[k] = v end
    
    -- Add libs and locals
    if libs then
       for _,v in ipairs(libs) do
 	 local good,lib=pcall(require,v.lib)
-	 globals[v.var]=good and lib or {}
+	 globals[v.var] = good and lib or {}
       end
    end
    if locals then
-      for _,v in ipairs(locals) do globals[v]={} end
+      for _,v in ipairs(locals) do globals[v] = {} end
    end
 
    -- Descend the tree to the limit of dotted parts
-   local g,pre=globals,""
-   for i=1,#parts do
+   local g,pre = globals, ""
+   for i = 1,#parts do
       if not g then break end	-- should always exist
-      if i<#parts then		-- keep descending
-	 pre = (i > 1 and pre.."." or "")..parts[i]
+      if i < #parts then -- keep descending
+	 pre = (i > 1 and pre.."." or "") .. parts[i]
 	 g = g[parts[i]]
       else  -- final part; seed the queue with any matching tables
 	 for k,v in pairs(g) do
-	    if type(k)=="string" and k:sub(1,1) ~= "_" and k:find('^'..parts[i]) then
-	       local dpath=(i > 1 and pre.."." or "")..k
+	    if type(k) == "string" and k:sub(1,1) ~= "_" and k:find('^'..parts[i]) then
+	       local dpath=(i > 1 and pre .. "." or "") .. k
 	       print(dpath)
-	       cnt=cnt+1
-	       if type(v)=="table" then queue:push({pre=dpath,entries=v}) end
+	       cnt = cnt + 1
+	       if type(v) == "table" then queue:push({pre = dpath,entries = v}) end
 	    end
 	 end
       end
@@ -65,17 +65,15 @@ function __emacs_lua_complete(parts,libs,locals,limit)
 
    -- Perform a limited breadth-first traversal of the queued tables
    while queue.head < queue.tail and cnt < limit do
-      local q=queue:pop()
+      local q = queue:pop()
       for k,v in pairs(q.entries) do
 	 if type(k) == "string" and k:sub(1,1) ~= "_" then 
-	    pre = q.pre.."."..k
+	    pre = q.pre .. "." .. k
 	    print(pre)
 	    cnt = cnt + 1
 	    if cnt >= limit then break end
-	    if type(v) == "table" then queue:push({pre=pre,entries=v}) end
+	    if type(v) == "table" then queue:push({pre = pre,entries = v}) end
 	 end
       end
    end
 end
-
-
