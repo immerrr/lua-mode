@@ -1739,8 +1739,6 @@ When called interactively, switch to the process buffer."
 
 (defvar-local lua-shell-output-buffer nil
   "Buffer for redirected output, stored locally with process-buffer")
-(defvar-local lua-shell-last-command nil
-  "The last command sent to lua, stored locally with process-buffer")
 (defvar-local lua-shell-redirected-output nil
   "The output of the last redirected command, stored locally with process-buffer")
 
@@ -1814,7 +1812,6 @@ complete.  If PROCESS not passed, get or create a process."
 	(erase-buffer)
 	(insert command))
       (setq command (concat "dofile(\"" lua-shell-temp-file "\")")))
-    (setq lua-shell-last-command command)
     (if redirect-buffer
 	(comint-redirect-send-command-to-process command redirect-buffer
 						 process nil t)
