@@ -269,7 +269,11 @@ element is itself expanded with `lua-rx-to-string'. "
   :group 'lua)
 
 (defcustom lua-default-application "lua"
-  "Default application to run in Lua process."
+  "Default application to run in Lua process.
+
+Can be a string, where it denotes a command to be executed to
+start Lua process, or a (HOST . PORT) cons, that can be used to
+connect to Lua process running remotely."
   :type '(choice (string)
                  (cons string integer))
   :group 'lua)
