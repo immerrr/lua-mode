@@ -1797,8 +1797,7 @@ output will be left in lua-shell-redirected-output."
       (with-current-buffer lua-shell-output-buffer (erase-buffer))
       (lua-send-string command lua-shell-output-buffer process)
       (while (not comint-redirect-completed)
-	(accept-process-output process))
-      (comint-redirect-cleanup))))
+	(accept-process-output process)))))
 
 (defun lua-send-string (str &optional redirect-buffer process)
   "Send STR to the Lua process, possibly via dofile.
