@@ -232,9 +232,9 @@ Should be a list of strings."
   :type 'string
   :group 'lua)
 
-(defcustom lua-shell-maximum-command-length
+(defcustom lua-shell-maximum-sent-length
   512
-  "The maximum length of a lua command"
+  "The maximum length of a command sent to lua by Emacs"
   :type 'integer
   :group 'lua)
 
@@ -1809,7 +1809,7 @@ complete.  If PROCESS not passed, get or create a process."
 	(command str)
 	(process (or process (lua-get-create-process)))
 	(comint-redirect-perform-sanity-check nil))
-    (when (> (length str) lua-shell-maximum-command-length)
+    (when (> (length str) lua-shell-maximum-sent-length)
       (with-temp-file (lua-shell-temp-file)
 	(erase-buffer)
 	(insert command))
