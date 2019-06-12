@@ -53,7 +53,10 @@ function __emacs_lua_complete(parts, libs, locals, limit)
 	 g = g[parts[i]]
       else  -- final part; seed the queue with any matching tables
 	 for k,v in pairs(g) do
-	    if type(k) == "string" and k:sub(1,1) ~= "_" and k:find('^'..parts[i]) then
+	    if type(k) == "string" and
+	       k:sub(1,#parts[i]) == parts[i] and
+	       (parts[i]:sub(1,1) == "_" or k:sub(1,1) ~= "_")
+	    then
 	       local dpath=(i > 1 and pre .. "." or "") .. k
 	       print(dpath)
 	       cnt = cnt + 1
