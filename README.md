@@ -46,6 +46,7 @@ hash-bang line (`#!/usr/bin/lua`). Putting this snippet to `.emacs` should be en
 - documentation lookup (using online/offline reference manual, e.g. [string.find](http://www.lua.org/manual/5.1/manual.html#pdf-string.find))
 - [imenu](http://www.gnu.org/software/emacs/manual/html_node/emacs/Imenu.html) integration
 - [HideShow](http://www.gnu.org/software/emacs/manual/html_node/emacs/Hideshow.html) integration
+- using `completion-at-point` queries active Lua subprocess for completion targets
 
 ## CUSTOMIZATION
 
@@ -56,6 +57,7 @@ The following variables are available for customization (see more via `M-x custo
 - Var `lua-mode-hook`: list of functions to execute when lua-mode is initialized
 - Var `lua-documentation-url` (default `"http://www.lua.org/manual/5.1/manual.html#pdf-"`): base URL for documentation lookup
 - Var `lua-documentation-function` (default `browse-url`): function used to show documentation (`eww` is a viable alternative for Emacs 25)
+- Var `lua-local-require-completions` (default `t`): set to `nil` to prevent completion attempting to load local libraries for current file for completion targets
 
 ## LUA SUBPROCESS CREATION
 

@@ -1,6 +1,6 @@
 # Makefile for lua-mode
 
-VERSION="$(shell sed -nre '/^;; Version:/ { s/^;; Version:[ \t]+//; p }' lua-mode.el)"
+VERSION="$(shell perl -ne 'if(s/^;; Version:[ \t]+(.*)/$$1/){print; exit}' lua-mode.el)"
 DISTFILE = lua-mode-$(VERSION).zip
 
 # EMACS value may be overridden
@@ -10,8 +10,12 @@ LUA_MODE_ELC=lua-mode.$(EMACS_MAJOR_VERSION).elc
 
 EMACS_BATCH=$(EMACS) --batch -Q
 
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+mkfile_dir := $(dir $(mkfile_path))
+export LUA_PATH = $(mkfile_dir)test/?.lua
+
 default:
-	@echo version is $(VERSION)
+	@echo version is $(VERSION), LUA_PATH is $(LUA_PATH)
 
 %.$(EMACS_MAJOR_VERSION).elc: %.elc
 	mv $< $@

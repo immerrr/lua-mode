@@ -12,7 +12,7 @@
 ;;              Aaron Smith <aaron-lua@gelatinous.com>.
 ;;
 ;; URL:         http://immerrr.github.com/lua-mode
-;; Version:     20151025
+;; Version:     20190524
 ;;
 ;; This file is NOT part of Emacs.
 ;;
@@ -86,12 +86,11 @@
 
 ;;; Code:
 (eval-when-compile
-  (require 'cl))
-
+  (require 'cl)
+  (require 'subr-x))
 (require 'comint)
 (require 'newcomment)
 (require 'rx)
-
 
 ;; rx-wrappers for Lua
 
@@ -233,9 +232,22 @@ Should be a list of strings."
   :type 'string
   :group 'lua)
 
+(defcustom lua-shell-maximum-sent-length
+  512
+  "The maximum length of a command sent to lua by Emacs"
+  :type 'integer
+  :group 'lua)
 
-(defvar lua-process nil
-  "The active Lua process")
+(defcustom lua-shell-output-buffer-name " *lua-shell-output*"
+  "Scratch buffer for parsing redirected lua output."
+  :type 'string
+  :group 'lua)
+
+(defcustom lua-shell-maximum-completions 1000
+  "The maximum number of completions items to request from lua.
+Reduce if completion performance on large tables suffers."
+  :type 'integer
+  :group 'lua)
 
 (defvar lua-process-buffer nil
   "Buffer used for communication with the Lua process")
@@ -275,7 +287,6 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
 (defvar lua--electric-indent-chars
   (mapcar #'string-to-char '("}" "]" ")")))
 
-
 (defvar lua-mode-map
   (let ((result-map (make-sparse-keymap))
         prefix-key)
@@ -304,7 +315,7 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
  key like `{' is pressed")
 (make-variable-buffer-local 'lua-electric-flag)
 
-(defcustom lua-prompt-regexp "[^\n]*\\(>[\t ]+\\)+$"
+(defcustom lua-prompt-regexp "^\\(>[\t ]+\\)+"
   "Regexp which matches the Lua program's prompt."
   :type  'regexp
   :group 'lua)
@@ -320,7 +331,6 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
 (defvar lua--repl-buffer-p nil
   "Buffer-local flag saying if this is a Lua REPL buffer.")
 (make-variable-buffer-local 'lua--repl-buffer-p)
-
 
 (defadvice compilation-find-file (around lua--repl-find-file
                                          (marker filename directory &rest formats)
@@ -351,7 +361,6 @@ Usually, stdin:XX line number points to nowhere."
           (compilation-set-window (display-buffer (marker-buffer msg)) msg)
           (goto-char msg))
       ad-do-it)))
-
 
 (defcustom lua-indent-string-contents nil
   "If non-nil, contents of multiline string will be indented.
@@ -671,7 +680,6 @@ Groups 6-9 can be used in any of argument regexps."
   :group 'lua
   (setq comint-prompt-regexp lua-prompt-regexp)
 
-
   (setq-local font-lock-defaults '(lua-font-lock-keywords ;; keywords
                                         nil                    ;; keywords-only
                                         nil                    ;; case-fold
@@ -713,6 +721,9 @@ Groups 6-9 can be used in any of argument regexps."
   (if (boundp 'mode-popup-menu)
       (setq mode-popup-menu
             (cons (concat mode-name " Mode Commands") lua-emacs-menu)))
+
+  (make-local-variable 'completion-at-point-functions)
+  (add-to-list 'completion-at-point-functions 'lua-complete-function)
 
   ;; hideshow setup
   (unless (assq 'lua-mode hs-special-modes-alist)
@@ -1623,10 +1634,18 @@ This function just searches for a `end' at the beginning of a line."
           (forward-line)))
     ret))
 
+(defvar lua-process-complete-code-filename
+  (expand-file-name "emacs_lua_complete.lua"
+		    (expand-file-name "scripts"
+		     (file-name-directory load-file-name)))
+  "Path to the associate lua completion function definition.")
 (defvar lua-process-init-code
   (mapconcat
    'identity
-   '("local loadstring = loadstring or load"
+   `(
+     ,(concat "dofile(\"" lua-process-complete-code-filename "\")")
+     "os.execute('stty -echo -onlcr')"
+     "local loadstring = loadstring or load"
      "function luamode_loadstring(str, displayname, lineoffset)"
      "  if lineoffset > 1 then"
      "    str = string.rep('\\n', lineoffset - 1) .. str"
@@ -1656,8 +1675,15 @@ This function just searches for a `end' at the beginning of a line."
           (replace-match "\\\\\\&" t))))
       (concat "'" (buffer-string) "'"))))
 
+;; Get and set process-related variables from within the process buffer
+(defsubst lua-proc-get (var)
+  (buffer-local-value var lua-process-buffer))
+(defsubst lua-proc-set (var val)
+  (setf (buffer-local-value var lua-process-buffer) val))
+
 ;;;###autoload
 (defalias 'run-lua #'lua-start-process)
+(defalias 'lua-get-create-process #'lua-start-process)
 
 ;;;###autoload
 (defun lua-start-process (&optional name program startfile &rest switches)
@@ -1665,48 +1691,67 @@ This function just searches for a `end' at the beginning of a line."
 PROGRAM defaults to NAME, which defaults to `lua-default-application'.
 When called interactively, switch to the process buffer."
   (interactive)
-  (or switches
-      (setq switches lua-default-command-switches))
-  (setq name (or name (if (consp lua-default-application)
-                          (car lua-default-application)
-                        lua-default-application)))
-  (setq program (or program lua-default-application))
-  (setq lua-process-buffer (apply 'make-comint name program startfile switches))
-  (setq lua-process (get-buffer-process lua-process-buffer))
-  (set-process-query-on-exit-flag lua-process nil)
-  (with-current-buffer lua-process-buffer
-    ;; wait for prompt
-    (while (not (lua-prompt-line))
-      (accept-process-output (get-buffer-process (current-buffer)))
-      (goto-char (point-max)))
-    ;; send initialization code
-    (lua-send-string lua-process-init-code)
+  (if (and lua-process-buffer
+	   (comint-check-proc lua-process-buffer))
+      (if (stringp lua-process-buffer) 	;good buffer, but still a string
+	  (setq lua-process-buffer (get-buffer lua-process-buffer)))
+    ;; Start a new process
+    (let* ((switches (or switches lua-default-command-switches))
+	   (name (or name (if (consp lua-default-application)
+			      (car lua-default-application)
+			    (file-name-base lua-default-application))))
+	   (program (or program lua-default-application))
+	   (process-buffer (or (if (or (and (bufferp lua-process-buffer)
+					    (buffer-live-p lua-process-buffer))
+				       (stringp lua-process-buffer)) ;preset?
+				   lua-process-buffer)
+			       (generate-new-buffer (concat "*" name "*")))))
+      (apply 'make-comint-in-buffer name process-buffer program
+	     startfile switches)
 
-    ;; enable error highlighting in stack traces
-    (require 'compile)
-    (setq lua--repl-buffer-p t)
-    (make-local-variable 'compilation-error-regexp-alist)
-    (setq compilation-error-regexp-alist
-          (cons (list lua-traceback-line-re 1 2)
-                compilation-error-regexp-alist))
-    (compilation-shell-minor-mode 1))
+      ;; wait for prompt
+      (with-current-buffer process-buffer
+	(while (not (lua-prompt-line))
+	  (accept-process-output)
+	  (goto-char (point-max)))
+	;; Set the redirect hook locally
+	(add-hook 'comint-redirect-hook 'lua-finalize-output nil t))
+
+      (set-process-query-on-exit-flag (get-buffer-process process-buffer) nil)
+      (setq lua-process-buffer process-buffer) 
+      
+      ;; send initialization code (waiting for it to run)
+      (lua-send-command-output-to-buffer-and-wait lua-process-init-code)
+
+      ;; enable error highlighting in stack traces
+      (require 'compile)
+      (setq lua--repl-buffer-p t)
+      (make-local-variable 'compilation-error-regexp-alist)
+      (setq compilation-error-regexp-alist
+	    (cons (list lua-traceback-line-re 1 2)
+		  compilation-error-regexp-alist))
+      (compilation-shell-minor-mode 1)))
 
   ;; when called interactively, switch to process buffer
-  (if (called-interactively-p 'any)
-      (switch-to-buffer lua-process-buffer)))
+  (prog1
+      (get-buffer-process lua-process-buffer)
+    (if (called-interactively-p 'any) (pop-to-buffer lua-process-buffer))))
 
-(defun lua-get-create-process ()
-  "Return active Lua process creating one if necessary."
-  (unless (comint-check-proc lua-process-buffer)
-    (lua-start-process))
-  lua-process)
+(defvar-local lua-shell-output-buffer nil
+  "Buffer for redirected output, stored locally with process-buffer")
+(defvar-local lua-shell-redirected-output nil
+  "The output of the last redirected command, stored locally with process-buffer")
 
 (defun lua-kill-process ()
-  "Kill Lua process and its buffer."
+  "Kill Lua process and its buffer (along with any output buffer)."
   (interactive)
   (when (buffer-live-p lua-process-buffer)
-    (kill-buffer lua-process-buffer)
-    (setq lua-process-buffer nil)))
+    (with-current-buffer lua-process-buffer
+      (comint-redirect-cleanup)
+      (if (buffer-live-p lua-shell-output-buffer)
+	  (kill-buffer lua-shell-output-buffer)))
+    (kill-buffer lua-process-buffer))
+  (setq lua-process-buffer nil)) ;buffer gone, but set it in calling buffer
 
 (defun lua-set-lua-region-start (&optional arg)
   "Set start of region for use with `lua-send-lua-region'."
@@ -1718,17 +1763,62 @@ When called interactively, switch to the process buffer."
   (interactive)
   (set-marker lua-region-end (or arg (point))))
 
-(defun lua-send-string (str)
-  "Send STR plus a newline to the Lua process.
+(defvar lua-shell-temp-file nil
+  "Absolute pathname for temporary lua file for dofile'ing regions/long commands")
 
-If `lua-process' is nil or dead, start a new process first."
-  (unless (string-equal (substring str -1) "\n")
-    (setq str (concat str "\n")))
-  (process-send-string (lua-get-create-process) str))
+(defun lua-shell-temp-file ()
+  "Returns a temp file for running lua commands, creating it if necessary"
+  (or lua-shell-temp-file
+      (setq lua-shell-temp-file
+	      (make-temp-file "lua-command-"))))
+
+(defun lua-shell-delete-temp-file ()
+  "Delete the temporary file."
+  (if (stringp lua-shell-temp-file)
+      (condition-case nil
+	  (delete-file lua-shell-temp-file)
+	(error nil))))
+(add-hook 'kill-buffer-hook 'lua-shell-delete-temp-file nil 'local)
+(add-hook 'kill-emacs-hook 'lua-shell-delete-temp-file)
+
+(defun lua-send-command-output-to-buffer-and-wait (command)
+  "Send a command accumulating output in the output buffer,
+and wait for the next prompt to appear. Blocks emacs, only use
+for instances where results are immediately needed.  Any lua
+output will be left in lua-shell-redirected-output."
+  (let ((process (lua-get-create-process)))
+    (with-current-buffer lua-process-buffer
+      (unless (buffer-live-p lua-shell-output-buffer)
+	(setq lua-shell-output-buffer
+	      (get-buffer-create
+	       (generate-new-buffer lua-shell-output-buffer-name))))
+      (with-current-buffer lua-shell-output-buffer (erase-buffer))
+      (lua-send-string command lua-shell-output-buffer process)
+      (while (not comint-redirect-completed)
+	(accept-process-output process)))))
+
+(defun lua-send-string (str &optional redirect-buffer process)
+  "Send STR to the Lua process, possibly via dofile.
+If necessary, start a new process first.  If optional argument
+REDIRECT-BUFFER is passed, redirect command output to that
+buffer, which calls comint-redirect-hook when the output is
+complete.  If PROCESS not passed, get or create a process."
+  (let (file
+	(command str)
+	(process (or process (lua-get-create-process)))
+	(comint-redirect-perform-sanity-check nil))
+    (when (> (length str) lua-shell-maximum-sent-length)
+      (with-temp-file (lua-shell-temp-file)
+	(erase-buffer)
+	(insert command))
+      (setq command (concat "dofile(\"" lua-shell-temp-file "\")")))
+    (if redirect-buffer
+	(comint-redirect-send-command-to-process command redirect-buffer
+						 process nil t)
+      (comint-simple-send process command))))
 
 (defun lua-send-current-line ()
-  "Send current line to the Lua process, found in `lua-process'.
-If `lua-process' is nil or dead, start a new process first."
+  "Send current line to the Lua process."
   (interactive)
   (lua-send-region (line-beginning-position) (line-end-position)))
 
@@ -1753,6 +1843,151 @@ If `lua-process' is nil or dead, start a new process first."
       (if (and (>= pos start) (< pos end))
           (lua-send-region start end)
         (error "Not on a function definition")))))
+
+(defsubst lua-completion-trim-input (str)
+  (format "'%s'" (string-trim str)))
+
+(defun lua-completion-string-for (expr libs locals)
+  "Construct a string of Lua code to print completions.
+The `expr' arg should be the input string (which may contain dots
+for table lookup), and `libs' should be a list of the format returned
+by `lua-local-libs', or nil."
+  (apply 'concat
+	 `("__emacs_lua_complete({"
+	   ,(string-join
+	     (mapcar 'lua-completion-trim-input (split-string expr "\\.")) ",")
+	   "},{"
+	   ,(string-join
+	     (mapcar (lambda (l) (apply 'format "{var='%s',lib='%s'}" l)) libs) ",")
+	   "},{"
+	   ,(string-join (mapcar (apply-partially 'format "'%s'") locals) ",")
+	   "}," ,(number-to-string lua-shell-maximum-completions) ")")))
+
+(defvar lua-local-require-completions t
+  "During completion, scan file for local require calls for context.")
+
+(defvar lua-local-require-regexp
+  "^local\\s-+\\([^ \n]+\\)\\s-*=\\s-*require\\s-*(?\\s-*\\(['\"]?\\)\\([^)\n]+\\)\\2"
+  "A regexp to match lines where a library is required and put in a local.")
+
+(defvar lua-top-level-local-regexp
+  "^local\\s-+\\([^ \n]+\\)\\s-*="
+  "A regexp to match top-level local definitions")
+
+(defun lua-local-libs ()
+  "Find all modules loaded with require which are stored in locals.
+
+Returns a list of lists where the car is the local name and the cadr
+is the string that is passed to require."
+  (save-excursion
+    (when lua-local-require-completions
+      (let ((libs nil))
+        (goto-char (point-min))
+        ;; find each match of "local x = require y" and save for later
+        (while (lua-find-regexp 'forward lua-local-require-regexp)
+          (add-to-list 'libs (list (match-string-no-properties 1)
+                                   (match-string-no-properties 3))))
+        libs))))
+
+(defun lua-top-level-locals (lib-names)
+  "Return a list of all top-level locals in the file for completion targets."
+  (save-excursion
+    (let ((locals nil))
+      (goto-char (point-min))
+      (while (lua-find-regexp 'forward lua-top-level-local-regexp)
+        (let ((local (match-string-no-properties 1)))
+          (when (not (member local lib-names))
+            (add-to-list 'locals local))))
+      locals)))
+
+(defun lua-start-of-expr ()
+  "Search backwards to find the beginning of the current expression.
+This is distinct from `backward-sexp' which treats . and : as a separator."
+  (save-excursion
+    (backward-sexp)
+    (let ((bos (point)))
+      (when (> (point) 1) (backward-char))
+      (when (string-match "[[:space:]]" (thing-at-point 'char))
+        (search-backward-regexp "[^\n\s-]" nil t)
+        (when (string= (thing-at-point 'char) "\n")
+          (backward-char)))
+      (if (member (thing-at-point 'char) '(":" "."))
+          (lua-start-of-expr)
+        bos))))
+
+(defun lua-finalize-output ()
+  "Callback for comint-redirect-send-command
+Reads and sets output from lua-shell-output-buffer, 
+after clearing any copy of the input from beginning."
+  (setq lua-shell-redirected-output
+	(with-current-buffer lua-shell-output-buffer
+	  (buffer-substring-no-properties
+	   (point-min) (point-max)))))
+
+(defun lua-mimic-whitespace (string completions)
+  "Reproduce the whitespace pattern of the initial completion string. 
+Lua ignores whitespace, so we must complete across it.  Assumes
+string does not start with whitespace and that all completions start with
+the string."
+  (let (ind matches (end 0))
+    (while (setq ind (string-match "[\r\n[:space:]]+" string end))
+      (setq end (match-end 0))
+      (push (cons ind (match-string 0 string)) matches)) 
+    (dolist (match (reverse matches) completions)
+      (setq completions
+	    (mapcar (lambda(x) (concat (substring x 0 (car match))
+				       (cdr match)
+				       (substring x (car match))))
+		    completions)))))
+
+(defun lua--get-completions (expr libs locals)
+  (lua-send-command-output-to-buffer-and-wait
+   (lua-completion-string-for expr libs locals))
+  (let ((output (lua-proc-get 'lua-shell-redirected-output)))
+    (if output
+	(cl-remove-if (lambda (x) (string-match "^[[:space:]]*$" x))
+		      (split-string output "[\r\n]")))))
+
+(defun lua-complete-string (string)
+  "Queries current lua subprocess for possible completions."
+  (let*  ((expr (string-join ; collapse multi-line input
+		 (split-string string "[\r\n]") " "))
+	  (libs (lua-local-libs))
+	  (locals (lua-top-level-locals (mapcar 'car libs))))
+    (lua-mimic-whitespace string (lua--get-completions expr libs locals))))
+
+;; Sort completions with fewest .'s first
+(defun lua--sort-completions (list)
+  (sort list
+	(lambda (a b)
+	  (let ((sa (- (length a) (length (remove ?. a))))
+		(sb (- (length b) (length (remove ?. b)))))
+	    (if (eq sa sb) (string< a b) (< sa sb))))))
+
+(defvar lua-last-completed nil
+  "The last lua variable completed")
+(defvar lua-completions nil
+  "The list of completions for the last lua variable completed")
+(defun lua-sorted-completion-table (string pred action)
+  "Perform sorted, cached completion of lua global string.
+Suitable for a completion-at-point-functions function"
+  (cond
+   ((eq (car-safe action) 'boundaries) nil)
+   ((eq action 'metadata)
+    `(metadata (display-sort-function . ,#'lua--sort-completions)))
+   (t (or (when (and lua-last-completed
+		     (string-prefix-p lua-last-completed string))
+	    (complete-with-action action lua-completions string pred))
+	  (unless (eq action 'lambda) ; successful test-completions can be nil
+	    (setq lua-completions (lua-complete-string string)
+		  lua-last-completed string)
+	    (complete-with-action action lua-completions string pred))))))
+  
+(defun lua-complete-function ()
+  "Completion function for `completion-at-point-functions'.
+Maps the expression and provides a cached function returning completion table."
+  (let ((start-of-expr (lua-start-of-expr)))
+    (list start-of-expr (point) #'lua-sorted-completion-table)))
 
 (defun lua-maybe-skip-shebang-line (start)
   "Skip shebang (#!/path/to/interpreter/) line at beginning of buffer.
@@ -1818,7 +2053,6 @@ Otherwise, return START."
 Create a Lua process if one doesn't already exist."
   (interactive)
   (display-buffer (process-buffer (lua-get-create-process))))
-
 
 (defun lua-hide-process-buffer ()
   "Delete all windows that display `lua-process-buffer'."
