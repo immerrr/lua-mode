@@ -1853,7 +1853,13 @@ complete.  If PROCESS not passed, get or create a process."
         (error "Not on a function definition")))))
 
 (defsubst lua-completion-trim-input (str)
-  (format "'%s'" (string-trim str)))
+  (lua-make-lua-string (string-trim str)))
+
+(defsubst lua--local-lib-to-lua-table (lib)
+  (format "{var=%s,lib=%s}"
+          (lua-make-lua-string (car lib))
+          (lua-make-lua-string (cadr lib))))
+
 
 (defun lua-completion-string-for (expr libs locals)
   "Construct a string of Lua code to print completions.
@@ -1865,10 +1871,9 @@ by `lua-local-libs', or nil."
 	   ,(string-join
 	     (mapcar 'lua-completion-trim-input (split-string expr "\\.")) ",")
 	   "},{"
-	   ,(string-join
-	     (mapcar (lambda (l) (apply 'format "{var='%s',lib='%s'}" l)) libs) ",")
+	   ,(string-join (mapcar #'lua--local-lib-to-lua-table libs) ",")
 	   "},{"
-	   ,(string-join (mapcar (apply-partially 'format "'%s'") locals) ",")
+	   ,(string-join (mapcar #'lua-make-lua-string locals) ",")
 	   "}," ,(number-to-string lua-shell-maximum-completions) ")")))
 
 (defvar lua-local-require-completions t
