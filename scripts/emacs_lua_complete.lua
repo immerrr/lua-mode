@@ -13,6 +13,7 @@
 --     require'd and searched alongside global variables.
 --   LOCALS: an array of strings parsed from local aloc,bloc = ... to
 --     complete as well
+--   LIMIT: The maximum number of nodes to print.  Defaults to 2000.  
 --
 -- Example:
 -- __emacs_lua_complete({'table','ins'},{{var="xyz",lib="libfile"}},
@@ -29,8 +30,10 @@ function __emacs_lua_complete(parts, libs, locals, limit)
       self.head = self.head+1  return self[self.head]
    end
 
+   local cnt, limit=0, limit or 2000 -- max nodes to print
+
    -- Mirror the globals table
-   local globals,cnt,limit = {}, 0, limit or 2000
+   local globals = {}
    for k,v in pairs(_G) do globals[k] = v end
    
    -- Add libs and locals
@@ -45,7 +48,7 @@ function __emacs_lua_complete(parts, libs, locals, limit)
    end
 
    -- Descend the tree to the limit of dotted parts
-   local g,pre = globals, ""
+   local g, pre = globals, ""
    for i, part in ipairs(parts) do
       if not g then break end	-- should always exist
       if i < #parts then -- keep descending
