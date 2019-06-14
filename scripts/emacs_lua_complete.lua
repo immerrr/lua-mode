@@ -46,16 +46,16 @@ function __emacs_lua_complete(parts, libs, locals, limit)
 
    -- Descend the tree to the limit of dotted parts
    local g,pre = globals, ""
-   for i = 1,#parts do
+   for i, part in ipairs(parts) do
       if not g then break end	-- should always exist
       if i < #parts then -- keep descending
-	 pre = (i > 1 and pre.."." or "") .. parts[i]
-	 g = g[parts[i]]
+	 pre = (i > 1 and pre.."." or "") .. part
+	 g = g[part]
       else  -- final part; seed the queue with any matching tables
 	 for k,v in pairs(g) do
 	    if type(k) == "string" and
-	       k:sub(1,#parts[i]) == parts[i] and
-	       (parts[i]:sub(1,1) == "_" or k:sub(1,1) ~= "_")
+	       k:sub(1,#part) == part and
+	       (part:sub(1,1) == "_" or k:sub(1,1) ~= "_")
 	    then
 	       local dpath=(i > 1 and pre .. "." or "") .. k
 	       print(dpath)
