@@ -1101,8 +1101,11 @@ DIRECTION has to be either 'forward or 'backward."
 (defun lua-goto-matching-block-token (&optional parse-start direction)
   "Find block begion/end token matching the one at the point.
 This function moves the point to the token that matches the one
-at the current point. Returns the point position of the first character of
-the matching token if successful, nil otherwise."
+at the current point.  Returns the point position of the first character of
+the matching token if successful, nil otherwise.
+
+Optional PARSE-START is a position to which the point should be moved first.
+DIRECTION has to be 'forward or 'backward ('forward by default)."
   (if parse-start (goto-char parse-start))
   (let ((case-fold-search nil))
     (if (looking-at lua-indentation-modifier-regexp)
@@ -1114,7 +1117,10 @@ the matching token if successful, nil otherwise."
 (defun lua-goto-matching-block (&optional noreport)
   "Go to the keyword balancing the one under the point.
 If the point is on a keyword/brace that starts a block, go to the
-matching keyword that ends the block, and vice versa."
+matching keyword that ends the block, and vice versa.
+
+If optional NOREPORT is non-nil, it won't flag an error if there
+is no block open/close open."
   (interactive)
   ;; search backward to the beginning of the keyword if necessary
   (if (eq (char-syntax (following-char)) ?w)
@@ -1129,7 +1135,7 @@ matching keyword that ends the block, and vice versa."
   "Move 1 line forward (back if BACK is non-nil) skipping blank lines.
 
 Moves point 1 line forward (or backward) skipping lines that contain
-no Lua code besides comments. The point is put to the beginning of
+no Lua code besides comments.  The point is put to the beginning of
 the line.
 
 Returns final value of point as integer or nil if operation failed."
@@ -1160,7 +1166,7 @@ Returns final value of point as integer or nil if operation failed."
                  t)
      "\\)"
      "\\s *\\="))
-  "Regexp that matches the ending of a line that needs continuation
+  "Regexp that matches the ending of a line that needs continuation.
 
 This regexp starts from eol and looks for a binary operator or an unclosed
 block intro (i.e. 'for' without 'do' or 'if' without 'then') followed by
@@ -1179,15 +1185,15 @@ an optional whitespace till the end of the line.")
                  t)
      "\\($\\|[^" lua-operator-class "]\\)"
      "\\)"))
-  "Regexp that matches a line that continues previous one
+  "Regexp that matches a line that continues previous one.
 
 This regexp means, starting from point there is an optional whitespace followed
-by Lua binary operator. Lua is very liberal when it comes to continuation line,
+by Lua binary operator.  Lua is very liberal when it comes to continuation line,
 so we're safe to assume that every line that starts with a binop continues
 previous one even though it looked like an end-of-statement.")
 
 (defun lua-last-token-continues-p ()
-  "Returns true if the last token on this line is a continuation token."
+  "Return non-nil if the last token on this line is a continuation token."
   (let ((line-begin (line-beginning-position))
         (line-end (line-end-position)))
     (save-excursion
@@ -1201,7 +1207,7 @@ previous one even though it looked like an end-of-statement.")
       (re-search-backward lua-cont-eol-regexp line-begin t))))
 
 (defun lua-first-token-continues-p ()
-  "Returns true if the first token on this line is a continuation token."
+  "Return non-nil if the first token on this line is a continuation token."
   (let ((line-end (line-end-position)))
     (save-excursion
       (beginning-of-line)
@@ -1219,14 +1225,15 @@ previous one even though it looked like an end-of-statement.")
      "\\_>\\)")))
 
 (defun lua-first-token-starts-block-p ()
-  "Returns true if the first token on this line is a block starter token."
+  "Return non-nil if the first token on this line is a block starter token."
   (let ((line-end (line-end-position)))
     (save-excursion
       (beginning-of-line)
       (re-search-forward (concat "\\s *" lua-block-starter-regexp) line-end t))))
 
 (defun lua-is-continuing-statement-p (&optional parse-start)
-  "Return non-nil if the line continues a statement.
+  "Return non-nil if the line at PARSE-START continues a statement.
+
 More specifically, return the point in the line that is continued.
 The criteria for a continuing statement are:
 
@@ -1246,8 +1253,10 @@ The criteria for a continuing statement are:
                     (lua-last-token-continues-p)))))))
 
 (defun lua-make-indentation-info-pair (found-token found-pos)
-  "This is a helper function to lua-calculate-indentation-info. Don't
-use standalone."
+  "Create a pair from FOUND-TOKEN and FOUND-POS for indentation calculation.
+
+This is a helper function to lua-calculate-indentation-info.
+Don't use standalone."
   (cond
    ;; function is a bit tricky to indent right. They can appear in a lot ot
    ;; different contexts. Until I find a shortcut, I'll leave it with a simple
@@ -1321,17 +1330,17 @@ use standalone."
                       (- lua-indent-level))))))
 
 (defun  lua-add-indentation-info-pair (pair info)
-  "Add the given indentation info pair to the list of indentation information.
+  "Add the given indentation info PAIR to the list of indentation INFO.
 This function has special case handling for two tokens: remove-matching,
-and replace-matching. These two tokens are cleanup tokens that remove or
+and replace-matching.  These two tokens are cleanup tokens that remove or
 alter the effect of a previously recorded indentation info.
 
 When a remove-matching token is encountered, the last recorded info, i.e.
-the car of the list is removed. This is used to roll-back an indentation of a
+the car of the list is removed.  This is used to roll-back an indentation of a
 block opening statement when it is closed.
 
 When a replace-matching token is seen, the last recorded info is removed,
-and the cdr of the replace-matching info is added in its place. This is used
+and the cdr of the replace-matching info is added in its place.  This is used
 when a middle-of the block (the only case is 'else') is seen on the same line
 the block is opened."
   (cond
