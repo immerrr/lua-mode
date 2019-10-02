@@ -20,7 +20,7 @@ modules to your Emacs and keeping them up-to-date. Once you have **el-get** set 
 and updating is no more than
 
     <M-x> el-get-update "lua-mode"`
-    
+
 Please, consult with [el-get documentation](https://github.com/dimitri/el-get/blob/master/README.md) for further information.
 
 ### MANUAL INSTALLATION
@@ -53,6 +53,7 @@ The following variables are available for customization (see more via `M-x custo
 
 - Var `lua-indent-level` (default `3`): indentation offset in spaces
 - Var `lua-indent-string-contents` (default `nil`): set to `t` if you like to have contents of multiline strings to be indented like comments
+- Var `lua-indent-nested-block-content-align` (default `t`) set to `nil` to stop aligning the content of nested blocks with the open parenthesis
 - Var `lua-mode-hook`: list of functions to execute when lua-mode is initialized
 - Var `lua-documentation-url` (default `"http://www.lua.org/manual/5.1/manual.html#pdf-"`): base URL for documentation lookup
 - Var `lua-documentation-function` (default `browse-url`): function used to show documentation (`eww` is a viable alternative for Emacs 25)

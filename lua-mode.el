@@ -52,6 +52,9 @@
 ;; - Var `lua-indent-string-contents':
 ;;   set to `t` if you like to have contents of multiline strings to be
 ;;   indented like comments
+;; - Var `lua-indent-nested-block-content-align':
+;;   set to `nil' to stop aligning the content of nested blocks with the
+;;   open parenthesis
 ;; - Var `lua-mode-hook':
 ;;   list of functions to execute when lua-mode is initialized
 ;; - Var `lua-documentation-url':
@@ -356,6 +359,13 @@ Usually, stdin:XX line number points to nowhere."
 (defcustom lua-indent-string-contents nil
   "If non-nil, contents of multiline string will be indented.
 Otherwise leading amount of whitespace on each line is preserved."
+  :group 'lua
+  :type 'boolean)
+
+(defcustom lua-indent-nested-block-content-align t
+  "If non-nil, the contents of nested blocks are indented to
+align with the column of the opening parenthesis, rather than
+just forward by `lua-indent-level'."
   :group 'lua
   :type 'boolean)
 
@@ -1260,7 +1270,8 @@ use standalone."
     (cons 'relative lua-indent-level))
 
    ;; block openers
-   ((member found-token (list "{" "(" "["))
+   ((and lua-indent-nested-block-content-align
+	 (member found-token (list "{" "(" "[")))
     (save-excursion
       (let ((found-bol (line-beginning-position)))
         (forward-comment (point-max))
