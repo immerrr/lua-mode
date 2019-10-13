@@ -1,3 +1,4 @@
+dist: xenial
 language: emacs-lisp
 sudo: no
 addons:
@@ -5,6 +6,9 @@ addons:
     packages:
     - lua5.2
 env:
+  - EVM_EMACS=emacs-26.1-travis-linux-xenial
+  - EVM_EMACS=emacs-26.2-travis-linux-xenial
+  - EVM_EMACS=emacs-git-snapshot-travis-linux-xenial
   - EVM_EMACS=emacs-24.3-travis
   - EVM_EMACS=emacs-24.4-travis
   - EVM_EMACS=emacs-24.5-travis
