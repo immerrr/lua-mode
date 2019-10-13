@@ -101,80 +101,120 @@
   (require 'compile))
 
 (eval-and-compile
-  (defvar lua-rx-constituents)
-  (defvar rx-parent)
+  (if (fboundp #'rx-let)
+      (progn
+        ;; Emacs 27+ way of customizing rx
+        (defvar lua--rx-bindings)
 
-  (defun lua-rx-to-string (form &optional no-group)
-    "Lua-specific replacement for `rx-to-string'.
+        (setq
+         lua--rx-bindings
+         '((symbol (&rest x) (seq symbol-start (or x) symbol-end))
+           (ws (* (any " \t")))
+           (ws+ (+ (any " \t")))
+
+           (lua-name (symbol (seq (+ (any alpha "_")) (* (any alnum "_")))))
+           (lua-funcname (seq lua-name (* ws "." ws lua-name)
+                           (opt ws ":" ws lua-name)))
+           (lua-funcheader
+            ;; Outer (seq ...) is here to shy-group the definition
+            (seq (or (seq (symbol "function") ws (group-n 1 lua-funcname))
+                     (seq (group-n 1 lua-funcname) ws "=" ws
+                          (symbol "function")))))
+           (lua-number
+            (seq (or (seq (+ digit) (opt ".") (* digit))
+                         (seq (* digit) (opt ".") (+ digit)))
+                     (opt (regexp "[eE][+-]?[0-9]+"))))
+           (lua-assignment-op (seq "=" (or buffer-end (not (any "=")))))
+           (lua-token (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
+                       ">" "=" ";" ":" "," "." ".." "..."))
+           (lua-keyword
+            (symbol "and" "break" "do" "else" "elseif" "end"  "for" "function"
+                    "goto" "if" "in" "local" "not" "or" "repeat" "return"
+                    "then" "until" "while"))))
+
+        (defmacro lua-rx (&rest regexps)
+          (eval `(rx-let ,lua--rx-bindings
+                   (rx ,@regexps))))
+
+        (defun lua-rx-to-string (form &optional no-group)
+          (rx-let-eval lua--rx-bindings
+            (rx-to-string form no-group))))
+    (progn
+      ;; Pre-Emacs 27 way of customizing rx
+      (defvar lua-rx-constituents)
+      (defvar rx-parent)
+
+      (defun lua-rx-to-string (form &optional no-group)
+        "Lua-specific replacement for `rx-to-string'.
 
 See `rx-to-string' documentation for more information FORM and
 NO-GROUP arguments."
-    (let ((rx-constituents lua-rx-constituents))
-      (rx-to-string form no-group)))
+        (let ((rx-constituents lua-rx-constituents))
+          (rx-to-string form no-group)))
 
-  (defmacro lua-rx (&rest regexps)
-    "Lua-specific replacement for `rx'.
+      (defmacro lua-rx (&rest regexps)
+        "Lua-specific replacement for `rx'.
 
 See `rx' documentation for more information about REGEXPS param."
-    (cond ((null regexps)
-           (error "No regexp"))
-          ((cdr regexps)
-           (lua-rx-to-string `(and ,@regexps) t))
-          (t
-           (lua-rx-to-string (car regexps) t))))
+        (cond ((null regexps)
+               (error "No regexp"))
+              ((cdr regexps)
+               (lua-rx-to-string `(and ,@regexps) t))
+              (t
+               (lua-rx-to-string (car regexps) t))))
 
-  (defun lua--new-rx-form (form)
-    "Add FORM definition to `lua-rx' macro.
+      (defun lua--new-rx-form (form)
+        "Add FORM definition to `lua-rx' macro.
 
 FORM is a cons (NAME . DEFN), see more in `rx-constituents' doc.
 This function enables specifying new definitions using old ones:
 if DEFN is a list that starts with `:rx' symbol its second
 element is itself expanded with `lua-rx-to-string'. "
-    (let ((name (car form))
-          (form-definition (cdr form)))
-      (when (and (listp form-definition) (eq ':rx (car form-definition)))
-        (setcdr form (lua-rx-to-string (cadr form-definition) 'nogroup)))
-      (push form lua-rx-constituents)))
+        (let ((name (car form))
+              (form-definition (cdr form)))
+          (when (and (listp form-definition) (eq ':rx (car form-definition)))
+            (setcdr form (lua-rx-to-string (cadr form-definition) 'nogroup)))
+          (push form lua-rx-constituents)))
 
-  (defun lua--rx-symbol (form)
-    ;; form is a list (symbol XXX ...)
-    ;; Skip initial 'symbol
-    (setq form (cdr form))
-    ;; If there's only one element, take it from the list, otherwise wrap the
-    ;; whole list into `(or XXX ...)' form.
-    (setq form (if (eq 1 (length form))
-                   (car form)
-                 (append '(or) form)))
-    (rx-form `(seq symbol-start ,form symbol-end) rx-parent))
+      (defun lua--rx-symbol (form)
+        ;; form is a list (symbol XXX ...)
+        ;; Skip initial 'symbol
+        (setq form (cdr form))
+        ;; If there's only one element, take it from the list, otherwise wrap the
+        ;; whole list into `(or XXX ...)' form.
+        (setq form (if (eq 1 (length form))
+                       (car form)
+                     (append '(or) form)))
+        (rx-form `(seq symbol-start ,form symbol-end) rx-parent))
 
-  (setq lua-rx-constituents (copy-sequence rx-constituents))
+      (setq lua-rx-constituents (copy-sequence rx-constituents))
 
-  (mapc #'lua--new-rx-form
-        `((symbol lua--rx-symbol 1 nil)
-          (ws . "[ \t]*") (ws+ . "[ \t]+")
-          (lua-name :rx (symbol (regexp "[[:alpha:]_]+[[:alnum:]_]*")))
-          (lua-funcname
-           :rx (seq lua-name (* ws "." ws lua-name)
-                    (opt ws ":" ws lua-name)))
-          (lua-funcheader
-           ;; Outer (seq ...) is here to shy-group the definition
-           :rx (seq (or (seq (symbol "function") ws (group-n 1 lua-funcname))
-                        (seq (group-n 1 lua-funcname) ws "=" ws
-                             (symbol "function")))))
-          (lua-number
-           :rx (seq (or (seq (+ digit) (opt ".") (* digit))
-                        (seq (* digit) (opt ".") (+ digit)))
-                    (opt (regexp "[eE][+-]?[0-9]+"))))
-          (lua-assignment-op
-           :rx (seq "=" (or buffer-end (not (any "=")))))
-          (lua-token
-           :rx (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
-                   ">" "=" ";" ":" "," "." ".." "..."))
-          (lua-keyword
-           :rx (symbol "and" "break" "do" "else" "elseif" "end"  "for" "function"
-                       "goto" "if" "in" "local" "not" "or" "repeat" "return"
-                       "then" "until" "while")))
-        ))
+      (mapc #'lua--new-rx-form
+            `((symbol lua--rx-symbol 1 nil)
+              (ws . "[ \t]*") (ws+ . "[ \t]+")
+              (lua-name :rx (symbol (regexp "[[:alpha:]_]+[[:alnum:]_]*")))
+              (lua-funcname
+               :rx (seq lua-name (* ws "." ws lua-name)
+                        (opt ws ":" ws lua-name)))
+              (lua-funcheader
+               ;; Outer (seq ...) is here to shy-group the definition
+               :rx (seq (or (seq (symbol "function") ws (group-n 1 lua-funcname))
+                            (seq (group-n 1 lua-funcname) ws "=" ws
+                                 (symbol "function")))))
+              (lua-number
+               :rx (seq (or (seq (+ digit) (opt ".") (* digit))
+                            (seq (* digit) (opt ".") (+ digit)))
+                        (opt (regexp "[eE][+-]?[0-9]+"))))
+              (lua-assignment-op
+               :rx (seq "=" (or buffer-end (not (any "=")))))
+              (lua-token
+               :rx (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
+                       ">" "=" ";" ":" "," "." ".." "..."))
+              (lua-keyword
+               :rx (symbol "and" "break" "do" "else" "elseif" "end"  "for" "function"
+                           "goto" "if" "in" "local" "not" "or" "repeat" "return"
+                           "then" "until" "while")))
+            ))))
 
 
 ;; Local variables
