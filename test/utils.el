@@ -139,11 +139,12 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
   (butlast
    (split-string
     (with-lua-buffer
-     (insert (replace-regexp-in-string "^\\s *" "" (lua-join-lines strs)))
-     (font-lock-fontify-buffer)
-     (indent-region (point-min) (point-max))
-     (buffer-substring-no-properties
-      (point-min) (point-max)))
+     (let ((inhibit-message t))
+       (insert (replace-regexp-in-string "^\\s *" "" (lua-join-lines strs)))
+       (font-lock-fontify-buffer)
+       (indent-region (point-min) (point-max))
+       (buffer-substring-no-properties
+        (point-min) (point-max))))
     "\n" nil)))
 
 (defun lua-insert-goto-<> (strs)

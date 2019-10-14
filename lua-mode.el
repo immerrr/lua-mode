@@ -101,80 +101,120 @@
   (require 'compile))
 
 (eval-and-compile
-  (defvar lua-rx-constituents)
-  (defvar rx-parent)
+  (if (fboundp #'rx-let)
+      (progn
+        ;; Emacs 27+ way of customizing rx
+        (defvar lua--rx-bindings)
 
-  (defun lua-rx-to-string (form &optional no-group)
-    "Lua-specific replacement for `rx-to-string'.
+        (setq
+         lua--rx-bindings
+         '((symbol (&rest x) (seq symbol-start (or x) symbol-end))
+           (ws (* (any " \t")))
+           (ws+ (+ (any " \t")))
+
+           (lua-name (symbol (seq (+ (any alpha "_")) (* (any alnum "_")))))
+           (lua-funcname (seq lua-name (* ws "." ws lua-name)
+                           (opt ws ":" ws lua-name)))
+           (lua-funcheader
+            ;; Outer (seq ...) is here to shy-group the definition
+            (seq (or (seq (symbol "function") ws (group-n 1 lua-funcname))
+                     (seq (group-n 1 lua-funcname) ws "=" ws
+                          (symbol "function")))))
+           (lua-number
+            (seq (or (seq (+ digit) (opt ".") (* digit))
+                         (seq (* digit) (opt ".") (+ digit)))
+                     (opt (regexp "[eE][+-]?[0-9]+"))))
+           (lua-assignment-op (seq "=" (or buffer-end (not (any "=")))))
+           (lua-token (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
+                       ">" "=" ";" ":" "," "." ".." "..."))
+           (lua-keyword
+            (symbol "and" "break" "do" "else" "elseif" "end"  "for" "function"
+                    "goto" "if" "in" "local" "not" "or" "repeat" "return"
+                    "then" "until" "while"))))
+
+        (defmacro lua-rx (&rest regexps)
+          (eval `(rx-let ,lua--rx-bindings
+                   (rx ,@regexps))))
+
+        (defun lua-rx-to-string (form &optional no-group)
+          (rx-let-eval lua--rx-bindings
+            (rx-to-string form no-group))))
+    (progn
+      ;; Pre-Emacs 27 way of customizing rx
+      (defvar lua-rx-constituents)
+      (defvar rx-parent)
+
+      (defun lua-rx-to-string (form &optional no-group)
+        "Lua-specific replacement for `rx-to-string'.
 
 See `rx-to-string' documentation for more information FORM and
 NO-GROUP arguments."
-    (let ((rx-constituents lua-rx-constituents))
-      (rx-to-string form no-group)))
+        (let ((rx-constituents lua-rx-constituents))
+          (rx-to-string form no-group)))
 
-  (defmacro lua-rx (&rest regexps)
-    "Lua-specific replacement for `rx'.
+      (defmacro lua-rx (&rest regexps)
+        "Lua-specific replacement for `rx'.
 
 See `rx' documentation for more information about REGEXPS param."
-    (cond ((null regexps)
-           (error "No regexp"))
-          ((cdr regexps)
-           (lua-rx-to-string `(and ,@regexps) t))
-          (t
-           (lua-rx-to-string (car regexps) t))))
+        (cond ((null regexps)
+               (error "No regexp"))
+              ((cdr regexps)
+               (lua-rx-to-string `(and ,@regexps) t))
+              (t
+               (lua-rx-to-string (car regexps) t))))
 
-  (defun lua--new-rx-form (form)
-    "Add FORM definition to `lua-rx' macro.
+      (defun lua--new-rx-form (form)
+        "Add FORM definition to `lua-rx' macro.
 
 FORM is a cons (NAME . DEFN), see more in `rx-constituents' doc.
 This function enables specifying new definitions using old ones:
 if DEFN is a list that starts with `:rx' symbol its second
 element is itself expanded with `lua-rx-to-string'. "
-    (let ((name (car form))
-          (form-definition (cdr form)))
-      (when (and (listp form-definition) (eq ':rx (car form-definition)))
-        (setcdr form (lua-rx-to-string (cadr form-definition) 'nogroup)))
-      (push form lua-rx-constituents)))
+        (let ((name (car form))
+              (form-definition (cdr form)))
+          (when (and (listp form-definition) (eq ':rx (car form-definition)))
+            (setcdr form (lua-rx-to-string (cadr form-definition) 'nogroup)))
+          (push form lua-rx-constituents)))
 
-  (defun lua--rx-symbol (form)
-    ;; form is a list (symbol XXX ...)
-    ;; Skip initial 'symbol
-    (setq form (cdr form))
-    ;; If there's only one element, take it from the list, otherwise wrap the
-    ;; whole list into `(or XXX ...)' form.
-    (setq form (if (eq 1 (length form))
-                   (car form)
-                 (append '(or) form)))
-    (rx-form `(seq symbol-start ,form symbol-end) rx-parent))
+      (defun lua--rx-symbol (form)
+        ;; form is a list (symbol XXX ...)
+        ;; Skip initial 'symbol
+        (setq form (cdr form))
+        ;; If there's only one element, take it from the list, otherwise wrap the
+        ;; whole list into `(or XXX ...)' form.
+        (setq form (if (eq 1 (length form))
+                       (car form)
+                     (append '(or) form)))
+        (rx-form `(seq symbol-start ,form symbol-end) rx-parent))
 
-  (setq lua-rx-constituents (copy-sequence rx-constituents))
+      (setq lua-rx-constituents (copy-sequence rx-constituents))
 
-  (mapc #'lua--new-rx-form
-        `((symbol lua--rx-symbol 1 nil)
-          (ws . "[ \t]*") (ws+ . "[ \t]+")
-          (lua-name :rx (symbol (regexp "[[:alpha:]_]+[[:alnum:]_]*")))
-          (lua-funcname
-           :rx (seq lua-name (* ws "." ws lua-name)
-                    (opt ws ":" ws lua-name)))
-          (lua-funcheader
-           ;; Outer (seq ...) is here to shy-group the definition
-           :rx (seq (or (seq (symbol "function") ws (group-n 1 lua-funcname))
-                        (seq (group-n 1 lua-funcname) ws "=" ws
-                             (symbol "function")))))
-          (lua-number
-           :rx (seq (or (seq (+ digit) (opt ".") (* digit))
-                        (seq (* digit) (opt ".") (+ digit)))
-                    (opt (regexp "[eE][+-]?[0-9]+"))))
-          (lua-assignment-op
-           :rx (seq "=" (or buffer-end (not (any "=")))))
-          (lua-token
-           :rx (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
-                   ">" "=" ";" ":" "," "." ".." "..."))
-          (lua-keyword
-           :rx (symbol "and" "break" "do" "else" "elseif" "end"  "for" "function"
-                       "goto" "if" "in" "local" "not" "or" "repeat" "return"
-                       "then" "until" "while")))
-        ))
+      (mapc #'lua--new-rx-form
+            `((symbol lua--rx-symbol 1 nil)
+              (ws . "[ \t]*") (ws+ . "[ \t]+")
+              (lua-name :rx (symbol (regexp "[[:alpha:]_]+[[:alnum:]_]*")))
+              (lua-funcname
+               :rx (seq lua-name (* ws "." ws lua-name)
+                        (opt ws ":" ws lua-name)))
+              (lua-funcheader
+               ;; Outer (seq ...) is here to shy-group the definition
+               :rx (seq (or (seq (symbol "function") ws (group-n 1 lua-funcname))
+                            (seq (group-n 1 lua-funcname) ws "=" ws
+                                 (symbol "function")))))
+              (lua-number
+               :rx (seq (or (seq (+ digit) (opt ".") (* digit))
+                            (seq (* digit) (opt ".") (+ digit)))
+                        (opt (regexp "[eE][+-]?[0-9]+"))))
+              (lua-assignment-op
+               :rx (seq "=" (or buffer-end (not (any "=")))))
+              (lua-token
+               :rx (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
+                       ">" "=" ";" ":" "," "." ".." "..."))
+              (lua-keyword
+               :rx (symbol "and" "break" "do" "else" "elseif" "end"  "for" "function"
+                           "goto" "if" "in" "local" "not" "or" "repeat" "return"
+                           "then" "until" "while")))
+            ))))
 
 
 ;; Local variables
@@ -1101,8 +1141,11 @@ DIRECTION has to be either 'forward or 'backward."
 (defun lua-goto-matching-block-token (&optional parse-start direction)
   "Find block begion/end token matching the one at the point.
 This function moves the point to the token that matches the one
-at the current point. Returns the point position of the first character of
-the matching token if successful, nil otherwise."
+at the current point.  Returns the point position of the first character of
+the matching token if successful, nil otherwise.
+
+Optional PARSE-START is a position to which the point should be moved first.
+DIRECTION has to be 'forward or 'backward ('forward by default)."
   (if parse-start (goto-char parse-start))
   (let ((case-fold-search nil))
     (if (looking-at lua-indentation-modifier-regexp)
@@ -1114,7 +1157,10 @@ the matching token if successful, nil otherwise."
 (defun lua-goto-matching-block (&optional noreport)
   "Go to the keyword balancing the one under the point.
 If the point is on a keyword/brace that starts a block, go to the
-matching keyword that ends the block, and vice versa."
+matching keyword that ends the block, and vice versa.
+
+If optional NOREPORT is non-nil, it won't flag an error if there
+is no block open/close open."
   (interactive)
   ;; search backward to the beginning of the keyword if necessary
   (if (eq (char-syntax (following-char)) ?w)
@@ -1129,7 +1175,7 @@ matching keyword that ends the block, and vice versa."
   "Move 1 line forward (back if BACK is non-nil) skipping blank lines.
 
 Moves point 1 line forward (or backward) skipping lines that contain
-no Lua code besides comments. The point is put to the beginning of
+no Lua code besides comments.  The point is put to the beginning of
 the line.
 
 Returns final value of point as integer or nil if operation failed."
@@ -1160,7 +1206,7 @@ Returns final value of point as integer or nil if operation failed."
                  t)
      "\\)"
      "\\s *\\="))
-  "Regexp that matches the ending of a line that needs continuation
+  "Regexp that matches the ending of a line that needs continuation.
 
 This regexp starts from eol and looks for a binary operator or an unclosed
 block intro (i.e. 'for' without 'do' or 'if' without 'then') followed by
@@ -1179,15 +1225,15 @@ an optional whitespace till the end of the line.")
                  t)
      "\\($\\|[^" lua-operator-class "]\\)"
      "\\)"))
-  "Regexp that matches a line that continues previous one
+  "Regexp that matches a line that continues previous one.
 
 This regexp means, starting from point there is an optional whitespace followed
-by Lua binary operator. Lua is very liberal when it comes to continuation line,
+by Lua binary operator.  Lua is very liberal when it comes to continuation line,
 so we're safe to assume that every line that starts with a binop continues
 previous one even though it looked like an end-of-statement.")
 
 (defun lua-last-token-continues-p ()
-  "Returns true if the last token on this line is a continuation token."
+  "Return non-nil if the last token on this line is a continuation token."
   (let ((line-begin (line-beginning-position))
         (line-end (line-end-position)))
     (save-excursion
@@ -1201,7 +1247,7 @@ previous one even though it looked like an end-of-statement.")
       (re-search-backward lua-cont-eol-regexp line-begin t))))
 
 (defun lua-first-token-continues-p ()
-  "Returns true if the first token on this line is a continuation token."
+  "Return non-nil if the first token on this line is a continuation token."
   (let ((line-end (line-end-position)))
     (save-excursion
       (beginning-of-line)
@@ -1219,14 +1265,15 @@ previous one even though it looked like an end-of-statement.")
      "\\_>\\)")))
 
 (defun lua-first-token-starts-block-p ()
-  "Returns true if the first token on this line is a block starter token."
+  "Return non-nil if the first token on this line is a block starter token."
   (let ((line-end (line-end-position)))
     (save-excursion
       (beginning-of-line)
       (re-search-forward (concat "\\s *" lua-block-starter-regexp) line-end t))))
 
 (defun lua-is-continuing-statement-p (&optional parse-start)
-  "Return non-nil if the line continues a statement.
+  "Return non-nil if the line at PARSE-START continues a statement.
+
 More specifically, return the point in the line that is continued.
 The criteria for a continuing statement are:
 
@@ -1246,8 +1293,10 @@ The criteria for a continuing statement are:
                     (lua-last-token-continues-p)))))))
 
 (defun lua-make-indentation-info-pair (found-token found-pos)
-  "This is a helper function to lua-calculate-indentation-info. Don't
-use standalone."
+  "Create a pair from FOUND-TOKEN and FOUND-POS for indentation calculation.
+
+This is a helper function to lua-calculate-indentation-info.
+Don't use standalone."
   (cond
    ;; function is a bit tricky to indent right. They can appear in a lot ot
    ;; different contexts. Until I find a shortcut, I'll leave it with a simple
@@ -1321,17 +1370,17 @@ use standalone."
                       (- lua-indent-level))))))
 
 (defun  lua-add-indentation-info-pair (pair info)
-  "Add the given indentation info pair to the list of indentation information.
+  "Add the given indentation info PAIR to the list of indentation INFO.
 This function has special case handling for two tokens: remove-matching,
-and replace-matching. These two tokens are cleanup tokens that remove or
+and replace-matching.  These two tokens are cleanup tokens that remove or
 alter the effect of a previously recorded indentation info.
 
 When a remove-matching token is encountered, the last recorded info, i.e.
-the car of the list is removed. This is used to roll-back an indentation of a
+the car of the list is removed.  This is used to roll-back an indentation of a
 block opening statement when it is closed.
 
 When a replace-matching token is seen, the last recorded info is removed,
-and the cdr of the replace-matching info is added in its place. This is used
+and the cdr of the replace-matching info is added in its place.  This is used
 when a middle-of the block (the only case is 'else') is seen on the same line
 the block is opened."
   (cond

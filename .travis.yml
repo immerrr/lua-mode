@@ -1,20 +1,28 @@
-language: emacs-lisp
+dist: xenial
+language: minimal
 sudo: no
 addons:
   apt:
     packages:
     - lua5.2
 env:
+  - EVM_EMACS=emacs-26.1-travis-linux-xenial
+  - EVM_EMACS=emacs-26.2-travis-linux-xenial
+  - EVM_EMACS=emacs-git-snapshot-travis-linux-xenial
   - EVM_EMACS=emacs-24.3-travis
   - EVM_EMACS=emacs-24.4-travis
   - EVM_EMACS=emacs-24.5-travis
   - EVM_EMACS=emacs-25.1-travis
   - EVM_EMACS=emacs-25.2-travis
   - EVM_EMACS=emacs-25.3-travis
-#   - EVM_EMACS=emacs-git-snapshot-travis
+matrix:
+  allow_failures:
+    - env: EVM_EMACS=emacs-git-snapshot-travis-linux-xenial
+  fast_finish: true
 before_install:
   - curl -fsSkL https://gist.github.com/rejeep/ebcd57c3af83b049833b/raw > travis.sh && source ./travis.sh
   - evm install "$EVM_EMACS" --use --skip
+  - emacs --version
 install:
   - cask install
 script:

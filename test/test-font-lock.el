@@ -81,7 +81,20 @@ _table.sort(foobar)
 
 
 (describe "Fontification of function headers"
-  (it "fontifies simple headers"
+  (it "fontifies function <name>(...) headers"
+    (expect "function bar() end"
+            :to-be-fontified-as '(("function" keyword "bar" function-name "end" keyword))))
+  (it "fontifies local function <name>(...) headers"
+    (expect "local function baz() end"
+            :to-be-fontified-as '(("local" keyword "function" keyword "baz" function-name "end" keyword))))
+  (it "fontifies <name> = function (...) headers"
+    (expect "qux = function() end"
+            :to-be-fontified-as '(("qux" function-name "function" keyword "end" keyword))))
+  (it "fontifies local <name> = function (...) headers"
+    (expect "local quux = function() end"
+            :to-be-fontified-as '(("local" keyword "quux" function-name "function" keyword "end" keyword))))
+
+  (it "fontifies different variations of headers altogether"
     (expect
      ;; Check all defun variants, check embedded defuns
      "\
