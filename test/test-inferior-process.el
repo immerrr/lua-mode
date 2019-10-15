@@ -3,7 +3,7 @@
                                        default-directory))
               "utils.el") nil 'nomessage 'nosuffix)
 (require 'cl-lib)
-
+(require 'comint)
 
 
 (describe "Hiding process buffer does not switch current window"
@@ -29,6 +29,16 @@
        (expect lua-process-buffer :to-be nil)
        (lua-hide-process-buffer)
        (expect (get-buffer-window cur-buf))))))
+
+(describe "Compilation minor mode"
+  (it "sets comint-prompt-regexp in process buffer"
+    (with-lua-buffer
+     (lua-start-process)
+     (with-current-buffer lua-process-buffer
+       (expect "" :not :to-match comint-prompt-regexp)
+       (expect "> " :to-match comint-prompt-regexp))
+     (expect comint-prompt-regexp :to-equal "^"))
+    (expect comint-prompt-regexp :to-equal "^")))
 
 
 (require 'compile)
