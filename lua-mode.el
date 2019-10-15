@@ -709,9 +709,6 @@ Groups 6-9 can be used in any of argument regexps."
   :abbrev-table lua-mode-abbrev-table
   :syntax-table lua-mode-syntax-table
   :group 'lua
-  (setq comint-prompt-regexp lua-prompt-regexp)
-
-
   (setq-local font-lock-defaults '(lua-font-lock-keywords ;; keywords
                                         nil                    ;; keywords-only
                                         nil                    ;; case-fold
@@ -1738,7 +1735,8 @@ When called interactively, switch to the process buffer."
     (setq compilation-error-regexp-alist
           (cons (list lua-traceback-line-re 1 2)
                 compilation-error-regexp-alist))
-    (compilation-shell-minor-mode 1))
+    (compilation-shell-minor-mode 1)
+    (setq-local comint-prompt-regexp lua-prompt-regexp))
 
   ;; when called interactively, switch to process buffer
   (if (called-interactively-p 'any)
