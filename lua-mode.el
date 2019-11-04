@@ -1836,11 +1836,11 @@ This function just searches for a `end' at the beginning of a line."
       (goto-char (point-min))
       (while (re-search-forward "[\"'\\\t\\\n]" nil t)
         (cond
-	 ((string= (match-string 0) "\n")
-	  (replace-match "\\\\n"))
-	 ((string= (match-string 0) "\t")
-	  (replace-match "\\\\t"))
-	 (t
+         ((string= (match-string 0) "\n")
+          (replace-match "\\\\n"))
+         ((string= (match-string 0) "\t")
+          (replace-match "\\\\t"))
+         (t
           (replace-match "\\\\\\&" t))))
       (concat "'" (buffer-string) "'"))))
 
