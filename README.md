@@ -9,17 +9,44 @@ If you have a problem or a suggestion about **lua-mode**, please, let me know ab
 
 ## INSTALLATION
 
+### MELPA INSTALLATION
+
+**lua-mode**'s officially supported installation method is from [MELPA](https://melpa.org/#/) archive. 
+
+To get started, enable installing packages from MELPA:
+
+```lisp
+(require 'package)
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+(package-initialize)
+```
+
+To fetch the list of packages you can do
+
+```
+    <M-x> package-refresh-contents
+```
+
+And after that **lua-mode** can be installed with
+
+```
+    <M-x> package-install "lua-mode"
+```
+
+Please, refer to [MELPA documentation](https://melpa.org/#/getting-started) and [Emacs documentation on
+packages](https://www.gnu.org/software/emacs/manual/html_node/emacs/Packages.html) for further information.
+
 ### EL-GET INSTALLATION
 
 [El-get](https://github.com/dimitri/el-get) is a package manager which greatly simplifies adding
-modules to your Emacs and keeping them up-to-date. Once you have **el-get** set up, installing
-**lua-mode** can be done with
+modules to your Emacs and keeping them up-to-date. Once you have **el-get** set up, 
+**lua-mode** can also be installed with
 
     <M-x> el-get-install "lua-mode"
 
 and updating is no more than
 
-    <M-x> el-get-update "lua-mode"`
+    <M-x> el-get-update "lua-mode"
 
 Please, consult with [el-get documentation](https://github.com/dimitri/el-get/blob/master/README.md) for further information.
 
