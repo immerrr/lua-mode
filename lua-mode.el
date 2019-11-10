@@ -40,7 +40,7 @@
 
 ;;; Commentary:
 
-;; lua-mode provides support for editing Lua, including automatical
+;; lua-mode provides support for editing Lua, including automatic
 ;; indentation, syntactical font-locking, running interactive shell,
 ;; interacting with `hs-minor-mode' and online documentation lookup.
 
