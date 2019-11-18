@@ -501,10 +501,91 @@ foobar(
       b
    },
    c, d
-)"))))
+)")))
 
+  (it "indent blocks with lua-indent-nested-block-content-align"
+	(let ((lua-indent-nested-block-content-align nil))
+	  (expect (lua--reindent-like "\
+call_some_fn( something, {
+      val = 5,
+      another = 6,
+} )"))
+	  (expect (lua--reindent-like "\
+local def = {
+   some_very_long_name = { fn =
+         function()
+            return true
+         end
+   }
+}"))
+	  ))
 
+  (it "indent blocks with lua-indent-close-paren-align"
+	(let ((lua-indent-close-paren-align nil))
+	  (expect (lua--reindent-like "\
+local foo = setmetatable( {
+      a = 4,
+      b = 5,
+}, {
+      __index = some_func,
+} )"))
+	  ))
 
+  (it "indents nested tables with alternative block indenting"
+	(let ((lua-indent-nested-block-content-align nil)
+		  (lua-indent-close-paren-align nil))
+	  (expect (lua--reindent-like "\
+foobar({
+      a, b, c
+})"))
+
+	  (expect (lua--reindent-like "\
+foobar(a, {
+      b,
+      c
+})"))
+
+	  (expect (lua--reindent-like "\
+foobar(
+   a,
+   {
+      b,
+      c
+})"))
+
+	  (expect (lua--reindent-like "\
+foobar(
+   a,
+   {
+      b,
+      c
+   }
+)"))
+
+	  (expect (lua--reindent-like "\
+foobar(a,
+   {
+      b,
+      c
+})"))
+
+	  (expect (lua--reindent-like "\
+foobar(a,
+   {
+      b,
+      c
+   }
+)"))
+
+	  (expect (lua--reindent-like "\
+foobar(
+   {
+      a,
+      b
+   },
+   c, d
+)"))
+	  )))
 
 (ert-deftest lua-indentation-defun ()
   ;; 	 [local] function funcname funcbody
