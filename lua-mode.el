@@ -1,4 +1,4 @@
-;;; lua-mode.el --- a major-mode for editing Lua scripts
+;;; lua-mode.el --- a major-mode for editing Lua scripts  -*- lexical-binding: t -*-
 
 ;; Author: 2011-2013 immerrr <immerrr+lua@gmail.com>
 ;;         2010-2011 Reuben Thomas <rrt@sc3d.org>
@@ -170,8 +170,7 @@ FORM is a cons (NAME . DEFN), see more in `rx-constituents' doc.
 This function enables specifying new definitions using old ones:
 if DEFN is a list that starts with `:rx' symbol its second
 element is itself expanded with `lua-rx-to-string'. "
-        (let ((name (car form))
-              (form-definition (cdr form)))
+        (let ((form-definition (cdr form)))
           (when (and (listp form-definition) (eq ':rx (car form-definition)))
             (setcdr form (lua-rx-to-string (cadr form-definition) 'nogroup)))
           (push form lua-rx-constituents)))
@@ -317,8 +316,7 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
 
 
 (defvar lua-mode-map
-  (let ((result-map (make-sparse-keymap))
-        prefix-key)
+  (let ((result-map (make-sparse-keymap)))
     (unless (boundp 'electric-indent-chars)
       (mapc (lambda (electric-char)
               (define-key result-map
@@ -528,7 +526,7 @@ groups set according to next matched token:
 
 Blanks & comments between tokens are silently skipped.
 Groups 6-9 can be used in any of argument regexps."
-    (lexical-let*
+    (let*
         ((delimited-matcher-re-template
           "\\=\\(?2:.*?\\)\\(?:\\(?%s:\\(?4:%s\\)\\|\\(?5:%s\\)\\)\\|\\(?%s:\\(?1:%s\\)\\)\\)")
          ;; There's some magic to this regexp. It works as follows:
@@ -555,7 +553,6 @@ Groups 6-9 can be used in any of argument regexps."
 
       (lambda (end)
         (let* ((prev-elt-p (match-beginning 1))
-               (prev-sep-p (match-beginning 4))
                (prev-end-p (match-beginning 5))
 
                (regexp (if prev-elt-p sep-or-end-expected-re elt-expected-re))
@@ -937,7 +934,7 @@ Return the amount the indentation changed by."
     (back-to-indentation)
     (if (lua-comment-or-string-p)
         (setq indent (lua-calculate-string-or-comment-indentation)) ;; just restore point position
-      (setq indent (max 0 (lua-calculate-indentation nil))))
+      (setq indent (max 0 (lua-calculate-indentation))))
 
     (when (not (equal indent (current-column)))
       (delete-region (line-beginning-position) (point))
@@ -1400,9 +1397,7 @@ Return list of indentation modifiers from point to BOUND."
   (while (lua-find-regexp 'forward lua-indentation-modifier-regexp
                           bound)
     (let ((found-token (match-string 0))
-          (found-pos (match-beginning 0))
-          (found-end (match-end 0))
-          (data (match-data)))
+          (found-pos (match-beginning 0)))
       (setq indentation-info
             (lua-add-indentation-info-pair
              (lua-make-indentation-info-pair found-token found-pos)
@@ -1416,8 +1411,7 @@ The effect of each token can be either a shift relative to the current
 indentation level, or indentation to some absolute column. This information
 is collected in a list of indentation info pairs, which denote absolute
 and relative each, and the shift/column to indent to."
-  (let ((combined-line-end (line-end-position))
-        indentation-info)
+  (let (indentation-info)
 
     (while (lua-is-continuing-statement-p)
       (lua-forward-line-skip-blanks 'back))
@@ -1587,11 +1581,10 @@ If not, return nil."
               (current-indentation)
             (current-column)))))))
 
-(defun lua-calculate-indentation (&optional parse-start)
+(defun lua-calculate-indentation ()
   "Return appropriate indentation for current line as Lua code."
   (save-excursion
-    (let ((continuing-p (lua-is-continuing-statement-p))
-          (cur-line-begin-pos (line-beginning-position)))
+    (let ((cur-line-begin-pos (line-beginning-position)))
       (or
        ;; when calculating indentation, do the following:
        ;; 1. check, if the line starts with indentation-modifier (open/close brace)
@@ -1905,11 +1898,8 @@ left out."
   ;; negative offsets not supported
   (assert (or (not count) (>= count 0)))
   (save-match-data
-    (let* ((count (or count 1))
-           (block-start (mapcar 'car lua-sexp-alist))
-           (block-end (mapcar 'cdr lua-sexp-alist))
-           (block-regex (regexp-opt (append  block-start block-end) 'words))
-           current-exp)
+    (let ((count (or count 1))
+          (block-start (mapcar 'car lua-sexp-alist)))
       (while (> count 0)
         ;; skip whitespace
         (skip-chars-forward " \t\n")
