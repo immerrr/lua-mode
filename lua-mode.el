@@ -13,6 +13,7 @@
 ;;
 ;; URL:         http://immerrr.github.com/lua-mode
 ;; Version:     20151025
+;; Package-Requires: ((emacs "24.3"))
 ;;
 ;; This file is NOT part of Emacs.
 ;;
