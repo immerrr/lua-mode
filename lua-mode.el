@@ -184,11 +184,12 @@ element is itself expanded with `lua-rx-to-string'. "
         (setq form (if (eq 1 (length form))
                        (car form)
                      (append '(or) form)))
-        (rx-form `(seq symbol-start ,form symbol-end) rx-parent))
+	(and (fboundp 'rx-form) ; Silence Emacs 27's byte-compiler.
+             (rx-form `(seq symbol-start ,form symbol-end) rx-parent)))
 
       (setq lua-rx-constituents (copy-sequence rx-constituents))
 
-      (mapc #'lua--new-rx-form
+      (mapc 'lua--new-rx-form
             `((symbol lua--rx-symbol 1 nil)
               (ws . "[ \t]*") (ws+ . "[ \t]+")
               (lua-name :rx (symbol (regexp "[[:alpha:]_]+[[:alnum:]_]*")))
