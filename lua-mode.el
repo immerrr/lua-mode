@@ -86,7 +86,7 @@
 
 ;;; Code:
 (eval-when-compile
-  (require 'cl))
+  (require 'cl-lib))
 
 (require 'comint)
 (require 'newcomment)
@@ -1043,12 +1043,12 @@ TOKEN-TYPE determines where the token occurs on a statement. open indicates that
   "Returns the relevant match regexp from token info"
   (cond
    ((eq direction 'forward) (cadr token-info))
-   ((eq direction 'backward) (caddr token-info))
+   ((eq direction 'backward) (nth 2 token-info))
    (t nil)))
 
 (defun lua-get-token-type (token-info)
   "Returns the relevant match regexp from token info"
-   (cadddr token-info))
+   (nth 3 token-info))
 
 (defun lua-backwards-to-block-begin-or-end ()
   "Move backwards to nearest block begin or end.  Returns nil if not successful."
@@ -1896,7 +1896,7 @@ left out."
   "Forward to block end"
   (interactive "p")
   ;; negative offsets not supported
-  (assert (or (not count) (>= count 0)))
+  (cl-assert (or (not count) (>= count 0)))
   (save-match-data
     (let ((count (or count 1))
           (block-start (mapcar 'car lua-sexp-alist)))
