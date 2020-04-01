@@ -20,7 +20,7 @@ Fontification check failed for:
 Fontification check failed on line %d for:
 %S
   Expected faces: %S
-  Result faces:   %S"
+  Actual faces:   %S"
                         lineno text (car expected-faces) (car result-faces)))
       (setq expected-faces (cdr expected-faces)
             result-faces (cdr result-faces)
