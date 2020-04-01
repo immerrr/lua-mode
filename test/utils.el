@@ -19,8 +19,8 @@ Fontification check failed for:
         (buttercup-fail "\
 Fontification check failed on line %d for:
 %S
-  Result faces:   %S
-  Expected faces: %S"
+  Expected faces: %S
+  Actual faces:   %S"
                         lineno text (car expected-faces) (car result-faces)))
       (setq expected-faces (cdr expected-faces)
             result-faces (cdr result-faces)
