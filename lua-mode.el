@@ -36,7 +36,7 @@
 
 ;; This field is expanded to commit SHA, date & associated heads/tags during
 ;; archive creation.
-;; Revision: $Format:%h (%cD %d)$
+;; Revision: $Format:%h (%cD)$
 ;;
 
 ;;; Commentary:
