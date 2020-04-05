@@ -34,9 +34,9 @@
 
 ;; Keywords: languages, processes, tools
 
-;; This field is expanded to commit SHA, date & associated heads/tags during
+;; This field is expanded to commit SHA and commit date during the
 ;; archive creation.
-;; Revision: $Format:%h (%cD %d)$
+;; Revision: $Format:%h (%cD)$
 ;;
 
 ;;; Commentary:
