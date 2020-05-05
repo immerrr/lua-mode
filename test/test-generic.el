@@ -3,6 +3,8 @@
                                        default-directory))
               "utils.el") nil 'nomessage 'nosuffix)
 
+(require 'imenu)
+
 (describe "lua-forward-sexp"
   (it "properly scans through curly braces"
     (with-lua-buffer
@@ -77,3 +79,31 @@
   (it "is derived from prog-mode"
     (with-lua-buffer
      (expect (derived-mode-p 'prog-mode)))))
+
+(describe "imenu integration"
+  (it "indexes functions"
+    (with-lua-buffer
+     (insert "\
+function foo()
+  function bar() end
+  local function baz() end
+  qux = function() end
+  local quux = function() end
+end
+")
+     (expect (mapcar 'car (funcall imenu-create-index-function))
+             :to-equal '("foo" "bar" "baz" "qux" "quux"))))
+
+  (it "indexes require statements"
+    (with-lua-buffer
+     (insert "\
+foo = require (\"foo\")
+local bar = require (\"bar\")
+")
+     (expect (mapcar (lambda (item) (cons (car item)
+                                          (if (listp (cdr item))
+                                              (mapcar 'car (cdr item))
+                                            -1)))
+                     (funcall imenu-create-index-function))
+             :to-equal '(("Requires" . ("foo" "bar")))))))
+
