@@ -53,6 +53,12 @@
 ;; - Var `lua-indent-string-contents':
 ;;   set to `t` if you like to have contents of multiline strings to be
 ;;   indented like comments
+;; - Var `lua-indent-nested-block-content-align':
+;;   set to `nil' to stop aligning the content of nested blocks with the
+;;   open parenthesis
+;; - Var `lua-indent-close-paren-align':
+;;   set to `t' to align close parenthesis with the open parenthesis,
+;;   rather than with the beginning of the line
 ;; - Var `lua-mode-hook':
 ;;   list of functions to execute when lua-mode is initialized
 ;; - Var `lua-documentation-url':
@@ -396,6 +402,20 @@ Usually, stdin:XX line number points to nowhere."
 (defcustom lua-indent-string-contents nil
   "If non-nil, contents of multiline string will be indented.
 Otherwise leading amount of whitespace on each line is preserved."
+  :group 'lua
+  :type 'boolean)
+
+(defcustom lua-indent-nested-block-content-align t
+  "If non-nil, the contents of nested blocks are indented to
+align with the column of the opening parenthesis, rather than
+just forward by `lua-indent-level'."
+  :group 'lua
+  :type 'boolean)
+
+(defcustom lua-indent-close-paren-align t
+  "If non-nil, close parenthesis are aligned with their open
+parenthesis.  If nil, close parenthesis are aligned to the
+beginning of the line."
   :group 'lua
   :type 'boolean)
 
@@ -1306,7 +1326,8 @@ Don't use standalone."
     (cons 'relative lua-indent-level))
 
    ;; block openers
-   ((member found-token (list "{" "(" "["))
+   ((and lua-indent-nested-block-content-align
+	 (member found-token (list "{" "(" "[")))
     (save-excursion
       (let ((found-bol (line-beginning-position)))
         (forward-comment (point-max))
@@ -1580,7 +1601,8 @@ If not, return nil."
         (when (lua-goto-matching-block-token block-token-pos 'backward)
           ;; Exception cases: when the start of the line is an assignment,
           ;; go to the start of the assignment instead of the matching item
-          (if (lua-point-is-after-left-shifter-p)
+          (if (or (not lua-indent-close-paren-align)
+                  (lua-point-is-after-left-shifter-p))
               (current-indentation)
             (current-column)))))))
 
