@@ -671,11 +671,50 @@ Groups 6-9 can be used in any of argument regexps."
     (,(lua-rx (or bol ";") ws lua-funcheader)
      (1 font-lock-function-name-face))
 
-    (,(lua-rx (or (group-n 1
-                           "@" (symbol "author" "copyright" "field" "release"
-                                       "return" "see" "usage" "description"))
-                  (seq (group-n 1 "@" (symbol "param" "class" "name")) ws+
-                       (group-n 2 lua-name))))
+    (,(lua-rx (or (group-n
+                   1 "@"
+                   (symbol
+                    ;; Doxygen
+                    "addindex" "arg" "attention" "author" "authors" "brief"
+                    "bug" "callergraph" "callgraph" "code" "cond" "copyright"
+                    "date" "deprecated" "details" "dir" "docbookonly" "dot"
+                    "else" "elseif" "emoji" "endcode" "endcond" "enddocbookonly"
+                    "enddot" "endhtmlonly" "endif" "endinternal" "endlatexonly"
+                    "endlink" "endmanonly" "endmsc" "endparblock" "endrtfonly"
+                    "endsecreflist" "endverbatim" "enduml" "endxmlonly" "f$"
+                    "fn" "hidecallergraph" "hidecallgraph" "hiderefby"
+                    "hiderefs" "hideinitializer" "htmlinclude" "htmlonly" "if"
+                    "ifnot" "image" "internal" "invariant" "latexonly" "li"
+                    "line" "mainpage" "manonly" "msc" "n" "nosubgrouping"
+                    "note" "overload" "par" "parblock" "post" "pre" "private"
+                    "privatesection" "property" "protected" "protectedsection"
+                    "public" "publicsection" "pure" "remark" "remarks" "result"
+                    "return" "returns" "rtfonly" "sa" "secreflist" "see" "short"
+                    "showinitializer" "showrefby" "showrefs" "since" "skip"
+                    "skipline" "startuml" "tableofcontents" "test" "throw"
+                    "throws" "todo" "tparam" "typedef" "until" "var" "verbatim"
+                    "version" "vhdlflow" "warning" "xmlonly"
+                    ;; LuaDoc extras
+                    "field" "release" "usage" "description"))
+                  (seq (group-n
+                        1 "@"
+                        (symbol
+                         ;; Doxygen
+                         "addtogroup" "class" "def" "defgroup" "enum" "example"
+                         "extends" "file" "headerfile" "idlexcept" "implements"
+                         "ingroup" "interface" "memberof" "namespace" "package"
+                         "page" "protocol" "relates" "related" "relatesalso"
+                         "relatedalso" "struct" "union" "weakgroup" "exception"
+                         "retval" "xrefitem" "anchor" "cite" "link" "ref"
+                         "refitem" "subpage" "section" "subsection"
+                         "subsubsection" "paragraph" "dontinclude" "include"
+                         "includelineno" "includedoc" "name" "snippet"
+                         "snippetlineno" "snippetdoc" "verbinclude"
+                         "latexinclude" "rtfinclude" "maninclude"
+                         "docbookinclude" "xmlinclude" "a" "b" "c" "copydoc"
+                         "copybrief" "copydetails" "dotfile" "mscfile" "diafile"
+                         "e" "em" "p" "param" "tparam"))
+                       ws+ (group-n 2 lua-name))))
      (1 font-lock-keyword-face t)
      (2 font-lock-variable-name-face t noerror)))
 
