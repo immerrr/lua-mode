@@ -132,8 +132,8 @@
                          (seq (* digit) (opt ".") (+ digit)))
                      (opt (regexp "[eE][+-]?[0-9]+"))))
            (lua-assignment-op (seq "=" (or buffer-end (not (any "=")))))
-           (lua-token (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
-                       ">" "=" ";" ":" "," "." ".." "..."))
+           (lua-operator (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
+                          ">" "=" ";" ":" "," "." ".." "..."))
            (lua-keyword
             (symbol "and" "break" "do" "else" "elseif" "end"  "for" "function"
                     "goto" "if" "in" "local" "not" "or" "repeat" "return"
@@ -214,14 +214,13 @@ element is itself expanded with `lua-rx-to-string'. "
                         (opt (regexp "[eE][+-]?[0-9]+"))))
               (lua-assignment-op
                :rx (seq "=" (or buffer-end (not (any "=")))))
-              (lua-token
+              (lua-operator
                :rx (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
                        ">" "=" ";" ":" "," "." ".." "..."))
               (lua-keyword
                :rx (symbol "and" "break" "do" "else" "elseif" "end"  "for" "function"
                            "goto" "if" "in" "local" "not" "or" "repeat" "return"
-                           "then" "until" "while")))
-            ))))
+                           "then" "until" "while")))))))
 
 
 ;; Local variables
@@ -1502,19 +1501,29 @@ and relative each, and the shift/column to indent to."
     indentation-info))
 
 
-(defun lua-accumulate-indentation-info (info)
+(defun lua-accumulate-indentation-info (reversed-indentation-info)
   "Accumulates the indentation information previously calculated by
 lua-calculate-indentation-info. Returns either the relative indentation
 shift, or the absolute column to indent to."
-  (let ((info-list (reverse info))
+  (let (indentation-info
         (type 'relative)
         (accu 0))
+    ;; Aggregate all neighbouring relative offsets, reversing the INFO list.
+    (cl-dolist (elt reversed-indentation-info)
+      (if (and (eq (car elt) 'relative)
+               (eq (caar indentation-info) 'relative))
+          (setcdr (car indentation-info) (+ (cdar indentation-info) (cdr elt)))
+        (push elt indentation-info)))
+
+    ;; Aggregate indentation info, taking 'absolute modifiers into account.
     (mapc (lambda (x)
-            (setq accu (if (eq 'absolute (car x))
-                           (progn (setq type 'absolute)
-                                  (cdr x))
-                         (+ accu (cdr x)))))
-          info-list)
+            (let ((new-val (cdr x)))
+              (if (eq 'absolute (car x))
+                  (progn (setq type 'absolute
+                               accu new-val))
+                (setq accu (+ accu new-val)))))
+          indentation-info)
+
     (cons type accu)))
 
 (defun lua-calculate-indentation-block-modifier (&optional parse-end)
