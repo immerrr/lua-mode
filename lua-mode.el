@@ -1328,17 +1328,21 @@ The criteria for a continuing statement are:
 * the last token of the previous line is a continuing op,
   OR the first token of the current line is a continuing op
 
-"
+* the expression is not enclosed by a parenthesis"
   (let ((prev-line nil))
     (save-excursion
       (if parse-start (goto-char parse-start))
       (save-excursion (setq prev-line (lua-forward-line-skip-blanks 'back)))
       (and prev-line
            (not (lua-first-token-starts-block-p))
-           (or (lua-first-token-continues-p)
-               (and (goto-char prev-line)
-                    ;; check last token of previous nonblank line
-                    (lua-last-token-continues-p)))))))
+           (and (or (lua-first-token-continues-p)
+                    (save-excursion (and (goto-char prev-line)
+                                         ;; check last token of previous nonblank line
+                                         (lua-last-token-continues-p))))
+                (not (member (car-safe (condition-case nil (lua-backward-up-list)
+                                         (scan-error nil)))
+                             ;; XXX: can we also add "{" here?
+                             '("(" "["))))))))
 
 (defun lua-make-indentation-info-pair (found-token found-pos)
   "Create a pair from FOUND-TOKEN and FOUND-POS for indentation calculation.

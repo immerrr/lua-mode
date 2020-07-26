@@ -86,7 +86,56 @@ x = foo(123,
       qux,
       quux)
 
+-- does not indent binary operators inside parentheses: alignment 1
+
+x = (very_very_very_long_name() +
+     another_very_very_very_long_name())
+
+-- does not indent binary operators inside parentheses: alignment 2
+
+x = (very_very_very_long_name()
+     + another_very_very_very_long_name())
+
+-- does not indent binary operators inside parentheses: indentation 1
+
+x = (
+   very_very_very_long_name() +
+   another_very_very_very_long_name()
+    )
+
+-- does not indent binary operators inside parentheses: indentation 2
+
+x = (
+   very_very_very_long_name()
+   + another_very_very_very_long_name()
+    )
+
+-- does not indent binary operators inside brackets: alignment 1
+
+x = t[very_very_very_long_name() +
+      another_very_very_very_long_name()]
+
+-- does not indent binary operators inside brackets: alignment 2
+
+x = t[very_very_very_long_name()
+      + another_very_very_very_long_name()]
+
+-- does not indent binary operators inside brackets: indentation 1
+
+x = [
+   very_very_very_long_name() +
+   another_very_very_very_long_name()
+    ]
+
+-- does not indent binary operators inside brackets: indentation 2
+
+x = [
+   very_very_very_long_name()
+   + another_very_very_very_long_name()
+    ]
+
 -- XFAIL: indentation in block-intros: while
+
 while
    foo do
    a = a + 1
