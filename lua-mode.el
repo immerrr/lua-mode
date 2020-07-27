@@ -134,9 +134,10 @@
            (lua-assignment-op (seq "=" (or buffer-end (not (any "=")))))
            (lua-operator (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
                           ">" "=" ";" ":" "," "." ".." "..."))
+           (lua-keyword-operator (symbol "and" "not" "or"))
            (lua-keyword
-            (symbol "and" "break" "do" "else" "elseif" "end"  "for" "function"
-                    "goto" "if" "in" "local" "not" "or" "repeat" "return"
+            (symbol "break" "do" "else" "elseif" "end"  "for" "function"
+                    "goto" "if" "in" "local" "repeat" "return"
                     "then" "until" "while"))))
 
         (defmacro lua-rx (&rest regexps)
@@ -217,9 +218,11 @@ element is itself expanded with `lua-rx-to-string'. "
               (lua-operator
                :rx (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
                        ">" "=" ";" ":" "," "." ".." "..."))
+              (lua-keyword-operator
+               :rx (symbol "and" "not" "or"))
               (lua-keyword
-               :rx (symbol "and" "break" "do" "else" "elseif" "end"  "for" "function"
-                           "goto" "if" "in" "local" "not" "or" "repeat" "return"
+               :rx (symbol "break" "do" "else" "elseif" "end"  "for" "function"
+                           "goto" "if" "in" "local" "repeat" "return"
                            "then" "until" "while")))))))
 
 
@@ -618,7 +621,7 @@ Groups 6-9 can be used in any of argument regexps."
      . font-lock-constant-face)
 
     ;; Keywords
-    (,(lua-rx lua-keyword)
+    (, (lua-rx (or lua-keyword lua-keyword-operator))
      . font-lock-keyword-face)
 
     ;; Labels used by the "goto" statement
@@ -1261,7 +1264,27 @@ previous one even though it looked like an end-of-statement.")
         (if (looking-at "--")
             (setq line-end (point))))
       (goto-char line-end)
-      (re-search-backward lua-cont-eol-regexp line-begin t))))
+      (when (re-search-backward lua-cont-eol-regexp line-begin t)
+        (cond
+         ;; "return" keyword is ambiguous and depends on next token
+         ((string-equal (match-string-no-properties 0) "return")
+          (save-excursion
+            (goto-char (match-end 0))
+            (forward-comment (point-max))
+            (and
+             ;; Not continuing: at end of file
+             (not (eobp))
+             (or
+              ;; "function" keyword: it is a continuation, e.g.
+              ;;
+              ;;    return
+              ;;       function() return 123 end
+              ;;
+              (looking-at (lua-rx (symbol "function")))
+              ;; Looking at semicolon or any other keyword: not continuation
+              (not (looking-at (lua-rx (or ";" lua-keyword))))))))
+         (t t))))))
+
 
 (defun lua-first-token-continues-p ()
   "Return non-nil if the first token on this line is a continuation token."
@@ -1273,20 +1296,6 @@ previous one even though it looked like an end-of-statement.")
       ;; the control inside this function
       (re-search-forward lua-cont-bol-regexp line-end t))))
 
-(defconst lua-block-starter-regexp
-  (eval-when-compile
-    (concat
-     "\\(\\_<"
-     (regexp-opt '("do" "while" "repeat" "until" "if" "then"
-                   "else" "elseif" "end" "for" "local") t)
-     "\\_>\\)")))
-
-(defun lua-first-token-starts-block-p ()
-  "Return non-nil if the first token on this line is a block starter token."
-  (let ((line-end (line-end-position)))
-    (save-excursion
-      (beginning-of-line)
-      (re-search-forward (concat "\\s *" lua-block-starter-regexp) line-end t))))
 
 (defun lua-backward-up-list ()
   "Goto starter/opener of the block that contains point."
@@ -1334,7 +1343,6 @@ The criteria for a continuing statement are:
       (if parse-start (goto-char parse-start))
       (save-excursion (setq prev-line (lua-forward-line-skip-blanks 'back)))
       (and prev-line
-           (not (lua-first-token-starts-block-p))
            (and (or (lua-first-token-continues-p)
                     (save-excursion (and (goto-char prev-line)
                                          ;; check last token of previous nonblank line

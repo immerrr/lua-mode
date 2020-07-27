@@ -143,6 +143,16 @@ end
 
 a = 0
 
+-- indentation in block-intros: while 2
+
+while
+   foo
+do
+   a = a + 1
+end
+
+a = 0
+
 -- XFAIL: indentation in block-intros: for1
 
 for k, v
@@ -158,3 +168,87 @@ for k, v
    in pairs(bar) do a = a + 1 end
 
 a = 0
+
+
+-- indents expressions after return: basic
+
+function myfunc()
+   return
+      123
+end
+
+-- indents expressions after return: function literal
+
+function myfunc()
+   return
+      function() return 123 end
+end
+
+-- indents expressions after return: ellipsis
+
+function myfunc(...)
+   return
+      ...
+end
+
+-- does not indents keywords after return: end
+
+function myfunc()
+   return
+end
+
+-- does not indents keywords after return: if/end
+
+function myfunc()
+   if true then
+      return
+   end
+end
+
+-- does not indents keywords after return: if/else
+
+function myfunc()
+   if true then
+      return
+   else
+      print(123)
+   end
+end
+
+-- does not indents keywords after return: if/elseif
+
+function myfunc()
+   if true then
+      return
+   elseif false then
+      print(123)
+   end
+end
+
+-- does not indents keywords after return: repeat/until
+
+function myfunc()
+   repeat
+      return
+   until true
+end
+
+-- does not indents keywords after return: semicolon 1
+
+function myfunc()
+   if true then
+      return;
+   end
+end
+
+-- does not indents keywords after return: semicolon 1
+
+function myfunc()
+   if true then
+      return;
+      hello_world() -- this is incorrect syntax, but it's fine
+   else
+      return
+         hello_world()
+   end
+end
