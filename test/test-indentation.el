@@ -6,42 +6,50 @@
 
 (require 'buttercup)
 (require 'subr-x)
+(require 'cl-lib)
 
-(defun file-contents (path)
-  (with-temp-buffer
-    (insert-file-contents-literally path)
-    (buffer-substring-no-properties (point-min) (point-max))))
-
-(defun string-trim-safe (str)
+(defun lua--string-trim-safe (str)
   (save-match-data (string-trim str)))
 
-(defun indentation-test-sections (file-path)
-  (with-temp-buffer
-     (insert-file-contents-literally file-path)
-     (let (results
-           section-name
-           (begin (point-min))
-           end
-           cur-str
-           (next-section-name "start"))
-       (goto-char (point-min))
-       (while next-section-name
-         (setq next-section-name
-               (when (re-search-forward "^--\\(.*\\)" nil 'noerror) (string-trim-safe (match-string-no-properties 1))))
-         (setq end (if next-section-name (match-beginning 0) (point-max)))
-         (setq cur-str (string-trim-safe (buffer-substring-no-properties begin end)))
-         (if (> (length cur-str) 0)
-             (push (cons (or section-name (format "section %d" (1+ (length results))))
-                         cur-str)
-                   results))
-         (setq section-name next-section-name)
-         (setq begin (point)))
-       (nreverse results))))
 
-(defun make-indentation-it-or-xit-clause (x)
+(defun lua--get-indentation-test-sections (file-path)
+  (with-temp-buffer
+    (insert-file-contents-literally file-path)
+    (hack-local-variables)
+    (let (results
+          section-name
+          (begin (point-min))
+          end
+          cur-str
+          (next-section-name "start"))
+      (goto-char (point-min))
+      (while next-section-name
+        ;; Scan towards the next comment or end of file, save the comment as
+        ;; the name for the section that comes AFTER the current one.
+        (setq next-section-name
+              (when (re-search-forward "^--\\(.*\\)" nil 'noerror) (lua--string-trim-safe (match-string-no-properties 1))))
+        ;; Record current section bounds and contents
+        (setq end (if next-section-name (match-beginning 0) (point-max)))
+        (setq cur-str (lua--string-trim-safe (buffer-substring-no-properties begin end)))
+        ;; Save current section to be returned
+        (if (> (length cur-str) 0)
+            (push (list (or section-name (format "section %d" (1+ (length results))))
+                        cur-str
+                        file-local-variables-alist)
+                  results))
+        ;; Transition to the next iteration of the loop.
+        (setq section-name next-section-name)
+        (setq begin (point)))
+      (nreverse results))))
+
+(defun lua--indentation-test-make-it-or-xit-clause (x)
   (let ((it-or-xit (if (string-match "XFAIL" (car x)) 'xit 'it)))
     (eval `(,it-or-xit ,(format "%s" (car x))
-                       (let ((lua-code ,(cdr x)))
+                       (let ((lua-code ,(cadr x))
+                             ,@(mapcar (lambda (alist-cons)
+                                         (list (car alist-cons) (cdr alist-cons)))
+                                       ;; cl-caddr here is to support Emacs<26 that don't have caddr.
+                                       (cl-caddr x)))
                          (expect lua-code :to-be-reindented-the-same-way))))))
 
 (let* ((current-path (or load-file-name (buffer-file-name) default-directory))
@@ -50,10 +58,9 @@
   (mapcar (lambda (test-file)
             (let ((file-path (expand-file-name test-file indentation-tests-dir)))
               (describe (format "Indentation test `%s'" test-file)
-                (mapcar #'make-indentation-it-or-xit-clause
-                        (indentation-test-sections file-path)))))
+                (mapcar #'lua--indentation-test-make-it-or-xit-clause
+                        (lua--get-indentation-test-sections file-path)))))
           indentation-tests))
-
 
 (describe "Continuation lines"
   (it "are indented before/after binary operators"
@@ -100,181 +107,6 @@ x = {
 }"))))))
 
 
-
-(describe "Block indentation"
-  (it "works for do ... end blocks"
-    ;; FIXME: test split block-intro indentations
-    (expect (lua--reindent-like "\
-do
-   a = a + 1
-end
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-do a = a + 1 end
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-do a = a + 1
-end
-
-a = 0")))
-
-
-  (it "works for while ... do ... end blocks"
-    (expect (lua--reindent-like "\
-while foo do
-   a = a + 1
-end
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-while foo
-do
-   a = a + 1
-end
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-while
-   foo
-do
-   a = a + 1
-end
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-while foo do a = a + 1 end
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-while
-   x +
-   y > 0
-do
-   a = a + 1
-end
-
-a = 0")))
-
-
-  (it "works for repeat ... until blocks"
-    (expect (lua--reindent-like "\
-repeat
-   a = a + 1
-until foo
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-repeat
-   a = a + 1
-until
-   foo
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-repeat
-   a = a + 1
-until
-   not
-   foo
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-repeat a = a + 1 until not foo
-
-a = 0")))
-
-
-
-  (it "works for \"for ... do\" block "
-    (expect (lua--reindent-like "\
-for k, v in pairs(bar) do
-   a = a + 1
-end
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-for k, v in pairs(bar)
-do
-   a = a + 1
-end
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-for k, v in pairs(bar) do a = a + 1 end
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-for y = 0, 10 do
-   a = a + 1
-end
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-for y = 0, 10
-do
-   a = a + 1
-end
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-for y = 0, 10 do a = a + 1 end
-
-a = 0")))
-
-  (it "works for conditionals"
-    (expect (lua--reindent-like "\
-if foo then
-   a = a + 1
-end
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-if foo then a = a + 1 end
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-if foo then
-   a = a + 1
-else
-   a = a + 2
-end
-
-a = 0"))
-
-
-    (expect (lua--reindent-like "\
-if foo then
-   a = a + 1
-elseif bar then
-   a = a + 2
-elseif baz then
-   a = a + 3
-end
-
-a = 0"))
-
-    (expect (lua--reindent-like "\
-if foo then a = a + 1 else
-   a = a + 2
-end"))))
 
 (describe "Function indentation"
   (it "indents function call arguments"
@@ -384,24 +216,6 @@ foobar(
    c, d
 )"))
       )))
-
-(ert-deftest lua-indentation-defun ()
-  ;; 	 [local] function funcname funcbody
-  ;; FIXME: add
-  )
-
-(ert-deftest lua-indentation-alignment ()
-  ;; FIXME: add
-  )
-
-(ert-deftest lua-indentation-tablector ()
-  ;; FIXME: add
-  )
-
-(ert-deftest lua-indentation-continuation-spans-over-empty-lines ()
-  ;; FIXME: add
-  ;; FIXME: check comment-only lines too
-  )
 
 
 (ert-deftest lua-indentation-keywords-with-special-characters ()

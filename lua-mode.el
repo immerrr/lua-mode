@@ -406,21 +406,24 @@ Usually, stdin:XX line number points to nowhere."
   "If non-nil, contents of multiline string will be indented.
 Otherwise leading amount of whitespace on each line is preserved."
   :group 'lua
-  :type 'boolean)
+  :type 'boolean
+  :safe #'booleanp)
 
 (defcustom lua-indent-nested-block-content-align t
   "If non-nil, the contents of nested blocks are indented to
 align with the column of the opening parenthesis, rather than
 just forward by `lua-indent-level'."
   :group 'lua
-  :type 'boolean)
+  :type 'boolean
+  :safe #'booleanp)
 
 (defcustom lua-indent-close-paren-align t
   "If non-nil, close parenthesis are aligned with their open
 parenthesis.  If nil, close parenthesis are aligned to the
 beginning of the line."
   :group 'lua
-  :type 'boolean)
+  :type 'boolean
+  :safe #'booleanp)
 
 (defcustom lua-jump-on-traceback t
   "*Jump to innermost traceback location in *lua* buffer.  When this

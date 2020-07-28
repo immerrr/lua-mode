@@ -69,3 +69,64 @@ local
    y =
    10,
    20
+
+-- continuation after "local": 4
+
+local
+   x = 5
+
+-- XFAIL: it unindents close paren for arithmetical expression
+
+a = (
+   foo +
+   bar
+)
+
+-- XFAIL: it unindents close paren for arithmetical expression: local
+
+local a = (
+   foo +
+   bar
+)
+
+-- it unindents close paren for function call
+
+a = myfunc(
+   foo +
+   bar
+)
+
+-- it unindents close paren for function call: local
+
+local a = myfunc(
+   foo +
+   bar
+)
+
+-- it unindents close brace for table ctor
+
+a = {
+   foo,
+   bar
+}
+
+-- it unindents close brace for table ctor: local
+
+local a = {
+   foo,
+   bar
+}
+
+-- XFAIL: it unindents close bracket for indexing
+
+a = myobj[
+   foo +
+   bar
+]
+
+-- XFAIL: it unindents close bracket for indexing: local
+
+local a = myobj[
+   foo +
+   bar
+]

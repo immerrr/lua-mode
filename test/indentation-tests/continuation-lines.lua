@@ -241,7 +241,7 @@ function myfunc()
    end
 end
 
--- does not indents keywords after return: semicolon 1
+-- does not indents keywords after return: semicolon 2
 
 function myfunc()
    if true then
