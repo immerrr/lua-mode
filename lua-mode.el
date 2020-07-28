@@ -1430,9 +1430,10 @@ Don't use standalone."
    ;; nullify a previous then if on the same line.
    ((member found-token (list "until" "elseif"))
     (save-excursion
-      (let ((line (line-number-at-pos)))
-        (if (and (lua-goto-matching-block-token found-pos 'backward)
-                 (= line (line-number-at-pos)))
+      (let* ((line-beginning (line-beginning-position))
+             (same-line (and (lua-goto-matching-block-token found-pos 'backward)
+                             (<= line-beginning (point)))))
+        (if same-line
             (cons 'remove-matching 0)
           (cons 'relative 0)))))
 
@@ -1442,9 +1443,10 @@ Don't use standalone."
    ;; line will remove the effect of the else.
    ((string-equal found-token "else")
     (save-excursion
-      (let ((line (line-number-at-pos)))
-        (if (and (lua-goto-matching-block-token found-pos 'backward)
-                 (= line (line-number-at-pos)))
+      (let* ((line-beginning (line-beginning-position))
+             (same-line (and (lua-goto-matching-block-token found-pos 'backward)
+                             (<= line-beginning (point)))))
+        (if same-line
             (cons 'replace-matching (cons 'relative lua-indent-level))
           (cons 'relative lua-indent-level)))))
 
@@ -1453,9 +1455,10 @@ Don't use standalone."
    ;; indentation back to the matching block opener.
    ((member found-token (list ")" "}" "]" "end"))
     (save-excursion
-      (let ((line (line-number-at-pos)))
-        (lua-goto-matching-block-token found-pos 'backward)
-        (if (/= line (line-number-at-pos))
+      (let* ((line-beginning (line-beginning-position))
+             (same-line (and (lua-goto-matching-block-token found-pos 'backward)
+                             (<= line-beginning (point)))))
+        (if (not same-line)
             (lua-calculate-indentation-info (point))
           (cons 'remove-matching 0)))))
 
