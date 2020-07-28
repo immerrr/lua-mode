@@ -1255,7 +1255,8 @@ previous one even though it looked like an end-of-statement.")
 (defun lua-last-token-continues-p ()
   "Return non-nil if the last token on this line is a continuation token."
   (let ((line-begin (line-beginning-position))
-        (line-end (line-end-position)))
+        (line-end (line-end-position))
+        return-value)
     (save-excursion
       (end-of-line)
       ;; we need to check whether the line ends in a comment and
@@ -1264,26 +1265,27 @@ previous one even though it looked like an end-of-statement.")
         (if (looking-at "--")
             (setq line-end (point))))
       (goto-char line-end)
-      (when (re-search-backward lua-cont-eol-regexp line-begin t)
-        (cond
-         ;; "return" keyword is ambiguous and depends on next token
-         ((string-equal (match-string-no-properties 0) "return")
-          (save-excursion
-            (goto-char (match-end 0))
-            (forward-comment (point-max))
-            (and
-             ;; Not continuing: at end of file
-             (not (eobp))
-             (or
-              ;; "function" keyword: it is a continuation, e.g.
-              ;;
-              ;;    return
-              ;;       function() return 123 end
-              ;;
-              (looking-at (lua-rx (symbol "function")))
-              ;; Looking at semicolon or any other keyword: not continuation
-              (not (looking-at (lua-rx (or ";" lua-keyword))))))))
-         (t t))))))
+      (setq return-value (re-search-backward lua-cont-eol-regexp line-begin t))
+      (if (and return-value
+               (string-equal (match-string-no-properties 0) "return"))
+          ;; "return" keyword is ambiguous and depends on next token
+          (unless (save-excursion
+                    (goto-char (match-end 0))
+                    (forward-comment (point-max))
+                    (and
+                     ;; Not continuing: at end of file
+                     (not (eobp))
+                     (or
+                      ;; "function" keyword: it is a continuation, e.g.
+                      ;;
+                      ;;    return
+                      ;;       function() return 123 end
+                      ;;
+                      (looking-at (lua-rx (symbol "function")))
+                      ;; Looking at semicolon or any other keyword: not continuation
+                      (not (looking-at (lua-rx (or ";" lua-keyword)))))))
+            (setq return-value nil)))
+      return-value)))
 
 
 (defun lua-first-token-continues-p ()
@@ -1295,6 +1297,13 @@ previous one even though it looked like an end-of-statement.")
       ;; if strings aren't supposed to be indented, `lua-calculate-indentation' won't even let
       ;; the control inside this function
       (re-search-forward lua-cont-bol-regexp line-end t))))
+
+
+(defun lua--backward-up-list-noerror ()
+  "Safe version of lua-backward-up-list that does not signal an error."
+  (condition-case nil
+      (lua-backward-up-list)
+    (scan-error nil)))
 
 
 (defun lua-backward-up-list ()
@@ -1314,8 +1323,9 @@ previous one even though it looked like an end-of-statement.")
       ;; If the token is a close token, continue to skip its opener. If not
       ;; close, stop and return found token.
       while (eq token-type 'close)
-      ;; Find matching opener to skip it and continue from beginning. Return nil
-      ;; on failure.
+      ;; Find matching opener to skip it and continue from beginning.
+      ;;
+      ;; Return nil on failure.
       always (let ((position (lua-find-matching-token-word token 'backward)))
                (and position (goto-char position)))
       finally return token-info)
@@ -1338,19 +1348,45 @@ The criteria for a continuing statement are:
   OR the first token of the current line is a continuing op
 
 * the expression is not enclosed by a parenthesis"
-  (let ((prev-line nil))
+  (let (return-value (prev-line nil))
     (save-excursion
       (if parse-start (goto-char parse-start))
+
+      ;; If line starts with a series of closer tokens, whether or not the line
+      ;; is a continuation line is decided by the opener line, e.g.
+      ;;
+      ;; x = foo +
+      ;;    long_function_name(
+      ;;       long_parameter_1,
+      ;;       long_parameter_2,
+      ;;       long_parameter_3,
+      ;;    ) + long_function_name2({
+      ;;       long_parameter_1,
+      ;;       long_parameter_2,
+      ;;       long_parameter_3,
+      ;;    })
+      ;;
+      ;; Final line, "})" is a continuation line, but it is decided by the
+      ;; opener line, ") + long_function_name2({", which in its turn is decided
+      ;; by the "long_function_name(" line, which is a continuation line
+      ;; because the line before it ends with a binary operator.
+      (while (and (lua--goto-line-beginning-rightmost-closer)
+                  (lua--backward-up-list-noerror)
+                  (lua-is-continuing-statement-p)))
+
       (save-excursion (setq prev-line (lua-forward-line-skip-blanks 'back)))
       (and prev-line
-           (and (or (lua-first-token-continues-p)
-                    (save-excursion (and (goto-char prev-line)
-                                         ;; check last token of previous nonblank line
-                                         (lua-last-token-continues-p))))
-                (not (member (car-safe (condition-case nil (lua-backward-up-list)
-                                         (scan-error nil)))
+           ;; Binary operator or keyword that implies continuation.
+           (and (setq return-value
+                      (or (lua-first-token-continues-p)
+                          (save-excursion (and (goto-char prev-line)
+                                               ;; check last token of previous nonblank line
+                                               (lua-last-token-continues-p)))))
+                (not (member (car-safe (lua--backward-up-list-noerror))
                              ;; XXX: can we also add "{" here?
-                             '("(" "["))))))))
+                             '("(" "[")))
+                return-value)))))
+
 
 (defun lua-make-indentation-info-pair (found-token found-pos)
   "Create a pair from FOUND-TOKEN and FOUND-POS for indentation calculation.
@@ -1402,12 +1438,12 @@ Don't use standalone."
    ;; either the next line will be indented correctly, or the end on the same
    ;; line will remove the effect of the else.
    ((string-equal found-token "else")
-     (save-excursion
-       (let ((line (line-number-at-pos)))
-         (if (and (lua-goto-matching-block-token found-pos 'backward)
-                  (= line (line-number-at-pos)))
-             (cons 'replace-matching (cons 'relative lua-indent-level))
-                   (cons 'relative lua-indent-level)))))
+    (save-excursion
+      (let ((line (line-number-at-pos)))
+        (if (and (lua-goto-matching-block-token found-pos 'backward)
+                 (= line (line-number-at-pos)))
+            (cons 'replace-matching (cons 'relative lua-indent-level))
+          (cons 'relative lua-indent-level)))))
 
    ;; Block closers. If they are on the same line as their openers, they simply
    ;; eat up the matching indentation modifier. Otherwise, they pull
@@ -1420,6 +1456,9 @@ Don't use standalone."
             (lua-calculate-indentation-info (point))
           (cons 'remove-matching 0)))))
 
+   ((member found-token '("do" "then"))
+    `(multiple . ((cancel-continued-line . nil) (relative . ,lua-indent-level))))
+
    ;; Everything else. This is from the original code: If opening a block
    ;; (match-data 1 exists), then push indentation one level up, if it is
    ;; closing a block, pull it one level down.
@@ -1430,8 +1469,8 @@ Don't use standalone."
                       ;; end of a block matched
                       (- lua-indent-level))))))
 
-(defun  lua-add-indentation-info-pair (pair info)
-  "Add the given indentation info PAIR to the list of indentation INFO.
+(defun  lua-add-indentation-info-pair (pair info-list)
+  "Add the given indentation info PAIR to the list of indentation INFO-LIST.
 This function has special case handling for two tokens: remove-matching,
 and replace-matching.  These two tokens are cleanup tokens that remove or
 alter the effect of a previously recorded indentation info.
@@ -1445,17 +1484,27 @@ and the cdr of the replace-matching info is added in its place.  This is used
 when a middle-of the block (the only case is 'else') is seen on the same line
 the block is opened."
   (cond
+   ( (eq 'multiple (car pair))
+     (let ((info-pair-elts (cdr pair)))
+       (while info-pair-elts
+         (setq info-list (lua-add-indentation-info-pair (car info-pair-elts) info-list)
+               info-pair-elts (cdr info-pair-elts)))
+       info-list))
+   ( (eq 'cancel-continued-line (car pair))
+     (if (eq (caar info-list) 'continued-line)
+         (cdr info-list)
+       info-list))
    ( (eq 'remove-matching (car pair))
-     ; Remove head of list
-     (cdr info))
+     ;; Remove head of list
+     (cdr info-list))
    ( (eq 'replace-matching (car pair))
-     ; remove head of list, and add the cdr of pair instead
-     (cons (cdr pair) (cdr info)))
+     ;; remove head of list, and add the cdr of pair instead
+     (cons (cdr pair) (cdr info-list)))
    ( (listp (cdr-safe pair))
-     (nconc pair info))
+     (nconc pair info-list))
    ( t
-     ; Just add the pair
-     (cons pair info))))
+     ;; Just add the pair
+     (cons pair info-list))))
 
 (defun lua-calculate-indentation-info-1 (indentation-info bound)
   "Helper function for `lua-calculate-indentation-info'.
@@ -1478,10 +1527,11 @@ The effect of each token can be either a shift relative to the current
 indentation level, or indentation to some absolute column. This information
 is collected in a list of indentation info pairs, which denote absolute
 and relative each, and the shift/column to indent to."
-  (let (indentation-info)
-
-    (while (lua-is-continuing-statement-p)
-      (lua-forward-line-skip-blanks 'back))
+  (let (indentation-info cont-stmt-pos)
+    (while (setq cont-stmt-pos (lua-is-continuing-statement-p))
+      (lua-forward-line-skip-blanks 'back)
+      (when (< cont-stmt-pos (point))
+        (goto-char cont-stmt-pos)))
 
     ;; calculate indentation modifiers for the line itself
     (setq indentation-info (list (cons 'absolute (current-indentation))))
@@ -1503,7 +1553,7 @@ and relative each, and the shift/column to indent to."
 
         ;; if it's the first non-continued line, subtract one level
         (when (eq (car (car indentation-info)) 'continued-line)
-          (pop indentation-info)))
+          (push (cons 'stop-continued-line (- lua-indent-level)) indentation-info)))
 
       ;; add modifiers found in this continuation line
       (setq indentation-info
@@ -1626,6 +1676,27 @@ left-shifter expression. "
        (looking-at lua--left-shifter-regexp)
        (= old-point (match-end 1))))))
 
+(defun lua--goto-line-beginning-rightmost-closer (&optional parse-start)
+  (let (case-fold-search pos line-end-pos return-val)
+    (save-excursion
+      (if parse-start (goto-char parse-start))
+      (setq line-end-pos (line-end-position))
+      (back-to-indentation)
+      (unless (lua-comment-or-string-p)
+        (cl-loop while (and (<= (point) line-end-pos)
+                            (looking-at lua-indentation-modifier-regexp))
+                 for token-info = (lua-get-block-token-info (match-string 0))
+                 for token-type = (lua-get-token-type token-info)
+                 while (not (eq token-type 'open))
+                 do (progn
+                      (setq pos (match-beginning 0)
+                            return-val token-info)
+                      (goto-char (match-end 0))
+                      (forward-comment (line-end-position))))))
+    (when pos
+      (progn
+        (goto-char pos)
+        return-val))))
 
 
 (defun lua-calculate-indentation-override (&optional parse-start)
@@ -1637,27 +1708,43 @@ line containing block-open token for the last block-close token
 in the sequence.
 
 If not, return nil."
-  (let (case-fold-search token-info block-token-pos)
+  (let (case-fold-search rightmost-closer-info opener-info opener-pos)
     (save-excursion
-      (if parse-start (goto-char parse-start))
+      (when (and (setq rightmost-closer-info (lua--goto-line-beginning-rightmost-closer parse-start))
+                 (setq opener-info (lua--backward-up-list-noerror))
+                 ;; Ensure opener matches closer.
+                 (string-match (lua-get-token-match-re rightmost-closer-info 'backward)
+                               (car opener-info)))
 
-      (back-to-indentation)
-      (unless (lua-comment-or-string-p)
-        (while
-            (and (looking-at lua-indentation-modifier-regexp)
-                 (setq token-info (lua-get-block-token-info (match-string 0)))
-                 (not (eq 'open (lua-get-token-type token-info))))
-          (setq block-token-pos (match-beginning 0))
-          (goto-char (match-end 0))
-          (skip-syntax-forward " " (line-end-position)))
+        ;; Special case: "middle" tokens like for/do, while/do, if/then,
+        ;; elseif/then: corresponding "end" or corresponding "else" must be
+        ;; unindented to the beginning of the statement, which is not
+        ;; necessarily the same as beginning of string that contains "do", e.g.
+        ;;
+        ;; while (
+        ;;    foo and
+        ;;    bar) do
+        ;;    hello_world()
+        ;; end
+        (setq opener-pos (point))
+        (unless (or
+                 (and (string-equal (car opener-info) "do")
+                      (member (car (lua--backward-up-list-noerror)) '("while" "for")))
+                 (and (string-equal (car opener-info) "then")
+                      (member (car (lua--backward-up-list-noerror)) '("if" "elseif"))))
+          (goto-char opener-pos))
 
-        (when (lua-goto-matching-block-token block-token-pos 'backward)
-          ;; Exception cases: when the start of the line is an assignment,
-          ;; go to the start of the assignment instead of the matching item
-          (if (or (not lua-indent-close-paren-align)
-                  (lua-point-is-after-left-shifter-p))
-              (current-indentation)
-            (current-column)))))))
+        ;; (let (cont-stmt-pos)
+        ;;   (while (setq cont-stmt-pos (lua-is-continuing-statement-p))
+        ;;     (goto-char cont-stmt-pos)))
+        ;; Exception cases: when the start of the line is an assignment,
+        ;; go to the start of the assignment instead of the matching item
+        (if (and lua-indent-close-paren-align
+                 (member (car opener-info) '("{" "(" "["))
+                 (not (lua-point-is-after-left-shifter-p)))
+            (current-column)
+          (current-indentation))))))
+
 
 (defun lua-calculate-indentation ()
   "Return appropriate indentation for current line as Lua code."
