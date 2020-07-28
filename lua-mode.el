@@ -1341,8 +1341,8 @@ previous one even though it looked like an end-of-statement.")
                      (if (eql start-pos end-pos) start-pos (match-beginning 0))
                      (if (eql start-pos end-pos) start-pos (match-end 0))))))))
 
-(defun lua-is-continuing-statement-p (&optional parse-start)
-  "Return non-nil if the line at PARSE-START continues a statement.
+(defun lua-is-continuing-statement-p-1 ()
+  "Return non-nil if current lined continues a statement.
 
 More specifically, return the point in the line that is continued.
 The criteria for a continuing statement are:
@@ -1351,44 +1351,55 @@ The criteria for a continuing statement are:
   OR the first token of the current line is a continuing op
 
 * the expression is not enclosed by a parenthesis"
-  (let (return-value (prev-line nil))
-    (save-excursion
-      (if parse-start (goto-char parse-start))
+  (let (prev-line return-value)
+    (save-excursion (setq prev-line (lua-forward-line-skip-blanks 'back)))
+    (and prev-line
+         ;; Binary operator or keyword that implies continuation.
+         (and (setq return-value
+                    (or (lua-first-token-continues-p)
+                        (save-excursion (and (goto-char prev-line)
+                                             ;; check last token of previous nonblank line
+                                             (lua-last-token-continues-p)))))
+              (not (member (car-safe (lua--backward-up-list-noerror))
+                           ;; XXX: can we also add "{" here?
+                           '("(" "[")))
+              return-value))))
 
-      ;; If line starts with a series of closer tokens, whether or not the line
-      ;; is a continuation line is decided by the opener line, e.g.
-      ;;
-      ;; x = foo +
-      ;;    long_function_name(
-      ;;       long_parameter_1,
-      ;;       long_parameter_2,
-      ;;       long_parameter_3,
-      ;;    ) + long_function_name2({
-      ;;       long_parameter_1,
-      ;;       long_parameter_2,
-      ;;       long_parameter_3,
-      ;;    })
-      ;;
-      ;; Final line, "})" is a continuation line, but it is decided by the
-      ;; opener line, ") + long_function_name2({", which in its turn is decided
-      ;; by the "long_function_name(" line, which is a continuation line
-      ;; because the line before it ends with a binary operator.
-      (while (and (lua--goto-line-beginning-rightmost-closer)
-                  (lua--backward-up-list-noerror)
-                  (lua-is-continuing-statement-p)))
 
-      (save-excursion (setq prev-line (lua-forward-line-skip-blanks 'back)))
-      (and prev-line
-           ;; Binary operator or keyword that implies continuation.
-           (and (setq return-value
-                      (or (lua-first-token-continues-p)
-                          (save-excursion (and (goto-char prev-line)
-                                               ;; check last token of previous nonblank line
-                                               (lua-last-token-continues-p)))))
-                (not (member (car-safe (lua--backward-up-list-noerror))
-                             ;; XXX: can we also add "{" here?
-                             '("(" "[")))
-                return-value)))))
+(defun lua-is-continuing-statement-p (&optional parse-start)
+  "Returns non-nil if the line at PARSE-START should be indented as continuation line.
+
+This true is when the line :
+
+* is continuing a statement itself
+
+* starts with a 1+ block-closer tokens, an top-most block opener is on a continuation line
+"
+  (save-excursion
+    (if parse-start (goto-char parse-start))
+
+    ;; If line starts with a series of closer tokens, whether or not the line
+    ;; is a continuation line is decided by the opener line, e.g.
+    ;;
+    ;; x = foo +
+    ;;    long_function_name(
+    ;;       long_parameter_1,
+    ;;       long_parameter_2,
+    ;;       long_parameter_3,
+    ;;    ) + long_function_name2({
+    ;;       long_parameter_1,
+    ;;       long_parameter_2,
+    ;;       long_parameter_3,
+    ;;    })
+    ;;
+    ;; Final line, "})" is a continuation line, but it is decided by the
+    ;; opener line, ") + long_function_name2({", which in its turn is decided
+    ;; by the "long_function_name(" line, which is a continuation line
+    ;; because the line before it ends with a binary operator.
+    (while (and (lua--goto-line-beginning-rightmost-closer)
+                (lua--backward-up-list-noerror)
+                (lua-is-continuing-statement-p-1)))
+    (lua-is-continuing-statement-p-1)))
 
 
 (defun lua-make-indentation-info-pair (found-token found-pos)
