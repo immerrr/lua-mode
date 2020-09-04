@@ -97,7 +97,8 @@
 
 (require 'comint)
 (require 'newcomment)
-(require 'rx)
+(eval-and-compile
+  (require 'rx))
 
 
 ;; rx-wrappers for Lua
