@@ -1354,16 +1354,21 @@ The criteria for a continuing statement are:
   (let (prev-line return-value)
     (save-excursion (setq prev-line (lua-forward-line-skip-blanks 'back)))
     (and prev-line
-         ;; Binary operator or keyword that implies continuation.
-         (and (setq return-value
-                    (or (lua-first-token-continues-p)
-                        (save-excursion (and (goto-char prev-line)
-                                             ;; check last token of previous nonblank line
-                                             (lua-last-token-continues-p)))))
-              (not (member (car-safe (lua--backward-up-list-noerror))
-                           ;; XXX: can we also add "{" here?
-                           '("(" "[")))
-              return-value))))
+         (or
+          ;; Binary operator or keyword that implies continuation.
+          (and (setq return-value
+                     (or (lua-first-token-continues-p)
+                         (save-excursion (and (goto-char prev-line)
+                                              ;; check last token of previous nonblank line
+                                              (lua-last-token-continues-p)))))
+               (not (member (car-safe (lua--backward-up-list-noerror))
+                            ;; XXX: can we also add "{" here?
+                            '("(" "[")))
+               return-value)
+          ;; "for" expressions (until the next do) imply continuation.
+          (when (string-equal (car-safe (lua--backward-up-list-noerror)) "for")
+            (point))))))
+
 
 
 (defun lua-is-continuing-statement-p (&optional parse-start)

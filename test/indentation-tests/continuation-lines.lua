@@ -134,7 +134,7 @@ x = [
    + another_very_very_very_long_name()
     ]
 
--- XFAIL: indentation in block-intros: while
+-- indentation in block-intros: while
 
 while
    foo do
@@ -152,23 +152,6 @@ do
 end
 
 a = 0
-
--- XFAIL: indentation in block-intros: for1
-
-for k, v
-   in pairs(bar) do
-   a = a + 1
-end
-
-a = 0
-
--- XFAIL: indentation in block-intros: for2
-
-for k, v
-   in pairs(bar) do a = a + 1 end
-
-a = 0
-
 
 -- indents expressions after return: basic
 
