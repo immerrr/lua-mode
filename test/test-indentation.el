@@ -5,7 +5,6 @@
               "utils.el") nil 'nomessage 'nosuffix)
 
 (require 'buttercup)
-(require 'subr-x)
 (require 'cl-lib)
 
 (defun lua--string-trim-safe (str)
