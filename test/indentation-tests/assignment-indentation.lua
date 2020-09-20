@@ -75,14 +75,46 @@ local
 local
    x = 5
 
--- XFAIL: it unindents close paren for arithmetical expression
+-- indentation of function call arguments in continuation part
+
+x = foo(123,
+        456)
+   + bar(
+      qux,
+      quux)
+
+-- does not indent binary operators inside parentheses: alignment 1
+
+x = (very_very_very_long_name() +
+     another_very_very_very_long_name())
+
+-- does not indent binary operators inside parentheses: alignment 2
+
+x = (very_very_very_long_name()
+     + another_very_very_very_long_name())
+
+-- does not indent binary operators inside parentheses: indentation 1
+
+x = (
+   very_very_very_long_name() +
+   another_very_very_very_long_name()
+)
+
+-- does not indent binary operators inside parentheses: indentation 2
+
+x = (
+   very_very_very_long_name()
+   + another_very_very_very_long_name()
+)
+
+-- it unindents close paren for arithmetical expression
 
 a = (
    foo +
    bar
 )
 
--- XFAIL: it unindents close paren for arithmetical expression: local
+-- it unindents close paren for arithmetical expression: local
 
 local a = (
    foo +
@@ -130,3 +162,27 @@ local a = myobj[
    foo +
    bar
 ]
+
+-- does not indent binary operators inside brackets: alignment 1
+
+x = t[very_very_very_long_name() +
+      another_very_very_very_long_name()]
+
+-- does not indent binary operators inside brackets: alignment 2
+
+x = t[very_very_very_long_name()
+      + another_very_very_very_long_name()]
+
+-- does not indent binary operators inside brackets: indentation 1
+
+x = [
+   very_very_very_long_name() +
+   another_very_very_very_long_name()
+    ]
+
+-- does not indent binary operators inside brackets: indentation 2
+
+x = [
+   very_very_very_long_name()
+   + another_very_very_very_long_name()
+    ]

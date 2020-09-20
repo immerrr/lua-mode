@@ -1657,6 +1657,7 @@ one."
               ;; right hand side
               (or "{"
                   "function"
+                  "("
                   (seq (group-n 1 (eval lua--function-name-rx) (* blank))
                        (any "({")))))))
 
