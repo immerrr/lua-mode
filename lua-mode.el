@@ -333,6 +333,7 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
                 #'lua-electric-match))
             lua--electric-indent-chars))
     (define-key result-map [menu-bar lua-mode] (cons "Lua" lua-mode-menu))
+    (define-key result-map [remap backward-up-list] 'lua-backward-up-list)
 
     ;; FIXME: see if the declared logic actually works
     ;; handle prefix-keyed bindings:
@@ -1287,6 +1288,37 @@ previous one even though it looked like an end-of-statement.")
     (save-excursion
       (beginning-of-line)
       (re-search-forward (concat "\\s *" lua-block-starter-regexp) line-end t))))
+
+(defun lua-backward-up-list ()
+  "Goto starter/opener of the block that contains point."
+  (interactive)
+  (let ((start-pos (point))
+        end-pos)
+    (or
+     ;; Return parent block opener token if it exists.
+     (cl-loop
+      ;; Search indentation modifier backward, return nil on failure.
+      always (lua-find-regexp 'backward lua-indentation-modifier-regexp)
+      ;; Fetch info about the found token
+      for token = (match-string-no-properties 0)
+      for token-info = (lua-get-block-token-info token)
+      for token-type = (lua-get-token-type token-info)
+      ;; If the token is a close token, continue to skip its opener. If not
+      ;; close, stop and return found token.
+      while (eq token-type 'close)
+      ;; Find matching opener to skip it and continue from beginning. Return nil
+      ;; on failure.
+      always (let ((position (lua-find-matching-token-word token 'backward)))
+               (and position (goto-char position)))
+      finally return token-info)
+     (progn
+       (setq end-pos (point))
+       (goto-char start-pos)
+       (signal 'scan-error
+               (list "Block open token not found"
+                     ;; If start-pos == end-pos, the "obstacle" is current
+                     (if (eql start-pos end-pos) start-pos (match-beginning 0))
+                     (if (eql start-pos end-pos) start-pos (match-end 0))))))))
 
 (defun lua-is-continuing-statement-p (&optional parse-start)
   "Return non-nil if the line at PARSE-START continues a statement.

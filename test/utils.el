@@ -170,3 +170,61 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
         (indent-tabs-mode nil)
         (font-lock-verbose nil))
     (equal strs (lua-get-indented-strs strs))))
+
+(defun with-point-at-matcher (&rest args)
+  (let* (lua-code
+         origin-placeholder
+         (origin-marker (make-marker))
+         target-placeholder
+         (target-marker (make-marker))
+         body
+         last-elt
+         result
+         message
+         )
+    (cl-dolist (elt args)
+      (cond
+       ((eq last-elt :lua-code)
+        (setq lua-code (funcall elt)
+              last-elt nil))
+       ((eq last-elt :with-point-at)
+        (setq origin-placeholder (funcall elt)
+              last-elt nil))
+       ((eq last-elt :to-end-up-at)
+        (setq target-placeholder (funcall elt)
+              last-elt nil))
+       ((eq last-elt :after-executing)
+        ;; No funcall here, funcall when the buffer is set up.
+        (setq body elt
+              last-elt nil))
+       (t
+        (setq last-elt (if (functionp elt) (funcall elt) elt)))))
+
+    (with-lua-buffer
+     (insert lua-code)
+
+     (goto-char (point-min))
+     (set-marker target-marker (search-forward target-placeholder))
+     (replace-match "")
+
+     (goto-char (point-min))
+     (set-marker origin-marker (search-forward origin-placeholder))
+     (replace-match "")
+
+     (funcall body)
+
+     (setq result (equal (point) (marker-position target-marker)))
+     (setq message
+           (if result
+          (format "Expected point not to be here:\n\n%s|%s"
+                  (buffer-substring-no-properties (point-min) (point))
+                  (buffer-substring-no-properties (point) (point-max)))
+        (format "Expected point to be here:\n============\n%s|%s\n============\n\nInstead it was here:\n============\n%s|%s\n============"
+                (buffer-substring-no-properties (point-min) (marker-position target-marker))
+                (buffer-substring-no-properties (marker-position target-marker) (point-max))
+                (buffer-substring-no-properties (point-min) (point))
+                (buffer-substring-no-properties (point) (point-max)))))
+     (cons result message))))
+
+(buttercup-define-matcher :with-point-at (&rest args)
+  (apply #'with-point-at-matcher `(:lua-code ,(car args) :with-point-at ,@(cdr args))))
