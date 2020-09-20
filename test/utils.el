@@ -230,20 +230,19 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
   (apply #'with-point-at-matcher `(:lua-code ,(car args) :with-point-at ,@(cdr args))))
 
 
-(require 'subr-x)
-
-;; (describe "foo"
-;;   (it "runs hello"
-;;     (expect "function foo()\nreturn 123\nend" :to-be-reindented-the-same-way)))
-
-;; (defun lua--explain-indentation-mismatch (strs indented-strs)
-;;   (cl-loop for i in (number-sequence 1 (length strs))
-;;            for s1 in strs
-;;            for s2 in indented-strs
-;;            if (not (string-equal s1 s2))
-;;            collect (format "Mismatch on line %s:\nExpected: %S\nActual  : %S" i s1 s2)))
-
-
+(defun lua--string-trim (string &optional trim-left trim-right)
+  ;; Backport of string-trim for Emacs 24 that doesn't have subr-x lib.
+  (let ((sub-start 0) sub-end)
+    (or trim-left (setq trim-left "[ \t\n\r]+"))
+    (or trim-right (setq trim-right "[ \t\n\r]+"))
+    (save-match-data
+      (when (string-match (concat "\\`" trim-left) string)
+        (setq sub-start (match-end 0)))
+      (when (string-match (concat trim-right "\\'") string sub-start)
+        (setq sub-end (match-beginning 0))))
+    (if (or sub-start sub-end)
+        (substring string sub-start sub-end)
+      string)))
 
 
 (buttercup-define-matcher :to-be-reindented-the-same-way (str)
@@ -251,7 +250,7 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
          (indented-lines (lua-get-indented-strs lines)))
     (buttercup--test-expectation (equal lines indented-lines)
       :expect-match-phrase (format "Indentation check failed:\n=========\nExpected:\n---------\n%s\n---------\nActual:\n---------\n%s\n========="
-                                   (string-trim (mapconcat 'identity lines "\n"))
-                                   (string-trim (mapconcat 'identity indented-lines "\n")))
+                                   (lua--string-trim (mapconcat 'identity lines "\n"))
+                                   (lua--string-trim (mapconcat 'identity indented-lines "\n")))
       :expect-mismatch-phrase (format "Expected `%S' to not be reindented like that"
                                       lines))))

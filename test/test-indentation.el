@@ -7,9 +7,6 @@
 (require 'buttercup)
 (require 'cl-lib)
 
-(defun lua--string-trim-safe (str)
-  (save-match-data (string-trim str)))
-
 
 (defun lua--get-indentation-test-sections (file-path)
   (with-temp-buffer
@@ -26,10 +23,10 @@
         ;; Scan towards the next comment or end of file, save the comment as
         ;; the name for the section that comes AFTER the current one.
         (setq next-section-name
-              (when (re-search-forward "^--\\(.*\\)" nil 'noerror) (lua--string-trim-safe (match-string-no-properties 1))))
+              (when (re-search-forward "^--\\(.*\\)" nil 'noerror) (lua--string-trim (match-string-no-properties 1))))
         ;; Record current section bounds and contents
         (setq end (if next-section-name (match-beginning 0) (point-max)))
-        (setq cur-str (lua--string-trim-safe (buffer-substring-no-properties begin end)))
+        (setq cur-str (lua--string-trim (buffer-substring-no-properties begin end)))
         ;; Save current section to be returned
         (if (> (length cur-str) 0)
             (push (list (or section-name (format "section %d" (1+ (length results))))
