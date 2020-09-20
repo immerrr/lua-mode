@@ -136,16 +136,18 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
         (lua-kill-process)))))
 
 (defun lua-get-indented-strs (strs)
-  (butlast
-   (split-string
-    (with-lua-buffer
-     (let ((inhibit-message t))
-       (insert (replace-regexp-in-string "^\\s *" "" (lua-join-lines strs)))
-       (font-lock-fontify-buffer)
-       (indent-region (point-min) (point-max))
-       (buffer-substring-no-properties
-        (point-min) (point-max))))
-    "\n" nil)))
+  (let ((indent-tabs-mode nil)
+        (font-lock-verbose nil))
+   (butlast
+    (split-string
+     (with-lua-buffer
+      (let ((inhibit-message t))
+        (insert (replace-regexp-in-string "^\\s *" "" (lua-join-lines strs)))
+        (font-lock-fontify-buffer)
+        (indent-region (point-min) (point-max))
+        (buffer-substring-no-properties
+         (point-min) (point-max))))
+     "\n" nil))))
 
 (defun lua-insert-goto-<> (strs)
   "Insert sequence of strings and put point in place of \"<>\"."
@@ -166,9 +168,7 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
      "\n" nil)))
 
 (defun lua--reindent-like (str)
-  (let ((strs (split-string str "\n"))
-        (indent-tabs-mode nil)
-        (font-lock-verbose nil))
+  (let ((strs (split-string str "\n")))
     (equal strs (lua-get-indented-strs strs))))
 
 (defun with-point-at-matcher (&rest args)
@@ -228,3 +228,29 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
 
 (buttercup-define-matcher :with-point-at (&rest args)
   (apply #'with-point-at-matcher `(:lua-code ,(car args) :with-point-at ,@(cdr args))))
+
+
+(defun lua--string-trim (string &optional trim-left trim-right)
+  ;; Backport of string-trim for Emacs 24 that doesn't have subr-x lib.
+  (let ((sub-start 0) sub-end)
+    (or trim-left (setq trim-left "[ \t\n\r]+"))
+    (or trim-right (setq trim-right "[ \t\n\r]+"))
+    (save-match-data
+      (when (string-match (concat "\\`" trim-left) string)
+        (setq sub-start (match-end 0)))
+      (when (string-match (concat trim-right "\\'") string sub-start)
+        (setq sub-end (match-beginning 0))))
+    (if (or sub-start sub-end)
+        (substring string sub-start sub-end)
+      string)))
+
+
+(buttercup-define-matcher :to-be-reindented-the-same-way (str)
+  (let* ((lines (split-string (funcall str) "\n"))
+         (indented-lines (lua-get-indented-strs lines)))
+    (buttercup--test-expectation (equal lines indented-lines)
+      :expect-match-phrase (format "Indentation check failed:\n=========\nExpected:\n---------\n%s\n---------\nActual:\n---------\n%s\n========="
+                                   (lua--string-trim (mapconcat 'identity lines "\n"))
+                                   (lua--string-trim (mapconcat 'identity indented-lines "\n")))
+      :expect-mismatch-phrase (format "Expected `%S' to not be reindented like that"
+                                      lines))))
