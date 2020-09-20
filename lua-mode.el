@@ -1217,17 +1217,17 @@ Returns final value of point as integer or nil if operation failed."
 (defconst lua-cont-eol-regexp
   (eval-when-compile
     (concat
-     "\\(\\_<"
+     "\\(?:\\(?1:\\_<"
      (regexp-opt '("and" "or" "not" "in" "for" "while"
                    "local" "function" "if" "until" "elseif" "return")
                  t)
-     "\\_>\\|"
-     "\\(^\\|[^" lua-operator-class "]\\)"
+     "\\_>\\)\\|"
+     "\\(?:^\\|[^" lua-operator-class "]\\)\\(?2:"
      (regexp-opt '("+" "-" "*" "/" "%" "^" ".." "=="
                    "=" "<" ">" "<=" ">=" "~=" "." ":"
-                   "&" "|" "~" ">>" "<<" "~")
+                   "&" "|" "~" ">>" "<<" "~" ",")
                  t)
-     "\\)"
+     "\\)\\)"
      "\\s *\\="))
   "Regexp that matches the ending of a line that needs continuation.
 
@@ -1239,14 +1239,14 @@ an optional whitespace till the end of the line.")
   (eval-when-compile
     (concat
      "\\=\\s *"
-     "\\(\\_<"
+     "\\(?:\\(?1:\\_<"
      (regexp-opt '("and" "or" "not") t)
-     "\\_>\\|"
-     (regexp-opt '("+" "-" "*" "/" "%" "^" ".." "=="
+     "\\_>\\)\\|\\(?2:"
+     (regexp-opt '("," "+" "-" "*" "/" "%" "^" ".." "=="
                    "=" "<" ">" "<=" ">=" "~=" "." ":"
                    "&" "|" "~" ">>" "<<" "~")
                  t)
-     "\\($\\|[^" lua-operator-class "]\\)"
+     "\\)\\(?:$\\|[^" lua-operator-class "]\\)"
      "\\)"))
   "Regexp that matches a line that continues previous one.
 
@@ -1268,7 +1268,9 @@ previous one even though it looked like an end-of-statement.")
         (if (looking-at "--")
             (setq line-end (point))))
       (goto-char line-end)
-      (setq return-value (re-search-backward lua-cont-eol-regexp line-begin t))
+      (setq return-value (and (re-search-backward lua-cont-eol-regexp line-begin t)
+                              (or (match-beginning 1)
+                                  (match-beginning 2))))
       (if (and return-value
                (string-equal (match-string-no-properties 0) "return"))
           ;; "return" keyword is ambiguous and depends on next token
@@ -1299,7 +1301,10 @@ previous one even though it looked like an end-of-statement.")
       ;; if first character of the line is inside string, it's a continuation
       ;; if strings aren't supposed to be indented, `lua-calculate-indentation' won't even let
       ;; the control inside this function
-      (re-search-forward lua-cont-bol-regexp line-end t))))
+      (and
+       (re-search-forward lua-cont-bol-regexp line-end t)
+       (or (match-beginning 1)
+           (match-beginning 2))))))
 
 
 (defun lua--backward-up-list-noerror ()
@@ -1350,21 +1355,29 @@ The criteria for a continuing statement are:
 * the last token of the previous line is a continuing op,
   OR the first token of the current line is a continuing op
 
-* the expression is not enclosed by a parenthesis"
-  (let (prev-line return-value)
+* the expression is not enclosed by a parentheses/braces/brackets"
+  (let (prev-line continuation-pos parent-block-opener)
     (save-excursion (setq prev-line (lua-forward-line-skip-blanks 'back)))
     (and prev-line
          (or
           ;; Binary operator or keyword that implies continuation.
-          (and (setq return-value
-                     (or (lua-first-token-continues-p)
-                         (save-excursion (and (goto-char prev-line)
-                                              ;; check last token of previous nonblank line
-                                              (lua-last-token-continues-p)))))
-               (not (member (car-safe (lua--backward-up-list-noerror))
-                            ;; XXX: can we also add "{" here?
-                            '("(" "[")))
-               return-value)
+          (save-excursion
+            (and (setq continuation-pos
+                       (or (lua-first-token-continues-p)
+                           (save-excursion (and (goto-char prev-line)
+                                                ;; check last token of previous nonblank line
+                                                (lua-last-token-continues-p)))))
+                 (not
+                  ;; Operators/keywords does not create continuation inside some blocks:
+                  (and
+                   (setq parent-block-opener (car-safe (lua--backward-up-list-noerror)))
+                   (or
+                    ;; - inside parens/brackets
+                    (member parent-block-opener '("(" "["))
+                    ;; - inside braces if it is a comma
+                    (and (eq (char-after continuation-pos) ?,)
+                         (equal parent-block-opener "{")))))
+                 continuation-pos))
           ;; "for" expressions (until the next do) imply continuation.
           (when (string-equal (car-safe (lua--backward-up-list-noerror)) "for")
             (point))))))

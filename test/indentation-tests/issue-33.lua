@@ -5,8 +5,7 @@ a =
 
 b =
    {
-   },
-
+   }
 
 a = {
    table_elt_indented
