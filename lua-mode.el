@@ -269,7 +269,11 @@ element is itself expanded with `lua-rx-to-string'. "
   :group 'lua)
 
 (defcustom lua-default-application "lua"
-  "Default application to run in Lua process."
+  "Default application to run in Lua process.
+
+Can be a string, where it denotes a command to be executed to
+start Lua process, or a (HOST . PORT) cons, that can be used to
+connect to Lua process running remotely."
   :type '(choice (string)
                  (cons string integer))
   :group 'lua)
@@ -1836,11 +1840,11 @@ This function just searches for a `end' at the beginning of a line."
       (goto-char (point-min))
       (while (re-search-forward "[\"'\\\t\\\n]" nil t)
         (cond
-	 ((string= (match-string 0) "\n")
-	  (replace-match "\\\\n"))
-	 ((string= (match-string 0) "\t")
-	  (replace-match "\\\\t"))
-	 (t
+         ((string= (match-string 0) "\n")
+          (replace-match "\\\\n"))
+         ((string= (match-string 0) "\t")
+          (replace-match "\\\\t"))
+         (t
           (replace-match "\\\\\\&" t))))
       (concat "'" (buffer-string) "'"))))
 
@@ -1863,13 +1867,6 @@ When called interactively, switch to the process buffer."
   (setq lua-process (get-buffer-process lua-process-buffer))
   (set-process-query-on-exit-flag lua-process nil)
   (with-current-buffer lua-process-buffer
-    ;; wait for prompt
-    (while (not (lua-prompt-line))
-      (accept-process-output (get-buffer-process (current-buffer)))
-      (goto-char (point-max)))
-    ;; send initialization code
-    (lua-send-string lua-process-init-code)
-
     ;; enable error highlighting in stack traces
     (require 'compile)
     (setq lua--repl-buffer-p t)
@@ -1878,7 +1875,14 @@ When called interactively, switch to the process buffer."
           (cons (list lua-traceback-line-re 1 2)
                 compilation-error-regexp-alist))
     (compilation-shell-minor-mode 1)
-    (setq-local comint-prompt-regexp lua-prompt-regexp))
+    (setq-local comint-prompt-regexp lua-prompt-regexp)
+
+    ;; Don't send initialization code until seeing the prompt to ensure that
+    ;; the interpreter is ready.
+    (while (not (lua-prompt-line))
+      (accept-process-output (get-buffer-process (current-buffer)))
+      (goto-char (point-max)))
+    (lua-send-string lua-process-init-code))
 
   ;; when called interactively, switch to process buffer
   (if (called-interactively-p 'any)
