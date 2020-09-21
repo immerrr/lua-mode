@@ -68,10 +68,9 @@ _table.sort(foobar)
 
     (expect "_do foo(5) end_"
             :to-be-fontified-as
-            '(nil))
-    )
+            '(nil)))
   (it "fontifies keywords used as attributes"
-     ;; Hint user that keywords cannot be used like that
+    ;; Hint user that keywords cannot be used like that
     (expect "foo(5).end"
             :to-be-fontified-as
             '(("end" keyword)))
@@ -79,20 +78,73 @@ _table.sort(foobar)
             :to-be-fontified-as
             '(("end" keyword)))))
 
+(describe "Fontification of variables"
+  (it "fontifies \"local foo, bar, baz = 1, 2, 3\""
+    (expect "local foo,bar  ,   baz = 1, 2, 3"
+            :to-be-fontified-as '(("local" keyword "foo" variable-name "bar" variable-name "baz" variable-name))))
+
+  (it "fontifies \"local foo, bar, baz\""
+    (expect "local foo,bar  ,   baz"
+            :to-be-fontified-as '(("local" keyword "foo" variable-name "bar" variable-name "baz" variable-name))))
+
+  (it "fontifies \"local x =\" at end of buffer"
+    (expect "local x ="
+            :to-be-fontified-as '(("local" keyword "x" variable-name))))
+
+  (it "fontifies local \"x =\" at end of line"
+    ;; Issue #163
+    (expect "local x =
+
+foo = bar"
+            :to-be-fontified-as '(("local" keyword "x" variable-name)
+                                  ()
+                                  ())))
+
+  (it "does not fontify \"for\" inside strings"
+    ;; Issue #157
+    (expect "local xx = [[
+for abc def
+]]"
+            :to-be-fontified-as '(("local" keyword "xx" variable-name "[[" string)
+                                  ("for abc def" string)
+                                  ("]]" string))))
+
+  (it "fontifies \"for x123 =\""
+    (expect "for x123 ="
+            :to-be-fontified-as '(("for" keyword "x123" variable-name))))
+
+  (it "fontifies \"for x, y, z\""
+    (expect "for x, y, z in "
+            :to-be-fontified-as '(("for" keyword "x" variable-name "y" variable-name "z" variable-name
+                                   "in" keyword)))))
+
 
 (describe "Fontification of function headers"
   (it "fontifies function <name>(...) headers"
-    (expect "function bar() end"
-            :to-be-fontified-as '(("function" keyword "bar" function-name "end" keyword))))
+    (expect "function bar(x, y) end"
+            :to-be-fontified-as '(("function" keyword "bar" function-name
+                                   "x" variable-name "y" variable-name
+                                   "end" keyword))))
   (it "fontifies local function <name>(...) headers"
-    (expect "local function baz() end"
-            :to-be-fontified-as '(("local" keyword "function" keyword "baz" function-name "end" keyword))))
+    (expect "local function baz(x, y) end"
+            :to-be-fontified-as '(("local" keyword "function" keyword "baz" function-name
+                                   "x" variable-name "y" variable-name
+                                   "end" keyword))))
   (it "fontifies <name> = function (...) headers"
-    (expect "qux = function() end"
-            :to-be-fontified-as '(("qux" function-name "function" keyword "end" keyword))))
+    (expect "qux = function(x, y) end"
+            :to-be-fontified-as '(("qux" function-name "function" keyword
+                                   "x" variable-name "y" variable-name
+                                   "end" keyword))))
   (it "fontifies local <name> = function (...) headers"
-    (expect "local quux = function() end"
-            :to-be-fontified-as '(("local" keyword "quux" function-name "function" keyword "end" keyword))))
+    (expect "local quux = function(x, y) end"
+            :to-be-fontified-as '(("local" keyword "quux" function-name "function" keyword
+                                   "x" variable-name "y" variable-name
+                                   "end" keyword))))
+
+  (it "fontifies parameters in function literals"
+    (expect "foo(function(x, y))"
+            :to-be-fontified-as '(("function" keyword
+                                   "x" variable-name "y" variable-name))))
 
   (it "fontifies different variations of headers altogether"
     (expect
@@ -147,7 +199,7 @@ end"
        ("end" keyword))))
 
   (it "does not choke on function names with underscores"
-   (expect
+    (expect
      ;; Check all defun variants, check embedded defuns
      "\
 function foo()
