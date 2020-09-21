@@ -138,7 +138,17 @@
            (lua-keyword
             (symbol "break" "do" "else" "elseif" "end"  "for" "function"
                     "goto" "if" "in" "local" "repeat" "return"
-                    "then" "until" "while"))))
+                    "then" "until" "while"))
+           (lua-up-to-9-variables
+            (seq (group-n 1 lua-name) ws
+                 (? "," ws (group-n 2 lua-name) ws
+                    (? "," ws (group-n 3 lua-name) ws
+                       (? "," ws (group-n 4 lua-name) ws
+                          (? "," ws (group-n 5 lua-name) ws
+                             (? "," ws (group-n 6 lua-name) ws
+                                (? "," ws (group-n 7 lua-name) ws
+                                   (? "," ws (group-n 8 lua-name) ws
+                                      (? "," ws (group-n 9 lua-name) ws))))))))))))
 
         (defmacro lua-rx (&rest regexps)
           (eval `(rx-let ,lua--rx-bindings
@@ -223,7 +233,17 @@ element is itself expanded with `lua-rx-to-string'. "
               (lua-keyword
                :rx (symbol "break" "do" "else" "elseif" "end"  "for" "function"
                            "goto" "if" "in" "local" "repeat" "return"
-                           "then" "until" "while")))))))
+                           "then" "until" "while"))
+              (lua-up-to-9-variables
+               :rx (seq (group-n 1 lua-name) ws
+                        (? "," ws (group-n 2 lua-name) ws
+                           (? "," ws (group-n 3 lua-name) ws
+                              (? "," ws (group-n 4 lua-name) ws
+                                 (? "," ws (group-n 5 lua-name) ws
+                                    (? "," ws (group-n 6 lua-name) ws
+                                       (? "," ws (group-n 7 lua-name) ws
+                                          (? "," ws (group-n 8 lua-name) ws
+                                             (? "," ws (group-n 9 lua-name) ws)))))))))))))))
 
 
 ;; Local variables
@@ -534,86 +554,6 @@ traceback location."
 This is a compilation of 5.1, 5.2 and 5.3 builtins taken from the
 index of respective Lua reference manuals.")
 
-(eval-and-compile
-  (defun lua-make-delimited-matcher (elt-regexp sep-regexp end-regexp)
-    "Construct matcher function for `font-lock-keywords' to match a sequence.
-
-It's supposed to match sequences with following EBNF:
-
-ELT-REGEXP { SEP-REGEXP ELT-REGEXP } END-REGEXP
-
-The sequence is parsed one token at a time.  If non-nil is
-returned, `match-data' will have one or more of the following
-groups set according to next matched token:
-
-1. matched element token
-2. unmatched garbage characters
-3. misplaced token (i.e. SEP-REGEXP when ELT-REGEXP is expected)
-4. matched separator token
-5. matched end token
-
-Blanks & comments between tokens are silently skipped.
-Groups 6-9 can be used in any of argument regexps."
-    (let*
-        ((delimited-matcher-re-template
-          "\\=\\(?2:.*?\\)\\(?:\\(?%s:\\(?4:%s\\)\\|\\(?5:%s\\)\\)\\|\\(?%s:\\(?1:%s\\)\\)\\)")
-         ;; There's some magic to this regexp. It works as follows:
-         ;;
-         ;; A. start at (point)
-         ;; B. non-greedy match of garbage-characters (?2:)
-         ;; C. try matching separator (?4:) or end-token (?5:)
-         ;; D. try matching element (?1:)
-         ;;
-         ;; Simple, but there's a trick: pt.C and pt.D are embraced by one more
-         ;; group whose purpose is determined only after the template is
-         ;; formatted (?%s:):
-         ;;
-         ;; - if element is expected, then D's parent group becomes "shy" and C's
-         ;;   parent becomes group 3 (aka misplaced token), so if D matches when
-         ;;   an element is expected, it'll be marked with warning face.
-         ;;
-         ;; - if separator-or-end-token is expected, then it's the opposite:
-         ;;   C's parent becomes shy and D's will be matched as misplaced token.
-         (elt-expected-re (format delimited-matcher-re-template
-                                  3 sep-regexp end-regexp "" elt-regexp))
-         (sep-or-end-expected-re (format delimited-matcher-re-template
-                                         "" sep-regexp end-regexp 3 elt-regexp)))
-
-      (lambda (end)
-        (let* ((prev-elt-p (match-beginning 1))
-               (prev-end-p (match-beginning 5))
-
-               (regexp (if prev-elt-p sep-or-end-expected-re elt-expected-re))
-               (comment-start (lua-comment-start-pos (syntax-ppss)))
-               (parse-stop end))
-
-          ;; If token starts inside comment, or end-token was encountered, stop.
-          (when (and (not comment-start)
-                     (not prev-end-p))
-            ;; Skip all comments & whitespace. forward-comment doesn't have boundary
-            ;; argument, so make sure point isn't beyond parse-stop afterwards.
-            (while (and (< (point) end)
-                        (forward-comment 1)))
-            (goto-char (min (point) parse-stop))
-
-            ;; Reuse comment-start variable to store beginning of comment that is
-            ;; placed before line-end-position so as to make sure token search doesn't
-            ;; enter that comment.
-            (setq comment-start
-                  (lua-comment-start-pos
-                   (save-excursion
-                     (parse-partial-sexp (point) parse-stop
-                                         nil nil nil 'stop-inside-comment)))
-                  parse-stop (or comment-start parse-stop))
-
-            ;; Now, let's match stuff.  If regular matcher fails, declare a span of
-            ;; non-blanks 'garbage', and the next iteration will start from where the
-            ;; garbage ends.  If couldn't match any garbage, move point to the end
-            ;; and return nil.
-            (or (re-search-forward regexp parse-stop t)
-                (re-search-forward "\\(?1:\\(?2:[^ \t]+\\)\\)" parse-stop 'skip)
-                (prog1 nil (goto-char end)))))))))
-
 
 (defvar lua-font-lock-keywords
   `(;; highlight the hash-bang line "#!/foo/bar/lua" as comment
@@ -641,41 +581,49 @@ Groups 6-9 can be used in any of argument regexps."
     (,lua--builtins
      (1 font-lock-builtin-face) (2 font-lock-builtin-face nil noerror))
 
-    ("^[ \t]*\\_<for\\_>"
-     (,(lua-make-delimited-matcher (lua-rx lua-name) ","
-                                   (lua-rx (or (symbol "in") lua-assignment-op)))
-      nil nil
-      (1 font-lock-variable-name-face nil noerror)
-      (2 font-lock-warning-face t noerror)
-      (3 font-lock-warning-face t noerror)))
+    (,(lua-rx (symbol "for") ws+ lua-up-to-9-variables)
+     (1 font-lock-variable-name-face)
+     (2 font-lock-variable-name-face nil noerror)
+     (3 font-lock-variable-name-face nil noerror)
+     (4 font-lock-variable-name-face nil noerror)
+     (5 font-lock-variable-name-face nil noerror)
+     (6 font-lock-variable-name-face nil noerror)
+     (7 font-lock-variable-name-face nil noerror)
+     (8 font-lock-variable-name-face nil noerror)
+     (9 font-lock-variable-name-face nil noerror))
 
-    ;; Handle local variable/function names
-    ;;  local blalba, xyzzy =
-    ;;        ^^^^^^  ^^^^^
-    ;;
-    ;;  local function foobar(x,y,z)
-    ;;                 ^^^^^^
-    ;;  local foobar = function(x,y,z)
-    ;;        ^^^^^^
-    ("^[ \t]*\\_<local\\_>"
-     (0 font-lock-keyword-face)
+    (,(lua-rx (symbol "function") (? ws+ lua-funcname) ws "(" ws lua-up-to-9-variables)
+     (1 font-lock-variable-name-face)
+     (2 font-lock-variable-name-face nil noerror)
+     (3 font-lock-variable-name-face nil noerror)
+     (4 font-lock-variable-name-face nil noerror)
+     (5 font-lock-variable-name-face nil noerror)
+     (6 font-lock-variable-name-face nil noerror)
+     (7 font-lock-variable-name-face nil noerror)
+     (8 font-lock-variable-name-face nil noerror)
+     (9 font-lock-variable-name-face nil noerror))
 
-     ;; (* nonl) at the end is to consume trailing characters or otherwise they
-     ;; delimited matcher would attempt to parse them afterwards and wrongly
-     ;; highlight parentheses as incorrect variable name characters.
-     (,(lua-rx point ws lua-funcheader (* nonl))
-      nil nil
-      (1 font-lock-function-name-face nil noerror))
-
-     (,(lua-make-delimited-matcher (lua-rx lua-name) ","
-                                   (lua-rx lua-assignment-op))
-      nil nil
-      (1 font-lock-variable-name-face nil noerror)
-      (2 font-lock-warning-face t noerror)
-      (3 font-lock-warning-face t noerror)))
-
-    (,(lua-rx (or bol ";") ws lua-funcheader)
+    (,(lua-rx lua-funcheader)
      (1 font-lock-function-name-face))
+
+    ;; local x, y, z
+    ;; local x = .....
+    ;;
+    ;; NOTE: this is intentionally below funcheader matcher, so that in
+    ;;
+    ;; local foo = function() ...
+    ;;
+    ;; "foo" is fontified as function-name-face, and variable-name-face is not applied.
+    (,(lua-rx (symbol "local") ws+ lua-up-to-9-variables)
+     (1 font-lock-variable-name-face)
+     (2 font-lock-variable-name-face nil noerror)
+     (3 font-lock-variable-name-face nil noerror)
+     (4 font-lock-variable-name-face nil noerror)
+     (5 font-lock-variable-name-face nil noerror)
+     (6 font-lock-variable-name-face nil noerror)
+     (7 font-lock-variable-name-face nil noerror)
+     (8 font-lock-variable-name-face nil noerror)
+     (9 font-lock-variable-name-face nil noerror))
 
     (,(lua-rx (or (group-n 1
                            "@" (symbol "author" "copyright" "field" "release"
