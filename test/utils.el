@@ -56,16 +56,17 @@ E.g. for properly fontified Lua string \"local x = 100\" it should return
     \"x\" font-lock-variable-name-face
     \"100\" font-lock-constant-face)
 "
-  (let ((pos 0)
-        nextpos
-        result prop newprop)
-    (while pos
-      (setq nextpos (next-property-change pos str)
-            newprop (or (get-text-property pos 'face str)
-                        (get-text-property pos 'font-lock-face str)))
+  (let* ((pos 0)
+         (prop (or (get-text-property pos 'face str)
+                   (get-text-property pos 'font-lock-face str)))
+         (nextpos 0)
+         newprop
+         result)
+    (while nextpos
+      (setq nextpos (next-property-change nextpos str))
+      (setq newprop (when nextpos (or (get-text-property nextpos 'face str)
+                                      (get-text-property nextpos 'font-lock-face str))))
       (when (not (equal prop newprop))
-        (setq prop newprop)
-
         (when (listp prop)
           (when (eq (car-safe (last prop)) 'default)
             (setq prop (butlast prop)))
@@ -76,8 +77,9 @@ E.g. for properly fontified Lua string \"local x = 100\" it should return
               (setq prop nil))))
         (when prop
           (push (substring-no-properties str pos nextpos) result)
-          (push prop result)))
-      (setq pos nextpos))
+          (push prop result))
+        (setq prop newprop
+              pos nextpos)))
     (nreverse result)))
 
 (defun lua-fontify-str (str)

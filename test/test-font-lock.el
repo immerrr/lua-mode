@@ -100,6 +100,15 @@ foo = bar"
                                   ()
                                   ())))
 
+  (it "does not fontify \"for\" inside strings"
+    ;; Issue #157
+    (expect "local xx = [[
+for abc def
+]]"
+            :to-be-fontified-as '(("local" keyword "xx" variable-name "[[" string)
+                                  ("for abc def" string)
+                                  ("]]" string))))
+
   (it "fontifies \"for x123 =\""
     (expect "for x123 ="
             :to-be-fontified-as '(("for" keyword "x123" variable-name))))
