@@ -361,12 +361,11 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
     (define-key result-map [menu-bar lua-mode] (cons "Lua" lua-mode-menu))
     (define-key result-map [remap backward-up-list] 'lua-backward-up-list)
 
-    ;; FIXME: see if the declared logic actually works
     ;; handle prefix-keyed bindings:
     ;; * if no prefix, set prefix-map as parent, i.e.
     ;;      if key is not defined look it up in prefix-map
     ;; * if prefix is set, bind the prefix-map to that key
-    (if (boundp 'lua-prefix-key)
+    (if lua-prefix-key
         (define-key result-map (vector lua-prefix-key) lua-prefix-mode-map)
       (set-keymap-parent result-map lua-prefix-mode-map))
     result-map)
