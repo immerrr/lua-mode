@@ -311,7 +311,7 @@ Should be a list of strings."
   "The active Lua process")
 
 (defvar lua-process-buffer nil
-  "Buffer used for communication with the Lua process")
+  "Buffer used for communication with the Lua process.")
 
 (defun lua--customize-set-prefix-key (prefix-key-sym prefix-key-val)
   (cl-assert (eq prefix-key-sym 'lua-prefix-key))
@@ -1857,32 +1857,32 @@ This function just searches for a `end' at the beginning of a line."
 PROGRAM defaults to NAME, which defaults to `lua-default-application'.
 When called interactively, switch to the process buffer."
   (interactive)
-  (or switches
-      (setq switches lua-default-command-switches))
-  (setq name (or name (if (consp lua-default-application)
-                          (car lua-default-application)
-                        lua-default-application)))
-  (setq program (or program lua-default-application))
-  (setq lua-process-buffer (apply 'make-comint name program startfile switches))
-  (setq lua-process (get-buffer-process lua-process-buffer))
-  (set-process-query-on-exit-flag lua-process nil)
-  (with-current-buffer lua-process-buffer
-    ;; enable error highlighting in stack traces
-    (require 'compile)
-    (setq lua--repl-buffer-p t)
-    (make-local-variable 'compilation-error-regexp-alist)
-    (setq compilation-error-regexp-alist
-          (cons (list lua-traceback-line-re 1 2)
-                compilation-error-regexp-alist))
-    (compilation-shell-minor-mode 1)
-    (setq-local comint-prompt-regexp lua-prompt-regexp)
+  (unless (process-live-p lua-process)
+    (setq name (or name (if (consp lua-default-application)
+                            (car lua-default-application)
+                          lua-default-application)))
+    (setq program (or program lua-default-application))
+    (setq lua-process-buffer (apply #'make-comint name program startfile
+                                    (or switches lua-default-command-switches)))
+    (setq lua-process (get-buffer-process lua-process-buffer))
+    (set-process-query-on-exit-flag lua-process nil)
+    (with-current-buffer lua-process-buffer
+      ;; enable error highlighting in stack traces
+      (require 'compile)
+      (setq lua--repl-buffer-p t)
+      (make-local-variable 'compilation-error-regexp-alist)
+      (setq compilation-error-regexp-alist
+            (cons (list lua-traceback-line-re 1 2)
+                  compilation-error-regexp-alist))
+      (compilation-shell-minor-mode 1)
+      (setq-local comint-prompt-regexp lua-prompt-regexp)
 
-    ;; Don't send initialization code until seeing the prompt to ensure that
-    ;; the interpreter is ready.
-    (while (not (lua-prompt-line))
-      (accept-process-output (get-buffer-process (current-buffer)))
-      (goto-char (point-max)))
-    (lua-send-string lua-process-init-code))
+      ;; Don't send initialization code until seeing the prompt to ensure that
+      ;; the interpreter is ready.
+      (while (not (lua-prompt-line))
+        (accept-process-output (get-buffer-process (current-buffer)))
+        (goto-char (point-max)))
+      (lua-send-string lua-process-init-code)))
 
   ;; when called interactively, switch to process buffer
   (if (called-interactively-p 'any)
@@ -1890,8 +1890,7 @@ When called interactively, switch to the process buffer."
 
 (defun lua-get-create-process ()
   "Return active Lua process creating one if necessary."
-  (unless (comint-check-proc lua-process-buffer)
-    (lua-start-process))
+  (lua-start-process)
   lua-process)
 
 (defun lua-kill-process ()
