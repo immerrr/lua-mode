@@ -1148,8 +1148,9 @@ If optional NOREPORT is non-nil, it won't flag an error if there
 is no block open/close open."
   (interactive)
   ;; search backward to the beginning of the keyword if necessary
-  (if (eq (char-syntax (following-char)) ?w)
-      (re-search-backward "\\_<" nil t))
+  (when (and (eq (char-syntax (following-char)) ?w)
+	     (not (looking-at "\\_<")))
+    (re-search-backward "\\_<" nil t))
   (let ((position (lua-goto-matching-block-token)))
     (if (and (not position)
              (not noreport))
