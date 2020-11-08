@@ -2022,11 +2022,11 @@ Create a Lua process if one doesn't already exist."
   "Get current Name { '.' Name } sequence."
   (save-excursion
     (save-match-data
-      (re-search-backward "\\`\\|[^A-Za-z.]")
+      (re-search-backward "\\`\\|[^A-Za-z_.]")
       ;; NOTE: `point' will be either at the start of the buffer or on a
       ;; non-symbol character.
-      (re-search-forward "\\([A-Za-z]+\\(?:.[A-Za-z]+\\)*\\)")
-      (match-string 1))))
+      (re-search-forward "\\([A-Za-z_]+\\(?:\\.[A-Za-z_]+\\)*\\)")
+      (match-string-no-properties 1))))
 
 (defun lua-search-documentation ()
   "Search Lua documentation for the word at the point."
