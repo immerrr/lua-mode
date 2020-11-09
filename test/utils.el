@@ -256,3 +256,15 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
                                    (lua--string-trim (mapconcat 'identity indented-lines "\n")))
       :expect-mismatch-phrase (format "Expected `%S' to not be reindented like that"
                                       lines))))
+
+(defmacro lua--parametrize-tests (variables param-values it description-form &rest body)
+  `(progn
+     ,@(cl-loop
+        for params in param-values
+        for let-bindings = (cl-loop for var in variables
+                                    for param in params
+                                    collect `(,var (quote ,param)))
+        for description = (eval `(let ,let-bindings ,description-form))
+        for test-body = `(let ,let-bindings ,@body)
+        collect
+        (macroexpand `(it ,description ,test-body)))))
