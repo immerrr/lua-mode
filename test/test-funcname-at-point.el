@@ -23,9 +23,9 @@
     (with-temp-buffer
       (save-excursion (insert "table.insert."))
       (expect (lua-funcname-at-point) :to-equal "table.insert")))
-  (it "ignores identifiers before point"
+  (it "handles identifiers before point"
     (with-temp-buffer
       (insert "table.insert.")
-      (expect (lua-funcname-at-point) :to-be nil))))
+      (expect (lua-funcname-at-point) :to-equal "table.insert"))))
 
 ;;; test-funcname-at-point.el ends here

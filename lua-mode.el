@@ -2018,9 +2018,15 @@ Create a Lua process if one doesn't already exist."
   (when (buffer-live-p lua-process-buffer)
     (delete-windows-on lua-process-buffer)))
 
+(defun lua--funcname-char-p (c)
+  "Check if character C is part of a function name.
+Return nil if C is nil. See `lua-funcname-at-point'."
+  (and c (string-match-p "\\`[A-Za-z_.]\\'" (string c))))
+
 (defun lua-funcname-at-point ()
   "Get current Name { '.' Name } sequence."
-  (when (looking-at-p "[A-Za-z_.]")
+  (when (or (lua--funcname-char-p (char-before))
+            (lua--funcname-char-p (char-after)))
     (save-excursion
       (save-match-data
         (re-search-backward "\\`\\|[^A-Za-z_.]")
