@@ -1289,7 +1289,7 @@ an optional whitespace till the end of the line.")
     (concat
      "\\=\\s *"
      "\\(?:\\(?1:\\_<"
-     (regexp-opt '("and" "or" "not") t)
+     (regexp-opt '("and" "or" "not" "in") t)
      "\\_>\\)\\|\\(?2:"
      (regexp-opt '("," "+" "-" "*" "/" "%" "^" ".." "=="
                    "=" "<" ">" "<=" ">=" "~=" "." ":"
@@ -1307,7 +1307,6 @@ previous one even though it looked like an end-of-statement.")
 (defun lua-last-token-continues-p ()
   "Return non-nil if the last token on this line is a continuation token."
   (let ((line-begin (line-beginning-position))
-        (line-end (line-end-position))
         return-value)
     (save-excursion
       (end-of-line)
@@ -1433,11 +1432,7 @@ The criteria for a continuing statement are:
                     ;; - inside braces if it is a comma
                     (and (eq (char-after continuation-pos) ?,)
                          (equal parent-block-opener "{")))))
-                 continuation-pos)
-            ;; "for" expressions (until the next do) imply continuation.
-            (when (string-equal (car-safe (lua--backward-up-list-noerror)) "for")
-              (point)))))))
-
+                 continuation-pos))))))
 
 
 (defun lua-is-continuing-statement-p (&optional parse-start)
