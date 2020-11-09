@@ -957,23 +957,65 @@ Return the amount the indentation changed by."
                0
              lua-indent-level))))))
 
-(defun lua-find-regexp (direction regexp &optional limit ignore-p)
+
+(defun lua--ensure-point-within-limit (limit backward)
+  "Return non-nil if point is within LIMIT going forward.
+
+With BACKWARD non-nil, return non-nil if point is within LIMIT
+going backward.
+
+If point is beyond limit, move it onto limit."
+  (if (= (cl-signum (- (point) limit))
+         (if backward 1 -1))
+      t
+    (goto-char limit)
+    nil))
+
+
+(defun lua--escape-from-string (&optional backward)
+  "Move point outside of string if it is inside one.
+
+By default, point is placed after the string, with BACKWARD it is
+placed before the string."
+  (interactive)
+  (let ((parse-state (syntax-ppss)))
+    (when (nth 3 parse-state)
+      (if backward
+          (goto-char (nth 8 parse-state))
+        (parse-partial-sexp (point) (line-end-position) nil nil (syntax-ppss) 'syntax-table))
+      t)))
+
+
+(defun lua-find-regexp (direction regexp &optional limit)
   "Searches for a regular expression in the direction specified.
+
 Direction is one of 'forward and 'backward.
-By default, matches in comments and strings are ignored, but what to ignore is
-configurable by specifying ignore-p. If the regexp is found, returns point
-position, nil otherwise.
-ignore-p returns true if the match at the current point position should be
-ignored, nil otherwise."
-  (let ((ignore-func (or ignore-p 'lua-comment-or-string-p))
-        (search-func (if (eq direction 'forward)
+
+Matches in comments and strings are ignored. If the regexp is
+found, returns point position, nil otherwise."
+  (let ((search-func (if (eq direction 'forward)
                          're-search-forward 're-search-backward))
         (case-fold-search nil))
-    (catch 'found
-      (while (funcall search-func regexp limit t)
-        (if (and (not (funcall ignore-func (match-beginning 0)))
-                 (not (funcall ignore-func (match-end 0))))
-            (throw 'found (point)))))))
+    (cl-loop
+     always (or (null limit)
+                (lua--ensure-point-within-limit limit (not (eq direction 'forward))))
+     always (funcall search-func regexp limit 'noerror)
+     for match-beg = (match-beginning 0)
+     for match-end = (match-end 0)
+     while (or (lua-comment-or-string-p match-beg)
+               (lua-comment-or-string-p match-end))
+     do (let ((parse-state (syntax-ppss)))
+          (cond
+           ;; Inside a string
+           ((nth 3 parse-state)
+            (lua--escape-from-string (not (eq direction 'forward))))
+           ;; Inside a comment
+           ((nth 4 parse-state)
+            (goto-char (nth 8 parse-state))
+            (when (eq direction 'forward)
+              (forward-comment 1)))))
+     finally return (point))))
+
 
 (defconst lua-block-regexp
   (eval-when-compile

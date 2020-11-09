@@ -471,3 +471,34 @@
              :with-point-at "<1>"
              :after-executing (lua-skip-ws-and-comments-forward limit)
              :to-end-up-at "<2>"))))
+
+(describe "lua-find-regexp"
+  (it "does not match open-bracket that is part of multiline string opener: forward"
+    (with-lua-buffer
+     (lua-insert-goto-<> '("<>foo = [[ bar ]]"))
+     (expect (lua-find-regexp 'forward "\\[") :not :to-be-truthy)))
+
+  (it "does not match open-bracket that is part of multiline string opener: backward"
+    (with-lua-buffer
+     (lua-insert-goto-<> '("foo = [[ bar ]]<>"))
+     (expect (lua-find-regexp 'backward "\\[") :not :to-be-truthy)))
+
+  (it "does not match close-bracket that is part of multiline string closer: forward"
+    (with-lua-buffer
+     (lua-insert-goto-<> '("<>foo = [[ bar ]]"))
+     (expect (lua-find-regexp 'forward "]") :not :to-be-truthy)))
+
+  (it "does not match close-bracket that is part of multiline string closer: backward"
+    (with-lua-buffer
+     (lua-insert-goto-<> '("<>foo = [[ bar ]]"))
+     (expect (lua-find-regexp 'backward "]") :not :to-be-truthy)))
+
+  (it "does not match minus that is part of comment starter: forward"
+    (with-lua-buffer
+     (lua-insert-goto-<> '("<>foo = [[ bar ]] -- baz"))
+     (expect (lua-find-regexp 'forward "-") :not :to-be-truthy)))
+
+  (it "does not match minus that is part of comment starter: backward"
+    (with-lua-buffer
+     (lua-insert-goto-<> '("<>foo = [[ bar ]] -- baz"))
+     (expect (lua-find-regexp 'backward "-") :not :to-be-truthy))))
