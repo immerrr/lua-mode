@@ -1415,9 +1415,9 @@ The criteria for a continuing statement are:
     (save-excursion (setq prev-line (lua-forward-line-skip-blanks 'back)))
     (and prev-line
          (not (lua--continuation-breaking-line-p))
-         (or
-          ;; Binary operator or keyword that implies continuation.
-          (save-excursion
+         (save-excursion
+           (or
+            ;; Binary operator or keyword that implies continuation.
             (and (setq continuation-pos
                        (or (lua-first-token-continues-p)
                            (save-excursion (and (goto-char prev-line)
@@ -1433,10 +1433,10 @@ The criteria for a continuing statement are:
                     ;; - inside braces if it is a comma
                     (and (eq (char-after continuation-pos) ?,)
                          (equal parent-block-opener "{")))))
-                 continuation-pos))
-          ;; "for" expressions (until the next do) imply continuation.
-          (when (string-equal (car-safe (lua--backward-up-list-noerror)) "for")
-            (point))))))
+                 continuation-pos)
+            ;; "for" expressions (until the next do) imply continuation.
+            (when (string-equal (car-safe (lua--backward-up-list-noerror)) "for")
+              (point)))))))
 
 
 
