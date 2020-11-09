@@ -1,0 +1,57 @@
+name: Test
+
+on: push
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        emacs_version:
+          # - '24.3'
+          - '25.1'
+          - '25.3'
+          - '26.1'
+          - '26.2'
+          - '26.3'
+          - '27.1'
+        include:
+          # - emacs_version: 'snapshot'
+          #   os: ubuntu-latest
+          #   allow_failure: true
+          # - os: macos-latest
+          #   emacs_version: '24.3'
+          - os: macos-latest
+            emacs_version: '25.1'
+          - os: macos-latest
+            emacs_version: '27.1'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Emacs
+        uses: purcell/setup-emacs@master
+        with:
+          version: ${{ matrix.emacs_version }}
+
+      - name: Set up Cask
+        uses: conao3/setup-cask@master
+        
+      - name: Install Lua (Ubuntu)
+        if: matrix.os != 'macos-latest'
+        run: sudo apt install lua5.2 && echo 'print(123)' | lua -i
+
+      - name: Install Lua (MacOS)
+        if: matrix.os == 'macos-latest'
+        uses: xpol/setup-lua@master
+        with:
+          lua-version: "5.2.4"
+
+      - name: Run tests
+        if: matrix.allow_failure != true
+        run: 'cask && make test'
+
+      - name: Run tests (allow failure)
+        if: matrix.allow_failure == true
+        run: 'cask && make test || true'
