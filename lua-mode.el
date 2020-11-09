@@ -361,12 +361,11 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
     (define-key result-map [menu-bar lua-mode] (cons "Lua" lua-mode-menu))
     (define-key result-map [remap backward-up-list] 'lua-backward-up-list)
 
-    ;; FIXME: see if the declared logic actually works
     ;; handle prefix-keyed bindings:
     ;; * if no prefix, set prefix-map as parent, i.e.
     ;;      if key is not defined look it up in prefix-map
     ;; * if prefix is set, bind the prefix-map to that key
-    (if (boundp 'lua-prefix-key)
+    (if lua-prefix-key
         (define-key result-map (vector lua-prefix-key) lua-prefix-mode-map)
       (set-keymap-parent result-map lua-prefix-mode-map))
     result-map)
@@ -2074,12 +2073,22 @@ Create a Lua process if one doesn't already exist."
   (when (buffer-live-p lua-process-buffer)
     (delete-windows-on lua-process-buffer)))
 
+(defun lua--funcname-char-p (c)
+  "Check if character C is part of a function name.
+Return nil if C is nil. See `lua-funcname-at-point'."
+  (and c (string-match-p "\\`[A-Za-z_.]\\'" (string c))))
+
 (defun lua-funcname-at-point ()
   "Get current Name { '.' Name } sequence."
-  ;; FIXME: copying/modifying syntax table for each call may incur a penalty
-  (with-syntax-table (copy-syntax-table)
-    (modify-syntax-entry ?. "_")
-    (current-word t)))
+  (when (or (lua--funcname-char-p (char-before))
+            (lua--funcname-char-p (char-after)))
+    (save-excursion
+      (save-match-data
+        (re-search-backward "\\`\\|[^A-Za-z_.]")
+        ;; NOTE: `point' will be either at the start of the buffer or on a
+        ;; non-symbol character.
+        (re-search-forward "\\([A-Za-z_]+\\(?:\\.[A-Za-z_]+\\)*\\)")
+        (match-string-no-properties 1)))))
 
 (defun lua-search-documentation ()
   "Search Lua documentation for the word at the point."
