@@ -1546,10 +1546,23 @@ Don't use standalone."
     (save-excursion
       (let* ((line-beginning (line-beginning-position))
              (same-line (and (lua-goto-matching-block-token found-pos 'backward)
-                             (<= line-beginning (point)))))
-        (if (not same-line)
-            (lua-calculate-indentation-info (point))
-          (cons 'remove-matching 0)))))
+                             (<= line-beginning (point))))
+             (opener-pos (point))
+             opener-continuation-offset)
+        (if same-line
+            (cons 'remove-matching 0)
+          (back-to-indentation)
+          (setq opener-continuation-offset
+                (if (lua-is-continuing-statement-p-1) lua-indent-level 0))
+
+          ;; Accumulate indentation up to opener, including indentation. If
+          ;; there were no other indentation modifiers until said opener,
+          ;; ensure there is no continuation after the closer.
+          `(multiple . ((absolute . ,(- (current-indentation) opener-continuation-offset))
+                        ,@(when (/= opener-continuation-offset 0)
+                            (list (cons 'continued-line opener-continuation-offset)))
+                        ,@(delete nil (list (lua-calculate-indentation-info-1 nil opener-pos)))
+                        (cancel-continued-line . nil)))))))
 
    ((member found-token '("do" "then"))
     `(multiple . ((cancel-continued-line . nil) (relative . ,lua-indent-level))))
