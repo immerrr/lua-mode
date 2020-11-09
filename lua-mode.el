@@ -1823,12 +1823,13 @@ If not, return nil."
         ;;    hello_world()
         ;; end
         (setq opener-pos (point))
-        (unless (or
-                 (and (string-equal (car opener-info) "do")
-                      (member (car (lua--backward-up-list-noerror)) '("while" "for")))
-                 (and (string-equal (car opener-info) "then")
-                      (member (car (lua--backward-up-list-noerror)) '("if" "elseif"))))
-          (goto-char opener-pos))
+        (when (/= (- opener-pos (line-beginning-position)) (current-indentation))
+          (unless (or
+                   (and (string-equal (car opener-info) "do")
+                        (member (car (lua--backward-up-list-noerror)) '("while" "for")))
+                   (and (string-equal (car opener-info) "then")
+                        (member (car (lua--backward-up-list-noerror)) '("if" "elseif"))))
+            (goto-char opener-pos)))
 
         ;; (let (cont-stmt-pos)
         ;;   (while (setq cont-stmt-pos (lua-is-continuing-statement-p))
