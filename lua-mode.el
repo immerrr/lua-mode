@@ -1470,11 +1470,15 @@ This true is when the line :
     ;; opener line, ") + long_function_name2({", which in its turn is decided
     ;; by the "long_function_name(" line, which is a continuation line
     ;; because the line before it ends with a binary operator.
-    (while (and (lua--goto-line-beginning-rightmost-closer)
-                (lua--backward-up-list-noerror)
-                (lua-is-continuing-statement-p-1)))
-    (lua-is-continuing-statement-p-1)))
-
+    (cl-loop
+     ;; Go to opener line
+     while (and (lua--goto-line-beginning-rightmost-closer)
+		(lua--backward-up-list-noerror))
+     ;; If opener line is continuing, repeat. If opener line is not
+     ;; continuing, return nil.
+     always (lua-is-continuing-statement-p-1)
+     ;; We get here if there was no opener to go to: check current line.
+     finally return (lua-is-continuing-statement-p-1))))
 
 (defun lua-make-indentation-info-pair (found-token found-pos)
   "Create a pair from FOUND-TOKEN and FOUND-POS for indentation calculation.
