@@ -1157,21 +1157,65 @@ is no block open/close open."
         (error "Not on a block control keyword or brace")
       position)))
 
+(defun lua-skip-ws-and-comments-backward (&optional limit)
+  "Move point back skipping all whitespace and comments.
+
+If LIMIT is given, stop at it or before.
+
+Return non-nil if moved point."
+  (interactive)
+  (unless (lua-string-p)
+    (let ((start-pos (point))
+          (comment-start-pos (lua-comment-start-pos)))
+      (setq limit (min (point) (or limit (point-min))))
+      (when comment-start-pos
+        (goto-char (max limit comment-start-pos)))
+      (when (< limit (point)) (forward-comment (- limit (point))))
+      (when (< (point) limit) (goto-char limit))
+      (when (/= start-pos (point))
+        (point)))))
+
+(defun lua-skip-ws-and-comments-forward (&optional limit)
+  "Move point forward skipping all whitespace and comments.
+
+If LIMIT is given, stop at it or before.
+
+Return non-nil if moved point."
+  (interactive)
+  (unless (lua-string-p)
+    (let ((start-pos (point))
+          (comment-start-pos (lua-comment-start-pos)))
+      (setq limit (max (point) (or limit (point-max))))
+      ;; Escape from current comment. It is necessary to use "while" because
+      ;; luadoc parameters have non-comment face, and parse-partial-sexp with
+      ;; 'syntax-table flag will stop on them.
+      (when comment-start-pos
+        (goto-char comment-start-pos)
+        (forward-comment 1))
+      (when (< (point) limit) (forward-comment (- limit (point))))
+      (when (< limit (point)) (goto-char limit))
+      (when (/= start-pos (point))
+        (point)))))
+
+
 (defun lua-forward-line-skip-blanks (&optional back)
-  "Move 1 line forward (back if BACK is non-nil) skipping blank lines.
+  "Move 1 line forward/backward and skip all insignificant ws/comment lines.
 
 Moves point 1 line forward (or backward) skipping lines that contain
 no Lua code besides comments.  The point is put to the beginning of
 the line.
 
 Returns final value of point as integer or nil if operation failed."
-  (catch 'found
-    (while t
-      (unless (eql (forward-line (if back -1 1)) 0)    ;; 0 means success
-        (throw 'found nil))
-      (unless (or (looking-at "\\s *\\(--.*\\)?$")
-                  (lua-comment-or-string-p))
-        (throw 'found (point))))))
+  (let ((start-pos (point)))
+    (if back
+        (progn
+          (beginning-of-line)
+          (lua-skip-ws-and-comments-backward))
+      (forward-line)
+      (lua-skip-ws-and-comments-forward))
+    (beginning-of-line)
+    (when (> (count-lines start-pos (point)) 0)
+      (point))))
 
 (eval-when-compile
   (defconst lua-operator-class
