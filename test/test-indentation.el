@@ -59,163 +59,167 @@
           indentation-tests))
 
 (describe "Continuation lines"
-  (it "are indented before/after binary operators"
-    (let ((binops '("+"  "-"  "*"  "/"  "^"  "%"  ".."
-                    "<"  "<="  ">"  ">="  "=="  "~="
-                    "and"  "or")))
-      (cl-dolist (binop binops)
-        (lua--reindent-like (replace-regexp-in-string "BINOP" binop "\
+  (lua--parametrize-tests
+   (binop)
+   (("+") ("-") ("*") ("/") ("^") ("%") ("..")
+    ("<") ("<=") (">") (">=") ("==") ("~=") ("and") ("or"))
+
+   :it (format "are indented before/after binary operators: %s" binop)
+   (expect (replace-regexp-in-string "BINOP" binop "\
 a = foo BINOP
-   bar" 'fixedcase))
-        (lua--reindent-like (replace-regexp-in-string "BINOP" binop "\
+   bar" 'fixedcase)
+           :to-be-reindented-the-same-way)
+   (expect (replace-regexp-in-string "BINOP" binop "\
 a = foo
-   BINOP bar" 'fixedcase)))))
+   BINOP bar" 'fixedcase)
+           :to-be-reindented-the-same-way))
+) ;; (
 
 
 
-  (xit "are indented before/after unary operators"
-    (expect (lua--reindent-like "\
-foo = bar
-   -#some_str"))
+;;    (xit "are indented before/after unary operators"
+;;      (expect (lua--reindent-like "\
+;; foo = bar
+;;    -#some_str"))
 
-    (cl-dolist (unop '("-" "#" "not "))
-      (expect (lua--reindent-like (replace-regexp-in-string "<>" unop  "\
-foobar(qux,
-       <>quux)")))
-      (expect (lua--reindent-like (replace-regexp-in-string "<>" unop "\
-foobar(qux, xyzzy
-          <>quux)")))
-      (expect (lua--reindent-like (replace-regexp-in-string "<>" unop "\
-foobar(
-   <>quux)")))
-      (expect (lua--reindent-like (replace-regexp-in-string "<>" unop "\
-x = {qux,
-     <>quux}")))
-      (expect (lua--reindent-like (replace-regexp-in-string "<>" unop "\
-x = {qux;
-     <>quux}")))
-      (expect (lua--reindent-like (replace-regexp-in-string "<>" unop "\
-x = {qux, xyzzy
-        <>quux}")))
-      (expect (lua--reindent-like (replace-regexp-in-string "<>" unop "\
-x = {
-   <>quux
-}"))))))
+;;      (cl-dolist (unop '("-" "#" "not "))
+;;        (expect (lua--reindent-like (replace-regexp-in-string "<>" unop  "\
+;; foobar(qux,
+;;        <>quux)")))
+;;        (expect (lua--reindent-like (replace-regexp-in-string "<>" unop "\
+;; foobar(qux, xyzzy
+;;           <>quux)")))
+;;        (expect (lua--reindent-like (replace-regexp-in-string "<>" unop "\
+;; foobar(
+;;    <>quux)")))
+;;        (expect (lua--reindent-like (replace-regexp-in-string "<>" unop "\
+;; x = {qux,
+;;      <>quux}")))
+;;        (expect (lua--reindent-like (replace-regexp-in-string "<>" unop "\
+;; x = {qux;
+;;      <>quux}")))
+;;        (expect (lua--reindent-like (replace-regexp-in-string "<>" unop "\
+;; x = {qux, xyzzy
+;;         <>quux}")))
+;;        (expect (lua--reindent-like (replace-regexp-in-string "<>" unop "\
+;; x = {
+;;    <>quux
+;; }"))))))
 
 
 
 (describe "Function indentation"
   (it "indents function call arguments"
-    (expect (lua--reindent-like "\
+    (expect "\
 foobar(
-   a, b, c)"))
-    (expect (lua--reindent-like "\
+   a, b, c)" :to-be-reindented-the-same-way)
+    (expect "\
 foobar(
    a,
-   b, c)"))
+   b, c)" :to-be-reindented-the-same-way)
 
-    (expect (lua--reindent-like "\
+    (expect "\
 foobar(
    a, b, c
-)"))
+)" :to-be-reindented-the-same-way)
 
-    (expect (lua--reindent-like "\
+    (expect "\
 foobar(a,
        b,
-       c)"))
+       c)" :to-be-reindented-the-same-way)
 
-    (expect (lua--reindent-like "\
+    (expect "\
 foobar{
    a, b, c
-}")))
+}" :to-be-reindented-the-same-way))
 
   (it "indent blocks with lua-indent-nested-block-content-align"
     (let ((lua-indent-nested-block-content-align nil))
-      (expect (lua--reindent-like "\
+      (expect "\
 call_some_fn( something, {
       val = 5,
       another = 6,
-} )"))
-      (expect (lua--reindent-like "\
+} )" :to-be-reindented-the-same-way)
+      (expect "\
 local def = {
    some_very_long_name = { fn =
          function()
             return true
          end
    }
-}"))
+}" :to-be-reindented-the-same-way)
       ))
 
   (it "indent blocks with lua-indent-close-paren-align"
     (let ((lua-indent-close-paren-align nil))
-      (expect (lua--reindent-like "\
+      (expect "\
 local foo = setmetatable( {
       a = 4,
       b = 5,
 }, {
       __index = some_func,
-} )"))
+} )" :to-be-reindented-the-same-way)
       ))
 
   (it "indents nested tables with alternative block indenting"
     (let ((lua-indent-nested-block-content-align nil)
 	  (lua-indent-close-paren-align nil))
-      (expect (lua--reindent-like "\
+      (expect "\
 foobar({
       a, b, c
-})"))
+})" :to-be-reindented-the-same-way)
 
-      (expect (lua--reindent-like "\
+      (expect "\
 foobar(a, {
       b,
       c
-})"))
+})" :to-be-reindented-the-same-way)
 
-      (expect (lua--reindent-like "\
+      (expect "\
 foobar(
    a,
    {
       b,
       c
-})"))
+})" :to-be-reindented-the-same-way)
 
-      (expect (lua--reindent-like "\
+      (expect "\
 foobar(
    a,
    {
       b,
       c
    }
-)"))
+)" :to-be-reindented-the-same-way)
 
-      (expect (lua--reindent-like "\
+      (expect "\
 foobar(a,
    {
       b,
       c
-})"))
+})" :to-be-reindented-the-same-way)
 
-      (expect (lua--reindent-like "\
+      (expect "\
 foobar(a,
    {
       b,
       c
    }
-)"))
+)" :to-be-reindented-the-same-way)
 
-      (expect (lua--reindent-like "\
+      (expect "\
 foobar(
    {
       a,
       b
    },
    c, d
-)"))
+)" :to-be-reindented-the-same-way)
       )))
 
 
 (ert-deftest lua-indentation-keywords-with-special-characters ()
-  (expect (lua--reindent-like "\
+  (expect "\
 do
    foobar = _do
-end")))
+end" :to-be-reindented-the-same-way))

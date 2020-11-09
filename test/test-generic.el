@@ -195,3 +195,62 @@ local foo = <2>{
             :with-point-at "<1>"
             :after-executing (lua-backward-up-list)
             :to-end-up-at "<2>")))
+
+
+(describe "lua-goto-matching-block"
+  (it "works for do...end block"
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "<2>do if true then print(123) end <1>end")
+
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "<2>do if true then print(123) end e<1>nd")
+
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "<2>do if true then print(123) end en<1>d")
+
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "<1>do if true then print(123) end <2>end")
+
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "d<1>o if true then print(123) end <2>end"))
+
+  (it "works for repeat...until block"
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "<1>repeat if true then print(123) end <2>until true")
+
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "<2>repeat if true then print(123) end <1>until true"))
+
+  (it "works for while...do...end block"
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "<1>while foo() do if true then print(123) end <2>end")
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "<2>while foo() do if true then print(123) end <1>end")
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "while foo() <1>do if true then print(123) end <2>end")
+    ;; The next line is a valid statement that ensures
+    ;; "lua-goto-matching-block" can distinguish between "while..do" and
+    ;; "do..end"
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "<1>while false do print(123) <2>end do print(123) end")
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "while false do print(123) end <1>do print(123) <2>end"))
+
+  (it "works for if..elseif..else..end block"
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "<1>if true then foo() elseif false then bar() else baz() <2>end")
+
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "<2>if true then foo() elseif false then bar() else baz() <1>end")
+
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "<2>if true then foo() elseif false then bar() <1>else baz() end")
+
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "<2>if true then foo() elseif false <1>then bar() else baz() end")
+
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "<2>if true then foo() <1>elseif false then bar() else baz() end")
+
+    (expect (lua-goto-matching-block) :to-move-point-from-1-to-2
+            "<2>if true <1>then foo() elseif false then bar() else baz() end")))

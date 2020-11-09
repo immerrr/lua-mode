@@ -450,24 +450,55 @@
   (describe "respects limit"
     (lua--parametrize-tests
      (limit navigation-spec test-name)
-     ((6 "  <1>   <2>   " "respect limit in whitespace")
+     ((6 "  <1>   <2>   " "in whitespace")
       (1 "     <2><1>   " "don't move if limit is before point")
-      (8 "--  <1>   <2>  \n" "respect limit when escaping single-line comment 1")
-      (8 "--  <1>  \n<2>  " "respect limit when escaping single-line comment 2")
-      (8 "--  <1>   <2>\n  " "respect limit when escaping single-line comment 3")
-      (8 "--[[<1>   <2> ]] \n" "respect limit when escaping multi-line comment 1")
-      (8 "--[[<1>  ]<2>] \n" "respect limit when escaping multi-line comment 1")
-      (8 "--[[<1>   <2> ]] \n" "respect limit when escaping multi-line comment 1")
+      (8 "--  <1>   <2>  \n" "when escaping single-line comment 1")
+      (8 "--  <1>  \n<2>  " "when escaping single-line comment 2")
+      (8 "--  <1>   <2>\n  " "when escaping single-line comment 3")
+      (8 "--[[<1>   <2> ]] \n" "when escaping multi-line comment 1")
+      (8 "--[[<1>  ]<2>] \n" "when escaping multi-line comment 1")
+      (8 "--[[<1>   <2> ]] \n" "when escaping multi-line comment 1")
 
-      (7 "--  <1>@s<2>ee x   " "respect limit when escaping single-line luadoc comment")
-      (8 "--  <1>@se<2>e x   " "respect limit when escaping single-line luadoc comment")
-      (9 "--  <1>@see<2> x   " "respect limit when escaping single-line luadoc comment")
-      (7 "--[[<1>@s<2>ee x]] " "respect limit when escaping single-line luadoc comment")
-      (8 "--[[<1>@se<2>e x]] " "respect limit when escaping single-line luadoc comment")
-      (9 "--[[<1>@see<2> x]] " "respect limit when escaping single-line luadoc comment")
+      (7 "--  <1>@s<2>ee x   " "when escaping single-line luadoc comment")
+      (8 "--  <1>@se<2>e x   " "when escaping single-line luadoc comment")
+      (9 "--  <1>@see<2> x   " "when escaping single-line luadoc comment")
+      (7 "--[[<1>@s<2>ee x]] " "when escaping multi-line luadoc comment")
+      (8 "--[[<1>@se<2>e x]] " "when escaping multi-line luadoc comment")
+      (9 "--[[<1>@see<2> x]] " "when escaping multi-line luadoc comment")
       )
      :it (replace-regexp-in-string "\n" "\\\\n" (format "%s: limit=%S %S" test-name limit navigation-spec))
      (expect navigation-spec
              :with-point-at "<1>"
              :after-executing (lua-skip-ws-and-comments-forward limit)
              :to-end-up-at "<2>"))))
+
+(describe "lua-find-regexp"
+  (it "does not match open-bracket that is part of multiline string opener: forward"
+    (with-lua-buffer
+     (lua-insert-goto-<> '("<>foo = [[ bar ]]"))
+     (expect (lua-find-regexp 'forward "\\[") :not :to-be-truthy)))
+
+  (it "does not match open-bracket that is part of multiline string opener: backward"
+    (with-lua-buffer
+     (lua-insert-goto-<> '("foo = [[ bar ]]<>"))
+     (expect (lua-find-regexp 'backward "\\[") :not :to-be-truthy)))
+
+  (it "does not match close-bracket that is part of multiline string closer: forward"
+    (with-lua-buffer
+     (lua-insert-goto-<> '("<>foo = [[ bar ]]"))
+     (expect (lua-find-regexp 'forward "]") :not :to-be-truthy)))
+
+  (it "does not match close-bracket that is part of multiline string closer: backward"
+    (with-lua-buffer
+     (lua-insert-goto-<> '("<>foo = [[ bar ]]"))
+     (expect (lua-find-regexp 'backward "]") :not :to-be-truthy)))
+
+  (it "does not match minus that is part of comment starter: forward"
+    (with-lua-buffer
+     (lua-insert-goto-<> '("<>foo = [[ bar ]] -- baz"))
+     (expect (lua-find-regexp 'forward "-") :not :to-be-truthy)))
+
+  (it "does not match minus that is part of comment starter: backward"
+    (with-lua-buffer
+     (lua-insert-goto-<> '("<>foo = [[ bar ]] -- baz"))
+     (expect (lua-find-regexp 'backward "-") :not :to-be-truthy))))

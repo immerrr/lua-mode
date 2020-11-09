@@ -175,14 +175,14 @@ x = t[very_very_very_long_name()
 
 -- does not indent binary operators inside brackets: indentation 1
 
-x = [
+x = foo[
    very_very_very_long_name() +
    another_very_very_very_long_name()
-    ]
+       ]
 
 -- does not indent binary operators inside brackets: indentation 2
 
-x = [
+x = foo[
    very_very_very_long_name()
    + another_very_very_very_long_name()
-    ]
+       ]

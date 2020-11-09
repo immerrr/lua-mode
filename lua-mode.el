@@ -957,23 +957,65 @@ Return the amount the indentation changed by."
                0
              lua-indent-level))))))
 
-(defun lua-find-regexp (direction regexp &optional limit ignore-p)
+
+(defun lua--ensure-point-within-limit (limit backward)
+  "Return non-nil if point is within LIMIT going forward.
+
+With BACKWARD non-nil, return non-nil if point is within LIMIT
+going backward.
+
+If point is beyond limit, move it onto limit."
+  (if (= (cl-signum (- (point) limit))
+         (if backward 1 -1))
+      t
+    (goto-char limit)
+    nil))
+
+
+(defun lua--escape-from-string (&optional backward)
+  "Move point outside of string if it is inside one.
+
+By default, point is placed after the string, with BACKWARD it is
+placed before the string."
+  (interactive)
+  (let ((parse-state (syntax-ppss)))
+    (when (nth 3 parse-state)
+      (if backward
+          (goto-char (nth 8 parse-state))
+        (parse-partial-sexp (point) (line-end-position) nil nil (syntax-ppss) 'syntax-table))
+      t)))
+
+
+(defun lua-find-regexp (direction regexp &optional limit)
   "Searches for a regular expression in the direction specified.
+
 Direction is one of 'forward and 'backward.
-By default, matches in comments and strings are ignored, but what to ignore is
-configurable by specifying ignore-p. If the regexp is found, returns point
-position, nil otherwise.
-ignore-p returns true if the match at the current point position should be
-ignored, nil otherwise."
-  (let ((ignore-func (or ignore-p 'lua-comment-or-string-p))
-        (search-func (if (eq direction 'forward)
+
+Matches in comments and strings are ignored. If the regexp is
+found, returns point position, nil otherwise."
+  (let ((search-func (if (eq direction 'forward)
                          're-search-forward 're-search-backward))
         (case-fold-search nil))
-    (catch 'found
-      (while (funcall search-func regexp limit t)
-        (if (and (not (funcall ignore-func (match-beginning 0)))
-                 (not (funcall ignore-func (match-end 0))))
-            (throw 'found (point)))))))
+    (cl-loop
+     always (or (null limit)
+                (lua--ensure-point-within-limit limit (not (eq direction 'forward))))
+     always (funcall search-func regexp limit 'noerror)
+     for match-beg = (match-beginning 0)
+     for match-end = (match-end 0)
+     while (or (lua-comment-or-string-p match-beg)
+               (lua-comment-or-string-p match-end))
+     do (let ((parse-state (syntax-ppss)))
+          (cond
+           ;; Inside a string
+           ((nth 3 parse-state)
+            (lua--escape-from-string (not (eq direction 'forward))))
+           ;; Inside a comment
+           ((nth 4 parse-state)
+            (goto-char (nth 8 parse-state))
+            (when (eq direction 'forward)
+              (forward-comment 1)))))
+     finally return (point))))
+
 
 (defconst lua-block-regexp
   (eval-when-compile
@@ -1148,8 +1190,9 @@ If optional NOREPORT is non-nil, it won't flag an error if there
 is no block open/close open."
   (interactive)
   ;; search backward to the beginning of the keyword if necessary
-  (if (eq (char-syntax (following-char)) ?w)
-      (re-search-backward "\\_<" nil t))
+  (when (and (eq (char-syntax (following-char)) ?w)
+	     (not (looking-at "\\_<")))
+    (re-search-backward "\\_<" nil t))
   (let ((position (lua-goto-matching-block-token)))
     (if (and (not position)
              (not noreport))
@@ -1246,7 +1289,7 @@ an optional whitespace till the end of the line.")
     (concat
      "\\=\\s *"
      "\\(?:\\(?1:\\_<"
-     (regexp-opt '("and" "or" "not") t)
+     (regexp-opt '("and" "or" "not" "in") t)
      "\\_>\\)\\|\\(?2:"
      (regexp-opt '("," "+" "-" "*" "/" "%" "^" ".." "=="
                    "=" "<" ">" "<=" ">=" "~=" "." ":"
@@ -1264,16 +1307,10 @@ previous one even though it looked like an end-of-statement.")
 (defun lua-last-token-continues-p ()
   "Return non-nil if the last token on this line is a continuation token."
   (let ((line-begin (line-beginning-position))
-        (line-end (line-end-position))
         return-value)
     (save-excursion
       (end-of-line)
-      ;; we need to check whether the line ends in a comment and
-      ;; skip that one.
-      (while (lua-find-regexp 'backward "-" line-begin 'lua-string-p)
-        (if (looking-at "--")
-            (setq line-end (point))))
-      (goto-char line-end)
+      (lua-skip-ws-and-comments-backward line-begin)
       (setq return-value (and (re-search-backward lua-cont-eol-regexp line-begin t)
                               (or (match-beginning 1)
                                   (match-beginning 2))))
@@ -1304,6 +1341,7 @@ previous one even though it looked like an end-of-statement.")
   (let ((line-end (line-end-position)))
     (save-excursion
       (beginning-of-line)
+      (lua-skip-ws-and-comments-forward line-end)
       ;; if first character of the line is inside string, it's a continuation
       ;; if strings aren't supposed to be indented, `lua-calculate-indentation' won't even let
       ;; the control inside this function
@@ -1352,6 +1390,16 @@ previous one even though it looked like an end-of-statement.")
                      (if (eql start-pos end-pos) start-pos (match-beginning 0))
                      (if (eql start-pos end-pos) start-pos (match-end 0))))))))
 
+(defun lua--continuation-breaking-line-p ()
+  "Return non-nil if looking at token(-s) that forbid continued line."
+  (save-excursion
+    (lua-skip-ws-and-comments-forward (line-end-position))
+    (looking-at (lua-rx (or (symbol "do" "while" "repeat" "until"
+                                 "if" "then" "elseif" "else"
+                                 "for" "local")
+                         lua-funcheader)))))
+
+
 (defun lua-is-continuing-statement-p-1 ()
   "Return non-nil if current lined continues a statement.
 
@@ -1365,9 +1413,10 @@ The criteria for a continuing statement are:
   (let (prev-line continuation-pos parent-block-opener)
     (save-excursion (setq prev-line (lua-forward-line-skip-blanks 'back)))
     (and prev-line
-         (or
-          ;; Binary operator or keyword that implies continuation.
-          (save-excursion
+         (not (lua--continuation-breaking-line-p))
+         (save-excursion
+           (or
+            ;; Binary operator or keyword that implies continuation.
             (and (setq continuation-pos
                        (or (lua-first-token-continues-p)
                            (save-excursion (and (goto-char prev-line)
@@ -1383,11 +1432,7 @@ The criteria for a continuing statement are:
                     ;; - inside braces if it is a comma
                     (and (eq (char-after continuation-pos) ?,)
                          (equal parent-block-opener "{")))))
-                 continuation-pos))
-          ;; "for" expressions (until the next do) imply continuation.
-          (when (string-equal (car-safe (lua--backward-up-list-noerror)) "for")
-            (point))))))
-
+                 continuation-pos))))))
 
 
 (defun lua-is-continuing-statement-p (&optional parse-start)
@@ -1420,11 +1465,15 @@ This true is when the line :
     ;; opener line, ") + long_function_name2({", which in its turn is decided
     ;; by the "long_function_name(" line, which is a continuation line
     ;; because the line before it ends with a binary operator.
-    (while (and (lua--goto-line-beginning-rightmost-closer)
-                (lua--backward-up-list-noerror)
-                (lua-is-continuing-statement-p-1)))
-    (lua-is-continuing-statement-p-1)))
-
+    (cl-loop
+     ;; Go to opener line
+     while (and (lua--goto-line-beginning-rightmost-closer)
+		(lua--backward-up-list-noerror))
+     ;; If opener line is continuing, repeat. If opener line is not
+     ;; continuing, return nil.
+     always (lua-is-continuing-statement-p-1)
+     ;; We get here if there was no opener to go to: check current line.
+     finally return (lua-is-continuing-statement-p-1))))
 
 (defun lua-make-indentation-info-pair (found-token found-pos)
   "Create a pair from FOUND-TOKEN and FOUND-POS for indentation calculation.
@@ -1492,10 +1541,23 @@ Don't use standalone."
     (save-excursion
       (let* ((line-beginning (line-beginning-position))
              (same-line (and (lua-goto-matching-block-token found-pos 'backward)
-                             (<= line-beginning (point)))))
-        (if (not same-line)
-            (lua-calculate-indentation-info (point))
-          (cons 'remove-matching 0)))))
+                             (<= line-beginning (point))))
+             (opener-pos (point))
+             opener-continuation-offset)
+        (if same-line
+            (cons 'remove-matching 0)
+          (back-to-indentation)
+          (setq opener-continuation-offset
+                (if (lua-is-continuing-statement-p-1) lua-indent-level 0))
+
+          ;; Accumulate indentation up to opener, including indentation. If
+          ;; there were no other indentation modifiers until said opener,
+          ;; ensure there is no continuation after the closer.
+          `(multiple . ((absolute . ,(- (current-indentation) opener-continuation-offset))
+                        ,@(when (/= opener-continuation-offset 0)
+                            (list (cons 'continued-line opener-continuation-offset)))
+                        ,@(delete nil (list (lua-calculate-indentation-info-1 nil opener-pos)))
+                        (cancel-continued-line . nil)))))))
 
    ((member found-token '("do" "then"))
     `(multiple . ((cancel-continued-line . nil) (relative . ,lua-indent-level))))
@@ -1769,12 +1831,13 @@ If not, return nil."
         ;;    hello_world()
         ;; end
         (setq opener-pos (point))
-        (unless (or
-                 (and (string-equal (car opener-info) "do")
-                      (member (car (lua--backward-up-list-noerror)) '("while" "for")))
-                 (and (string-equal (car opener-info) "then")
-                      (member (car (lua--backward-up-list-noerror)) '("if" "elseif"))))
-          (goto-char opener-pos))
+        (when (/= (- opener-pos (line-beginning-position)) (current-indentation))
+          (unless (or
+                   (and (string-equal (car opener-info) "do")
+                        (member (car (lua--backward-up-list-noerror)) '("while" "for")))
+                   (and (string-equal (car opener-info) "then")
+                        (member (car (lua--backward-up-list-noerror)) '("if" "elseif"))))
+            (goto-char opener-pos)))
 
         ;; (let (cont-stmt-pos)
         ;;   (while (setq cont-stmt-pos (lua-is-continuing-statement-p))

@@ -231,6 +231,13 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
 (buttercup-define-matcher :with-point-at (&rest args)
   (apply #'with-point-at-matcher `(:lua-code ,(car args) :with-point-at ,@(cdr args))))
 
+;;; Shortcut for with-point-at with <1> and <2> placeholders
+(buttercup-define-matcher :to-move-point-from-1-to-2 (code-block lua-code)
+  (with-point-at-matcher
+   :lua-code lua-code
+   :with-point-at (lambda () "<1>")
+   :after-executing code-block
+   :to-end-up-at (lambda () "<2>")))
 
 (defun lua--string-trim (string &optional trim-left trim-right)
   ;; Backport of string-trim for Emacs 24 that doesn't have subr-x lib.
