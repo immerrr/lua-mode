@@ -1269,12 +1269,7 @@ previous one even though it looked like an end-of-statement.")
         return-value)
     (save-excursion
       (end-of-line)
-      ;; we need to check whether the line ends in a comment and
-      ;; skip that one.
-      (while (lua-find-regexp 'backward "-" line-begin 'lua-string-p)
-        (if (looking-at "--")
-            (setq line-end (point))))
-      (goto-char line-end)
+      (lua-skip-ws-and-comments-backward line-begin)
       (setq return-value (and (re-search-backward lua-cont-eol-regexp line-begin t)
                               (or (match-beginning 1)
                                   (match-beginning 2))))
@@ -1305,6 +1300,7 @@ previous one even though it looked like an end-of-statement.")
   (let ((line-end (line-end-position)))
     (save-excursion
       (beginning-of-line)
+      (lua-skip-ws-and-comments-forward line-end)
       ;; if first character of the line is inside string, it's a continuation
       ;; if strings aren't supposed to be indented, `lua-calculate-indentation' won't even let
       ;; the control inside this function
