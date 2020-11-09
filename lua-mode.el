@@ -805,22 +805,41 @@ This function replaces previous prefix-key binding with a new one."
   "Returns true if the point is in a string."
   (save-excursion (elt (syntax-ppss pos) 3)))
 
-(defun lua-comment-start-pos (parsing-state)
+(defun lua--containing-double-hyphen-start-pos ()
+  "Return position of the beginning comment delimiter (--).
+
+Emacs syntax framework does not consider comment delimiters as
+part of the comment itself, but for this package it is useful to
+consider point as inside comment when it is between the two hyphens"
+  (and (eql (char-before) ?-)
+       (eql (char-after) ?-)
+       (1- (point))))
+
+(defun lua-comment-start-pos (&optional parsing-state)
   "Return position of comment containing current point.
 
 If point is not inside a comment, return nil."
-  (and parsing-state (nth 4 parsing-state) (nth 8 parsing-state)))
+  (unless parsing-state (setq parsing-state (syntax-ppss)))
+  (and
+   ;; Not a string
+   (not (nth 3 parsing-state))
+   ;; Syntax-based comment
+   (or (and (nth 4 parsing-state) (nth 8 parsing-state))
+       (lua--containing-double-hyphen-start-pos))))
 
 (defun lua-comment-or-string-p (&optional pos)
   "Returns true if the point is in a comment or string."
   (save-excursion (let ((parse-result (syntax-ppss pos)))
-                    (or (elt parse-result 3) (elt parse-result 4)))))
+                    (or (elt parse-result 3) (lua-comment-start-pos parse-result)))))
 
 (defun lua-comment-or-string-start-pos (&optional pos)
   "Returns start position of string or comment which contains point.
 
 If point is not inside string or comment, return nil."
-  (save-excursion (elt (syntax-ppss pos) 8)))
+  (save-excursion
+    (when pos (goto-char pos))
+    (or (elt (syntax-ppss pos) 8)
+        (lua--containing-double-hyphen-start-pos))))
 
 ;; They're propertized as follows:
 ;; 1. generic-comment
@@ -864,23 +883,15 @@ If none can be found before reaching LIMIT, return nil."
         ;; inside strings or comments ending either at EOL or at valid token.
         (and (setq last-search-matched
                    (re-search-forward lua-ml-begin-regexp limit 'noerror))
-
-             ;; Handle triple-hyphen '---[[' situation in which the multiline
-             ;; opener should be skipped.
+             ;; Ensure --[[ is not inside a comment or string.
              ;;
-             ;; In HYPHEN1-HYPHEN2-BRACKET1-BRACKET2 situation (match-beginning
-             ;; 0) points to HYPHEN1, but if there's another hyphen before
-             ;; HYPHEN1, standard syntax table will only detect comment-start
-             ;; at HYPHEN2.
+             ;; This includes "---[[" sequence, in which "--" at the beginning
+             ;; creates a single-line comment, and thus "-[[" is no longer a
+             ;; multi-line opener.
              ;;
-             ;; We could check for comment-start at HYPHEN2, but then we'd have
-             ;; to flush syntax-ppss cache to remove the result saying that at
-             ;; HYPHEN2 there's no comment or string, because under some
-             ;; circumstances that would hide the fact that we put a
-             ;; comment-start property at HYPHEN1.
-             (or (lua-comment-or-string-start-pos (match-beginning 0))
-                 (and (eq ?- (char-after (match-beginning 0)))
-                      (eq ?- (char-before (match-beginning 0)))))))
+             ;; XXX: need to ensure syntax-ppss beyond (match-beginning 0) is
+             ;; not calculated, or otherwise we'll need to flush the cache.
+             (lua-comment-or-string-start-pos (match-beginning 0))))
 
     last-search-matched))
 
