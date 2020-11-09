@@ -1391,6 +1391,16 @@ previous one even though it looked like an end-of-statement.")
                      (if (eql start-pos end-pos) start-pos (match-beginning 0))
                      (if (eql start-pos end-pos) start-pos (match-end 0))))))))
 
+(defun lua--continuation-breaking-line-p ()
+  "Return non-nil if looking at token(-s) that forbid continued line."
+  (save-excursion
+    (lua-skip-ws-and-comments-forward (line-end-position))
+    (looking-at (lua-rx (or (symbol "do" "while" "repeat" "until"
+                                 "if" "then" "elseif" "else"
+                                 "for" "local")
+                         lua-funcheader)))))
+
+
 (defun lua-is-continuing-statement-p-1 ()
   "Return non-nil if current lined continues a statement.
 
@@ -1404,6 +1414,7 @@ The criteria for a continuing statement are:
   (let (prev-line continuation-pos parent-block-opener)
     (save-excursion (setq prev-line (lua-forward-line-skip-blanks 'back)))
     (and prev-line
+         (not (lua--continuation-breaking-line-p))
          (or
           ;; Binary operator or keyword that implies continuation.
           (save-excursion
