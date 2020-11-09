@@ -1857,11 +1857,12 @@ This function just searches for a `end' at the beginning of a line."
 PROGRAM defaults to NAME, which defaults to `lua-default-application'.
 When called interactively, switch to the process buffer."
   (interactive)
-  (unless (process-live-p lua-process)
-    (setq name (or name (if (consp lua-default-application)
-                            (car lua-default-application)
-                          lua-default-application)))
-    (setq program (or program lua-default-application))
+  (setq name (or name (if (consp lua-default-application)
+                          (car lua-default-application)
+                        lua-default-application)))
+  (setq program (or program lua-default-application))
+  ;; don't re-initialize if there already is a lua process
+  (unless (comint-check-proc (format "*%s*" name))
     (setq lua-process-buffer (apply #'make-comint name program startfile
                                     (or switches lua-default-command-switches)))
     (setq lua-process (get-buffer-process lua-process-buffer))
