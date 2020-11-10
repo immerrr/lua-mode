@@ -958,6 +958,11 @@ Return the amount the indentation changed by."
              lua-indent-level))))))
 
 
+(defun lua--signum (x)
+  "Return 1 if X is positive, -1 if negative, 0 if zero."
+  ;; XXX: backport from cl-extras for Emacs24
+  (cond ((> x 0) 1) ((< x 0) -1) (t 0)))
+
 (defun lua--ensure-point-within-limit (limit backward)
   "Return non-nil if point is within LIMIT going forward.
 
@@ -965,7 +970,7 @@ With BACKWARD non-nil, return non-nil if point is within LIMIT
 going backward.
 
 If point is beyond limit, move it onto limit."
-  (if (= (cl-signum (- (point) limit))
+  (if (= (lua--signum (- (point) limit))
          (if backward 1 -1))
       t
     (goto-char limit)
