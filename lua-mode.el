@@ -802,7 +802,11 @@ This function replaces previous prefix-key binding with a new one."
 
 (defun lua-string-p (&optional pos)
   "Returns true if the point is in a string."
-  (save-excursion (elt (syntax-ppss pos) 3)))
+  (save-excursion
+    (when pos (goto-char pos))
+    (let ((syntax-env (or (lua-syntax-env-from-font-lock)
+                          (lua-syntax-env-from-ppss))))
+      (eq syntax-env 'string))))
 
 (defun lua--containing-double-hyphen-start-pos ()
   "Return position of the beginning comment delimiter (--).
@@ -826,10 +830,122 @@ If point is not inside a comment, return nil."
    (or (and (nth 4 parsing-state) (nth 8 parsing-state))
        (lua--containing-double-hyphen-start-pos))))
 
+(defun lua--hash-table-from-alist (alist)
+  (let ((ht (make-hash-table :test #'equal :size (length alist))))
+    (mapc (lambda (pair) (puthash (car pair) (cdr pair) ht))
+          alist)
+    ht))
+
+(defvar lua--syntax-env-for-faces-hash)
+(setq lua--syntax-env-for-faces-hash
+      (lua--hash-table-from-alist
+       ;; There are four "base" faces:
+       ;; - nil is for 'outside
+       ;; - string-face
+       ;; - comment-face
+       ;; - comment-delimiter-face
+       ;;
+       ;; Other faces, like variable/function names, constants, keywords, builtins,
+       ;; and so on depend on what is the "base" face that is in front of them.
+       ;;
+       ;; 4x4 = 16 combinations, list them explicitly not to miss anything.
+       '(;; char-before has no face -> point is outside of string/comment
+         ((nil . nil) . outside)
+         ((nil . font-lock-string-face) . outside)
+         ((nil . font-lock-comment-face) . outside)
+         ((nil . font-lock-comment-delimiter-face) . outside)
+
+         ;; point is after string: 'foobar'|
+         ((font-lock-string-face . nil) . outside)
+         ;; point is inside string: 'foo|bar'
+         ((font-lock-string-face . font-lock-string-face) . string)
+         ;; should not happen as comments always start with comment-delimiter, don't
+         ;; guess and let (syntax-ppss) handle it.
+         ;; ((font-lock-string-face . font-lock-comment-face) . outside)
+         ;; point is between string and comment: 'string'|-- comment
+         ((font-lock-string-face . font-lock-comment-delimiter-face) . outside)
+
+         ;; point is at end of comment: --[[ ]]| OR -- comment\n|
+         ((font-lock-comment-face . nil) . outside)
+         ;; point is between comment and string --[[ ]]|'foobar'
+         ((font-lock-comment-face . font-lock-string-face) . outside)
+         ;; point is inside comment: -- foo|bar
+         ((font-lock-comment-face . font-lock-comment-face) . comment)
+         ;; point is at the beginning line that follows a single-line comment:
+         ;;
+         ;; -- first line of comment
+         ;; |-- second line of comment
+         ;;
+         ;; according to syntax-ppss this is 'outside
+         ((font-lock-comment-face . font-lock-comment-delimiter-face) . outside)
+
+         ;; Should not happen, all comment delimiters are followed by
+         ;; - comment
+         ;; - comment-delimiter
+         ;; - luadoc keyword (e.g. --@see)
+         ;;
+         ;; Don't guess, let syntax-ppss decide.
+         ;;
+         ;; ((font-lock-comment-delimiter-face . nil) . outside)
+         ;; ((font-lock-comment-delimiter-face . font-lock-string-face) . outside)
+
+         ((font-lock-comment-delimiter-face . font-lock-comment-face) . comment)
+         ((font-lock-comment-delimiter-face . font-lock-comment-delimiter-face) . comment))))
+
+(defun lua--syntax-env-for-faces (faces)
+  (gethash faces lua--syntax-env-for-faces-hash))
+
+(defun lua-syntax-env-from-font-lock ()
+  (cond
+   ((bobp) 'outside)
+   ;; No font lock, can't decide
+   ((not font-lock-mode) nil)
+   ((eobp) nil)
+   ;; Need to check two neighboring characters, ensure both of them are fontified.
+   ((not (and (get-text-property (1- (point)) 'fontified)
+              (get-text-property (point) 'fontified)))
+    (let ((beg (or (previous-single-property-change (point) 'fontified) (point-min))))
+      (font-lock-ensure beg (min (+ 500 (point)) (point-max))))
+    (lua-syntax-env-from-font-lock))
+   (t (let* ((faces (cons (get-text-property (1- (point)) 'face)
+                          (get-text-property (point) 'face)))
+             (result (lua--syntax-env-for-faces faces)))
+        (when (and (not result)
+                   (not (memq (car faces) '(nil font-lock-string-face font-lock-comment-face font-lock-comment-delimiter-face))))
+          (save-excursion
+            (goto-char (or (point-min) (previous-single-property-change (point) 'face)))
+            (cond
+             ((bobp) (setq result 'outside))
+             ((and (get-text-property (1- (point)) 'fontified)
+                   (get-text-property (point) 'fontified))
+              (setq faces (cons (get-text-property (1- (point)) 'face)
+                                (get-text-property (point) 'face)))
+              (setq result (lua--syntax-env-for-faces faces))))))
+
+        (cond
+         (result result)
+         ;; One of the faces is nil -> point is touching non-string/comment
+         ((or (null (car faces)) (null (cdr faces)))
+          'outside)
+         (t (message "cannot decide %S" faces) nil))))))
+
+(defun lua-syntax-env-from-ppss ()
+  (let ((parse-result (syntax-ppss)))
+    (cond
+     ((nth 3 parse-result) 'string)
+     ((nth 4 parse-result) 'comment)
+     ((lua--containing-double-hyphen-start-pos) 'comment)
+     (t 'outside))))
+
 (defun lua-comment-or-string-p (&optional pos)
   "Returns true if the point is in a comment or string."
-  (save-excursion (let ((parse-result (syntax-ppss pos)))
-                    (or (elt parse-result 3) (lua-comment-start-pos parse-result)))))
+  (save-excursion
+    (when pos (goto-char pos))
+    (let (syntax-env)
+      (setq syntax-env (or (lua-syntax-env-from-font-lock)
+                           (lua-syntax-env-from-ppss)))
+      (not (eq syntax-env 'outside)))))
+
 
 (defun lua-comment-or-string-start-pos (&optional pos)
   "Returns start position of string or comment which contains point.
