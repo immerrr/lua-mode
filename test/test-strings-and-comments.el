@@ -264,6 +264,12 @@
     (("[[foo]=<>]") 1)
     (("[[foo]]<>") nil)
 
+    ;; Between two strings
+    (("'foo'<>'bar'") nil)
+    (("[[foo]]<>'bar'") nil)
+    (("'foo'<>[[bar]]") nil)
+    (("\"'foo'<>[[bar]]\"") 1)
+
     ;; single-line comments
     (("foo <>-- bar") nil)
     (("foo -<>- bar") 5)
@@ -300,93 +306,103 @@
 
     ;; single dash: not a comment
     (("foo = bar -<> baz") nil)
-    (("foo = bar <>- baz") nil))
+    (("foo = bar <>- baz") nil)
+
+    ;; Between two comments
+    (("-- foo\n<>-- bar") nil)
+    (("--[[foo]]<>-- bar") nil)
+    (("-- foo\n<>--[[ bar ]]") nil)
+    (("--[[ foo]]<>--[[ bar ]]") nil)
+    (("--[==[--[[ foo]]<>--[[ bar ]]]==]") 1)
+    )
+
    :it (format "returns %s for %S"
                (if expected-result (format "truthy/%S" expected-result) "nil")  strings)
-   (with-lua-buffer
-    (lua-insert-goto-<> strings)
-    (expect (lua-comment-or-string-start-pos)
-            :to-equal expected-result)
-    (if expected-result
-        (expect (lua-comment-or-string-p) :to-be-truthy)
-      (expect (lua-comment-or-string-p) :not :to-be-truthy)))))
-
+   (let (noninteractive)
+     (with-lua-buffer
+      (cl-assert font-lock-mode)
+      (lua-insert-goto-<> strings)
+      (expect (lua-comment-or-string-start-pos)
+              :to-equal expected-result)
+      (if expected-result
+          (expect (lua-comment-or-string-p) :to-be-truthy)
+        (expect (lua-comment-or-string-p) :not :to-be-truthy))))))
 
 (describe "lua-skip-ws-and-comments-backward"
-  (describe "doesn't move point"
-    (lua--parametrize-tests
-     (navigation-spec test-name)
-     (("<>" "empty buffer")
-      ("<>   --[[]]foo" "at beginning of non-empty buffer")
-      ("   f<>oo" "in the middle of variable")
-      ("   foo<>" "at the end of variable")
-      ("   foo<>--" "between variable and comment")
-      ("   foo 'bar'<>" "at the end of single-quote string literal")
-      ("   foo [[bar]]<>" "at the end of multi-line string literal")
-      ("   foo '<>bar'" "inside string literal")
-      ("   foo (<>bar)" "inside function call literal")
-      ("   foo '--   <>  bar'" "within whitespace inside single-line string literal")
-      ("   foo [[--   \n<>  bar]]" "within whitespace inside multi-line string literal")
-      )
-     :it (replace-regexp-in-string "\n" "\\\\n" (format "%s: %S" test-name navigation-spec))
-     (expect navigation-spec
-             :with-point-at "<"
-             :after-executing (lua-skip-ws-and-comments-backward)
-             :to-end-up-at ">")))
+          (describe "doesn't move point"
+                    (lua--parametrize-tests
+                     (navigation-spec test-name)
+                     (("<>" "empty buffer")
+                      ("<>   --[[]]foo" "at beginning of non-empty buffer")
+                      ("   f<>oo" "in the middle of variable")
+                      ("   foo<>" "at the end of variable")
+                      ("   foo<>--" "between variable and comment")
+                      ("   foo 'bar'<>" "at the end of single-quote string literal")
+                      ("   foo [[bar]]<>" "at the end of multi-line string literal")
+                      ("   foo '<>bar'" "inside string literal")
+                      ("   foo (<>bar)" "inside function call literal")
+                      ("   foo '--   <>  bar'" "within whitespace inside single-line string literal")
+                      ("   foo [[--   \n<>  bar]]" "within whitespace inside multi-line string literal")
+                      )
+                     :it (replace-regexp-in-string "\n" "\\\\n" (format "%s: %S" test-name navigation-spec))
+                     (expect navigation-spec
+                             :with-point-at "<"
+                             :after-executing (lua-skip-ws-and-comments-backward)
+                             :to-end-up-at ">")))
 
-  (describe "moves point"
-    (lua--parametrize-tests
-     (navigation-spec test-name)
-     (("<2>      <1>" "skip whitespace at the beginning of buffer")
-      ("foo<2>     <1>" "skip ws after variable")
-      ("foo()<2>     <1>" "skip ws after function call")
-      ("foo<2>    \n\t\n<1>" "skip newlines/tabs/spaces after variable")
-      ;; single-line comments
-      ("foo<2>  --  <1>" "escape single-line comment and skip ws")
-      ("foo<2>  -<1>-" "escape single-line comment delimiter")
-      ("foo<2>  --  '<1>'" "escape commented out string and skip ws")
-      ("foo<2>  --  [[<1>]]" "escape commented out string and skip ws")
-      ("foo<2>  --  \n<1>" "skip single-line comment and ws")
-      ("foo<2>  --  \n--\n--\n<1>" "skip several single-line comments and ws")
-      ;; multi-line
-      ("foo<2>  --[[ <1> ]]" "escape multi-line comment and skip ws")
-      ("foo<2>  -<1>-[[  ]]" "escape multi-line comment delimiter and skip ws 1")
-      ("foo<2>  --<1>[[  ]]" "escape multi-line comment delimiter and skip ws 2")
-      ("foo<2>  --[<1>[  ]]" "escape multi-line comment delimiter and skip ws 3")
-      ("foo<2>  --[[  ]<1>]" "escape multi-line comment delimiter and skip ws 4")
-      ("foo<2>  --[[ \n\n ]]\n\n--[[ ]]<1>" "skip multi-line comments and ws")
-      ;; luadoc keywords
-      ("foo<2>  --[[ @see foo <1>]]" "escape multi-line comment with luadoc keyword 1")
-      ("foo<2>  --[[ @s<1>ee foo ]]" "escape multi-line comment with luadoc keyword 2")
-      ("foo<2>  --[[ <1>@see foo ]]" "escape multi-line comment with luadoc keyword 3")
-      ("foo<2>  -- @see foo <1>" "escape single-line comment with luadoc keyword 1")
-      ("foo<2>  -- @s<1>ee foo " "escape single-line comment with luadoc keyword 2")
-      ("foo<2>  -- <1>@see foo " "escape single-line comment with luadoc keyword 3")
-      )
-     :it (replace-regexp-in-string "\n" "\\\\n" (format "%s: %S" test-name navigation-spec))
-     (expect navigation-spec
-             :with-point-at "<1>"
-             :after-executing (lua-skip-ws-and-comments-backward)
-             :to-end-up-at "<2>")))
+          (describe "moves point"
+                    (lua--parametrize-tests
+                     (navigation-spec test-name)
+                     (("<2>      <1>" "skip whitespace at the beginning of buffer")
+                      ("foo<2>     <1>" "skip ws after variable")
+                      ("foo()<2>     <1>" "skip ws after function call")
+                      ("foo<2>    \n\t\n<1>" "skip newlines/tabs/spaces after variable")
+                      ;; single-line comments
+                      ("foo<2>  --  <1>" "escape single-line comment and skip ws")
+                      ("foo<2>  -<1>-" "escape single-line comment delimiter")
+                      ("foo<2>  --  '<1>'" "escape commented out string and skip ws")
+                      ("foo<2>  --  [[<1>]]" "escape commented out string and skip ws")
+                      ("foo<2>  --  \n<1>" "skip single-line comment and ws")
+                      ("foo<2>  --  \n--\n--\n<1>" "skip several single-line comments and ws")
+                      ;; multi-line
+                      ("foo<2>  --[[ <1> ]]" "escape multi-line comment and skip ws")
+                      ("foo<2>  -<1>-[[  ]]" "escape multi-line comment delimiter and skip ws 1")
+                      ("foo<2>  --<1>[[  ]]" "escape multi-line comment delimiter and skip ws 2")
+                      ("foo<2>  --[<1>[  ]]" "escape multi-line comment delimiter and skip ws 3")
+                      ("foo<2>  --[[  ]<1>]" "escape multi-line comment delimiter and skip ws 4")
+                      ("foo<2>  --[[ \n\n ]]\n\n--[[ ]]<1>" "skip multi-line comments and ws")
+                      ;; luadoc keywords
+                      ("foo<2>  --[[ @see foo <1>]]" "escape multi-line comment with luadoc keyword 1")
+                      ("foo<2>  --[[ @s<1>ee foo ]]" "escape multi-line comment with luadoc keyword 2")
+                      ("foo<2>  --[[ <1>@see foo ]]" "escape multi-line comment with luadoc keyword 3")
+                      ("foo<2>  -- @see foo <1>" "escape single-line comment with luadoc keyword 1")
+                      ("foo<2>  -- @s<1>ee foo " "escape single-line comment with luadoc keyword 2")
+                      ("foo<2>  -- <1>@see foo " "escape single-line comment with luadoc keyword 3")
+                      )
+                     :it (replace-regexp-in-string "\n" "\\\\n" (format "%s: %S" test-name navigation-spec))
+                     (expect navigation-spec
+                             :with-point-at "<1>"
+                             :after-executing (lua-skip-ws-and-comments-backward)
+                             :to-end-up-at "<2>")))
 
-  (describe "respects limit"
-    (lua--parametrize-tests
-     (limit navigation-spec test-name)
-     ((3 "  <2>   <1>" "respect limit in whitespace")
-      (100 "     <2><1>    " "don't move if limit is beyond point")
-      (5 "--  <2>   <1>" "respect limit when escaping single-line comment")
-      (5 "--[[<2>   <1>]]" "respect limit when escaping multi-line comment")
-      (5 "    <2>--   <1>" "respect limit when escaping multi-line comment")
-      (5 "    <2>--[[   <1>]]" "respect limit when escaping multi-line comment")
+          (describe "respects limit"
+                    (lua--parametrize-tests
+                     (limit navigation-spec test-name)
+                     ((3 "  <2>   <1>" "respect limit in whitespace")
+                      (100 "     <2><1>    " "don't move if limit is beyond point")
+                      (5 "--  <2>   <1>" "respect limit when escaping single-line comment")
+                      (5 "--[[<2>   <1>]]" "respect limit when escaping multi-line comment")
+                      (5 "    <2>--   <1>" "respect limit when escaping multi-line comment")
+                      (5 "    <2>--[[   <1>]]" "respect limit when escaping multi-line comment")
 
-      (5 "--  <2>@see x   <1>" "respect limit when escaping single-line luadoc comment")
-      (5 "--[[<2>@see x   <1>]]" "respect limit when escaping multi-line luadoc comment")
-      )
-     :it (replace-regexp-in-string "\n" "\\\\n" (format "%s: limit=%S %S" test-name limit navigation-spec))
-     (expect navigation-spec
-             :with-point-at "<1>"
-             :after-executing (lua-skip-ws-and-comments-backward limit)
-             :to-end-up-at "<2>"))))
+                      (5 "--  <2>@see x   <1>" "respect limit when escaping single-line luadoc comment")
+                      (5 "--[[<2>@see x   <1>]]" "respect limit when escaping multi-line luadoc comment")
+                      )
+                     :it (replace-regexp-in-string "\n" "\\\\n" (format "%s: limit=%S %S" test-name limit navigation-spec))
+                     (expect navigation-spec
+                             :with-point-at "<1>"
+                             :after-executing (lua-skip-ws-and-comments-backward limit)
+                             :to-end-up-at "<2>"))))
 
 
 (describe "lua-skip-ws-and-comments-forward"

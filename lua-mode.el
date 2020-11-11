@@ -857,7 +857,7 @@ If point is not inside a comment, return nil."
 
          ;; point is after string: 'foobar'|
          ((font-lock-string-face . nil) . outside)
-         ;; point is inside string: 'foo|bar'
+         ;; point is inside string: 'foo|bar' (WARNING: corner-case: 'foo'|'bar')
          ((font-lock-string-face . font-lock-string-face) . string)
          ;; should not happen as comments always start with comment-delimiter, don't
          ;; guess and let (syntax-ppss) handle it.
@@ -923,6 +923,10 @@ If point is not inside a comment, return nil."
               (setq result (lua--syntax-env-for-faces faces))))))
 
         (cond
+         ((and (eq result 'string)
+               (memql (syntax-class (syntax-after (point))) '(7 15))
+               (memql (syntax-class (syntax-after (1- (point)))) '(7 15)))
+          nil)
          (result result)
          ;; One of the faces is nil -> point is touching non-string/comment
          ((or (null (car faces)) (null (cdr faces)))
