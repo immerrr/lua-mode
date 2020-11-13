@@ -8,7 +8,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         emacs_version:
-          # - '24.3'
+          - '24.3'
           - '25.1'
           - '25.3'
           - '26.1'
