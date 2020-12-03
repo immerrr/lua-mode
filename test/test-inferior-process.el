@@ -40,6 +40,43 @@
      (expect comint-prompt-regexp :to-equal "^"))
     (expect comint-prompt-regexp :to-equal "^")))
 
+(describe "Splitting Lua code into literals of specified size"
+  (it "splits strings into same-size Lua literals"
+    (expect (lua--split-string-into-lua-literals "foobarbaz" 3)
+            :to-equal '("'foo'" "'bar'" "'baz'")))
+
+  (it "leaves last lua literal shorter if necessary"
+    (expect (lua--split-string-into-lua-literals "foobarba" 3)
+            :to-equal '("'foo'" "'bar'" "'ba'"))
+    (expect (lua--split-string-into-lua-literals "foobarb" 3)
+            :to-equal '("'foo'" "'bar'" "'b'"))
+    (expect (lua--split-string-into-lua-literals "foobar" 3)
+            :to-equal '("'foo'" "'bar'")))
+
+  (it "escapes special characters and does not exceed max-length"
+    (expect (lua--split-string-into-lua-literals "foo\nbar" 3)
+            :to-equal '("'foo'" "'\\nb'" "'ar'")))
+
+  (it "cuts literal short if it cannot fit a special character"
+    (expect (lua--split-string-into-lua-literals "fo\nbar" 3)
+            :to-equal '("'fo'" "'\\nb'" "'ar'"))))
+
+(describe "Sending region chunked"
+  (it "does that"
+    (with-lua-buffer
+     (insert "x = '|01234567890|1234567890|1234567890|'")
+     (lua-start-process)
+     (let ((lua-string-max-size 20))
+       (lua-send-buffer))
+     (lua-send-string "print(x)")
+     (while (accept-process-output (lua-get-create-process) 0 200))
+     (with-current-buffer lua-process-buffer
+       (let* ((buf (buffer-substring-no-properties (point-min) (point-max)))
+              (buf-lines (cdr (split-string buf "\n" nil))))
+         (expect (nth 1 (nreverse buf-lines))
+                 :to-equal "> |01234567890|1234567890|1234567890|"))))))
+
+
 
 (require 'compile)
 (if (fboundp 'compilation--loc->file-struct)
