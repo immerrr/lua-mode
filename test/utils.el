@@ -127,10 +127,15 @@ This is a mere typing/reading aid for lua-mode's font-lock tests."
 (defmacro with-lua-buffer (&rest body)
   (declare (debug (&rest form)))
   `(with-temp-buffer
-     (lua-mode)
+     ;; font-lock is not activated if buffer name is temporary (starts with a
+     ;; space) and if `noninteractive' is non-nil. Ensure tests that use
+     ;; font-lock still work.
+     (rename-buffer "temp-buffer.lua" t)
+     (let (noninteractive)
+       (lua-mode)
+       (font-lock-mode 1))
      (set (make-local-variable 'lua-process) nil)
      (set (make-local-variable 'lua-process-buffer) nil)
-     (font-lock-fontify-buffer)
      (pop-to-buffer (current-buffer))
      (unwind-protect
       (progn ,@body)
