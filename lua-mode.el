@@ -895,6 +895,12 @@ If point is not inside a comment, return nil."
 (defun lua--syntax-env-for-faces (faces)
   (gethash faces lua--syntax-env-for-faces-hash))
 
+(defun lua--font-lock-ensure (start end)
+  "Backward compat for pre-25.1 Emacsen."
+  (cond
+   (jit-lock-mode (jit-lock-fontify-now start end))
+   (t (error "Only jit-lock mode is currently supported"))))
+
 (defun lua-syntax-env-from-font-lock ()
   (cond
    ((bobp) 'outside)
@@ -905,7 +911,7 @@ If point is not inside a comment, return nil."
    ((not (and (get-text-property (1- (point)) 'fontified)
               (get-text-property (point) 'fontified)))
     (let ((beg (or (previous-single-property-change (point) 'fontified) (point-min))))
-      (font-lock-ensure beg (min (+ 500 (point)) (point-max))))
+      (lua--font-lock-ensure beg (min (+ 500 (point)) (point-max))))
     (lua-syntax-env-from-font-lock))
    (t (let* ((faces (cons (get-text-property (1- (point)) 'face)
                           (get-text-property (point) 'face)))
