@@ -1,6 +1,8 @@
 # Lua mode
 
 [![Build Status](https://travis-ci.org/immerrr/lua-mode.svg?branch=master)](https://travis-ci.org/immerrr/lua-mode)
+[![MELPA](https://melpa.org/packages/lua-mode-badge.svg)](https://melpa.org/#/lua-mode)
+[![MELPA Stable](https://stable.melpa.org/packages/lua-mode-badge.svg)](https://stable.melpa.org/#/lua-mode)
 
 **lua-mode** is a major mode for editing Lua sources in Emacs.
 
