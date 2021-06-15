@@ -121,7 +121,7 @@
 
            (lua-name (symbol (seq (+ (any alpha "_")) (* (any alnum "_")))))
            (lua-funcname (seq lua-name (* ws "." ws lua-name)
-                           (opt ws ":" ws lua-name)))
+                              (opt ws ":" ws lua-name)))
            (lua-funcheader
             ;; Outer (seq ...) is here to shy-group the definition
             (seq (or (seq (symbol "function") ws (group-n 1 lua-funcname))
@@ -129,11 +129,11 @@
                           (symbol "function")))))
            (lua-number
             (seq (or (seq (+ digit) (opt ".") (* digit))
-                         (seq (* digit) (opt ".") (+ digit)))
-                     (opt (regexp "[eE][+-]?[0-9]+"))))
+                     (seq (* digit) (opt ".") (+ digit)))
+                 (opt (regexp "[eE][+-]?[0-9]+"))))
            (lua-assignment-op (seq "=" (or buffer-end (not (any "=")))))
            (lua-operator (or "+" "-" "*" "/" "%" "^" "#" "==" "~=" "<=" ">=" "<"
-                          ">" "=" ";" ":" "," "." ".." "..."))
+                             ">" "=" ";" ":" "," "." ".." "..."))
            (lua-keyword-operator (symbol "and" "not" "or"))
            (lua-keyword
             (symbol "break" "do" "else" "elseif" "end"  "for" "function"
@@ -202,7 +202,7 @@ element is itself expanded with `lua-rx-to-string'. "
         (setq form (if (eq 1 (length form))
                        (car form)
                      (append '(or) form)))
-	(and (fboundp 'rx-form) ; Silence Emacs 27's byte-compiler.
+        (and (fboundp 'rx-form) ; Silence Emacs 27's byte-compiler.
              (rx-form `(seq symbol-start ,form symbol-end) rx-parent)))
 
       (setq lua-rx-constituents (copy-sequence rx-constituents))
@@ -404,8 +404,8 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
        ;; NOTE: this doesn't traverse `compilation-search-path' when
        ;; looking for filename.
        (not (file-exists-p (expand-file-name
-                        filename
-                        (when directory (expand-file-name directory))))))
+                            filename
+                            (when directory (expand-file-name directory))))))
       (setq ad-return-value (current-buffer))
     ad-do-it))
 
@@ -525,32 +525,32 @@ traceback location."
                        "offset")))))
 
       (cl-labels
-       ((module-name-re (x)
-                        (concat "\\(?1:\\_<"
-                                (if (listp x) (car x) x)
-                                "\\_>\\)"))
-        (module-members-re (x) (if (listp x)
-                                   (concat "\\(?:[ \t]*\\.[ \t]*"
-                                           "\\_<\\(?2:"
-                                           (regexp-opt (cdr x))
-                                           "\\)\\_>\\)?")
-                                 "")))
+          ((module-name-re (x)
+                           (concat "\\(?1:\\_<"
+                                   (if (listp x) (car x) x)
+                                   "\\_>\\)"))
+           (module-members-re (x) (if (listp x)
+                                      (concat "\\(?:[ \t]*\\.[ \t]*"
+                                              "\\_<\\(?2:"
+                                              (regexp-opt (cdr x))
+                                              "\\)\\_>\\)?")
+                                    "")))
 
-       (concat
-        ;; common prefix:
-        ;; - beginning-of-line
-        ;; - or neither of [ '.', ':' ] to exclude "foo.string.rep"
-        ;; - or concatenation operator ".."
-        "\\(?:^\\|[^:. \t]\\|[.][.]\\)"
-        ;; optional whitespace
-        "[ \t]*"
-        "\\(?:"
-        ;; any of modules/functions
-        (mapconcat (lambda (x) (concat (module-name-re x)
-                                       (module-members-re x)))
-                   modules
-                   "\\|")
-        "\\)"))))
+        (concat
+         ;; common prefix:
+         ;; - beginning-of-line
+         ;; - or neither of [ '.', ':' ] to exclude "foo.string.rep"
+         ;; - or concatenation operator ".."
+         "\\(?:^\\|[^:. \t]\\|[.][.]\\)"
+         ;; optional whitespace
+         "[ \t]*"
+         "\\(?:"
+         ;; any of modules/functions
+         (mapconcat (lambda (x) (concat (module-name-re x)
+                                        (module-members-re x)))
+                    modules
+                    "\\|")
+         "\\)"))))
 
   "A regexp that matches Lua builtin functions & variables.
 
@@ -567,18 +567,18 @@ index of respective Lua reference manuals.")
      . font-lock-constant-face)
 
     ;; Keywords
-    (, (lua-rx (or lua-keyword lua-keyword-operator))
+    (,(lua-rx (or lua-keyword lua-keyword-operator))
      . font-lock-keyword-face)
 
     ;; Labels used by the "goto" statement
     ;; Highlights the following syntax:  ::label::
     (,(lua-rx "::" ws lua-name ws "::")
-      . font-lock-constant-face)
+     . font-lock-constant-face)
 
     ;; Highlights the name of the label in the "goto" statement like
     ;; "goto label"
     (,(lua-rx (symbol (seq "goto" ws+ (group-n 1 lua-name))))
-      (1 font-lock-constant-face))
+     (1 font-lock-constant-face))
 
     ;; Highlight Lua builtin functions and variables
     (,lua--builtins
@@ -644,9 +644,9 @@ index of respective Lua reference manuals.")
   "Imenu generic expression for lua-mode.  See `imenu-generic-expression'.")
 
 (defvar lua-sexp-alist '(("then" . "end")
-                      ("function" . "end")
-                      ("do" . "end")
-                      ("repeat" . "until")))
+                         ("function" . "end")
+                         ("do" . "end")
+                         ("repeat" . "until")))
 
 (defvar lua-mode-abbrev-table nil
   "Abbreviation table used in lua-mode buffers.")
@@ -687,11 +687,11 @@ index of respective Lua reference manuals.")
   :syntax-table lua-mode-syntax-table
   :group 'lua
   (setq-local font-lock-defaults '(lua-font-lock-keywords ;; keywords
-                                        nil                    ;; keywords-only
-                                        nil                    ;; case-fold
-                                        nil                    ;; syntax-alist
-                                        nil                    ;; syntax-begin
-                                        ))
+                                   nil                    ;; keywords-only
+                                   nil                    ;; case-fold
+                                   nil                    ;; syntax-alist
+                                   nil                    ;; syntax-begin
+                                   ))
 
   (setq-local syntax-propertize-function
               'lua--propertize-multiline-bounds)
@@ -711,7 +711,7 @@ index of respective Lua reference manuals.")
     ;; If electric-indent-chars is not defined, electric indentation is done
     ;; via `lua-mode-map'.
     (setq-local electric-indent-chars
-                  (append electric-indent-chars lua--electric-indent-chars)))
+                (append electric-indent-chars lua--electric-indent-chars)))
 
 
   ;; setup menu bar entry (XEmacs style)
@@ -748,7 +748,7 @@ index of respective Lua reference manuals.")
   "Insert character and adjust indentation."
   (interactive "P")
   (let (blink-paren-function)
-   (self-insert-command (prefix-numeric-value arg)))
+    (self-insert-command (prefix-numeric-value arg)))
   (if lua-electric-flag
       (lua-indent-line))
   (blink-matching-open))
@@ -1086,7 +1086,7 @@ TOKEN-TYPE determines where the token occurs on a statement. open indicates that
 
 (defun lua-get-token-type (token-info)
   "Returns the relevant match regexp from token info"
-   (nth 3 token-info))
+  (nth 3 token-info))
 
 (defun lua-backwards-to-block-begin-or-end ()
   "Move backwards to nearest block begin or end.  Returns nil if not successful."
@@ -1196,7 +1196,7 @@ is no block open/close open."
   (interactive)
   ;; search backward to the beginning of the keyword if necessary
   (when (and (eq (char-syntax (following-char)) ?w)
-	     (not (looking-at "\\_<")))
+             (not (looking-at "\\_<")))
     (re-search-backward "\\_<" nil t))
   (let ((position (lua-goto-matching-block-token)))
     (if (and (not position)
@@ -1400,9 +1400,9 @@ previous one even though it looked like an end-of-statement.")
   (save-excursion
     (lua-skip-ws-and-comments-forward (line-end-position))
     (looking-at (lua-rx (or (symbol "do" "while" "repeat" "until"
-                                 "if" "then" "elseif" "else"
-                                 "for" "local")
-                         lua-funcheader)))))
+                                    "if" "then" "elseif" "else"
+                                    "for" "local")
+                            lua-funcheader)))))
 
 
 (defun lua-is-continuing-statement-p-1 ()
@@ -1473,7 +1473,7 @@ This true is when the line :
     (cl-loop
      ;; Go to opener line
      while (and (lua--goto-line-beginning-rightmost-closer)
-		(lua--backward-up-list-noerror))
+                (lua--backward-up-list-noerror))
      ;; If opener line is continuing, repeat. If opener line is not
      ;; continuing, return nil.
      always (lua-is-continuing-statement-p-1)
@@ -1498,7 +1498,7 @@ Don't use standalone."
 
    ;; block openers
    ((and lua-indent-nested-block-content-align
-	 (member found-token (list "{" "(" "[")))
+         (member found-token (list "{" "(" "[")))
     (save-excursion
       (let ((found-bol (line-beginning-position)))
         (forward-comment (point-max))
