@@ -4,7 +4,7 @@
   (let ((trace-fn-name (intern (concat "trace--" (symbol-name fn)))))
     `(progn
        (defun ,trace-fn-name (&rest args)
-	 (message "%s was called with: %S" #',fn args))
+         (message "%s was called with: %S" #',fn args))
        (add-function :before (symbol-function #',fn) #',trace-fn-name))))
 
 
