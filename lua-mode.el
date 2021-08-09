@@ -11,7 +11,7 @@
 ;;              Paul Du Bois <pld-lua@gelatinous.com> and
 ;;              Aaron Smith <aaron-lua@gelatinous.com>.
 ;;
-;; URL:         http://immerrr.github.com/lua-mode
+;; URL:         https://immerrr.github.io/lua-mode
 ;; Version:     20210802
 ;; Package-Requires: ((emacs "24.3"))
 ;;
