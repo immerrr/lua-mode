@@ -12,7 +12,7 @@
 ;;              Aaron Smith <aaron-lua@gelatinous.com>.
 ;;
 ;; URL:         https://immerrr.github.io/lua-mode
-;; Version:     20210802
+;; Version:     20221027
 ;; Package-Requires: ((emacs "24.3"))
 ;;
 ;; This file is NOT part of Emacs.
