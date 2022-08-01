@@ -75,6 +75,7 @@ hash-bang line (`#!/usr/bin/lua`). Putting this snippet to `.emacs` should be en
 - documentation lookup (using online/offline reference manual, e.g. [string.find](http://www.lua.org/manual/5.1/manual.html#pdf-string.find))
 - [imenu](http://www.gnu.org/software/emacs/manual/html_node/emacs/Imenu.html) integration
 - [HideShow](http://www.gnu.org/software/emacs/manual/html_node/emacs/Hideshow.html) integration
+- [Flymake](https://www.gnu.org/software/emacs/manual/html_mono/flymake.html) integration for on-the-fly linting. The [luacheck](https://github.com/lunarmodules/luacheck) program is required for this. It can be installed e.g. via luarocks.
 
 ## CUSTOMIZATION
 
