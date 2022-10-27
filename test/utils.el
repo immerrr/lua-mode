@@ -1,4 +1,5 @@
-;; -*- flycheck-disabled-checkers: (emacs-lisp-checkdoc) -*-
+;; -*- flycheck-disabled-checkers: (emacs-lisp-checkdoc) ; lexical-binding:t -*-
+
 
 (require 'lua-mode)
 (require 'buttercup)

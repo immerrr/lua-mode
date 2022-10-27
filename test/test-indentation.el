@@ -1,4 +1,4 @@
-;; -*- flycheck-disabled-checkers: (emacs-lisp-checkdoc) -*-
+;; -*- flycheck-disabled-checkers: (emacs-lisp-checkdoc) ; lexical-binding:t -*-
 ;; -*- lexical-binding: t -*-
 (load (concat (file-name-directory (or load-file-name (buffer-file-name)
                                        default-directory))
