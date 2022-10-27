@@ -1,4 +1,4 @@
-;;; test-funcname-at-point.el --- Test the repl functions
+;;; test-funcname-at-point.el --- Test the repl functions -*- lexical-binding:t -*-
 
 ;;; Commentary:
 

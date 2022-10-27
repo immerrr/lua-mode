@@ -1,4 +1,4 @@
-;;; test-funcname-at-point.el --- Test `lua-funcname-at-point'
+;;; test-funcname-at-point.el --- Test `lua-funcname-at-point'  -*- lexical-binding:t -*-
 
 ;;; Commentary:
 
