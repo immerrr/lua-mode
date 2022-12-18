@@ -12,7 +12,7 @@
 ;;              Aaron Smith <aaron-lua@gelatinous.com>.
 ;;
 ;; URL:         https://immerrr.github.io/lua-mode
-;; Version:     20210802
+;; Version:     20221027
 ;; Package-Requires: ((emacs "24.3"))
 ;;
 ;; This file is NOT part of Emacs.
@@ -41,7 +41,8 @@
 
 ;; lua-mode provides support for editing Lua, including automatic
 ;; indentation, syntactical font-locking, running interactive shell,
-;; interacting with `hs-minor-mode' and online documentation lookup.
+;; Flymake checks with luacheck, interacting with `hs-minor-mode' and
+;; online documentation lookup.
 
 ;; The following variables are available for customization (see more via
 ;; `M-x customize-group lua`):
@@ -84,6 +85,10 @@
 ;; - Cmd `lua-send-defun': send current top-level function
 ;; - Cmd `lua-send-region': send active region
 ;; - Cmd `lua-restart-with-whole-file': restart REPL and send whole buffer
+
+;; To enable on-the-fly linting, make sure you have the luacheck
+;; program installed (available from luarocks) and activate
+;; `flymake-mode'.
 
 ;; See "M-x apropos-command ^lua-" for a list of commands.
 ;; See "M-x customize-group lua" for a list of customizable variables.
@@ -710,7 +715,7 @@ index of respective Lua reference manuals.")
     ;; via `lua-mode-map'.
     (setq-local electric-indent-chars
                 (append electric-indent-chars lua--electric-indent-chars)))
-
+  (add-hook 'flymake-diagnostic-functions #'lua-flymake nil t)
 
   ;; setup menu bar entry (XEmacs style)
   (if (and (featurep 'menubar)
@@ -2194,6 +2199,58 @@ left out."
           (forward-sexp 1))
         (setq count (1- count))))))
 
+;; Flymake integration
+
+(defcustom lua-luacheck-program "luacheck"
+  "Name of the luacheck executable."
+  :type 'string
+  :group 'lua)
+
+(defvar-local lua--flymake-process nil)
+
+(defun lua-flymake (report-fn &rest _args)
+  "Flymake backend using the luacheck program.
+Takes a Flymake callback REPORT-FN as argument, as expected of a
+member of `flymake-diagnostic-functions'."
+  (when (process-live-p lua--flymake-process)
+    (kill-process lua--flymake-process))
+  (let ((source (current-buffer)))
+    (save-restriction
+      (widen)
+      (setq lua--flymake-process
+            (make-process
+             :name "luacheck" :noquery t :connection-type 'pipe
+             :buffer (generate-new-buffer " *flymake-luacheck*")
+             :command `(,lua-luacheck-program
+                        "--codes" "--ranges" "--formatter" "plain" "-")
+             :sentinel
+             (lambda (proc _event)
+               (when (eq 'exit (process-status proc))
+                 (unwind-protect
+                     (if (with-current-buffer source
+                           (eq proc lua--flymake-process))
+                         (with-current-buffer (process-buffer proc)
+                           (goto-char (point-min))
+                           (cl-loop
+                            while (search-forward-regexp
+                                   "^\\([^:]*\\):\\([0-9]+\\):\\([0-9]+\\)-\\([0-9]+\\): \\(.*\\)$"
+                                   nil t)
+                            for line = (string-to-number (match-string 2))
+                            for col1 = (string-to-number (match-string 3))
+                            for col2 = (1+ (string-to-number (match-string 4)))
+                            for msg = (match-string 5)
+                            for type = (if (string-match-p "\\`(E" msg) :error :warning)
+                            collect (flymake-make-diagnostic source
+                                                             (cons line col1)
+                                                             (cons line col2)
+                                                             type
+                                                             msg)
+                            into diags
+                            finally (funcall report-fn diags)))
+                       (flymake-log :warning "Canceling obsolete check %s" proc))
+                   (kill-buffer (process-buffer proc)))))))
+      (process-send-region lua--flymake-process (point-min) (point-max))
+      (process-send-eof lua--flymake-process))))
 
 ;; menu bar
 
