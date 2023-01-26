@@ -375,8 +375,8 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
   "Keymap used in lua-mode buffers.")
 
 (defvar lua-electric-flag t
-  "If t, electric actions (like automatic reindentation) will happen when an electric
- key like `{' is pressed")
+  "If non-nil, electric actions happen when an electric key is pressed.
+Electric action can be automatic reindentation, electric key can be `{'.")
 (make-variable-buffer-local 'lua-electric-flag)
 
 (defcustom lua-prompt-regexp "[^\n]*\\(>[\t ]+\\)+$"
@@ -997,7 +997,7 @@ placed before the string."
 (defun lua-find-regexp (direction regexp &optional limit)
   "Searches for a regular expression in the direction specified.
 
-Direction is one of 'forward and 'backward.
+Direction is one of \\='forward and \\='backward.
 
 Matches in comments and strings are ignored. If the regexp is
 found, returns point position, nil otherwise."
@@ -1056,9 +1056,15 @@ found, returns point position, nil otherwise."
 Each token information entry is of the form:
   KEYWORD FORWARD-MATCH-REGEXP BACKWARDS-MATCH-REGEXP TOKEN-TYPE
 KEYWORD is the token.
-FORWARD-MATCH-REGEXP is a regexp that matches all possible tokens when going forward.
-BACKWARDS-MATCH-REGEXP is a regexp that matches all possible tokens when going backwards.
-TOKEN-TYPE determines where the token occurs on a statement. open indicates that the token appears at start, close indicates that it appears at end, middle indicates that it is a middle type token, and middle-or-open indicates that it can appear both as a middle or an open type.")
+FORWARD-MATCH-REGEXP is a regexp that matches all possible tokens
+  when going forward.
+BACKWARDS-MATCH-REGEXP is a regexp that matches all possible
+  tokens when going backwards.
+TOKEN-TYPE determines where the token occurs on a statement. open
+  indicates that the token appears at start, close indicates that
+  it appears at end, middle indicates that it is a middle type
+  token, and middle-or-open indicates that it can appear both as
+  a middle or an open type.")
 
 (defconst lua-indentation-modifier-regexp
   ;; The absence of else is deliberate, since it does not modify the
@@ -1100,12 +1106,12 @@ TOKEN-TYPE determines where the token occurs on a statement. open indicates that
   "Find matching open- or close-token for TOKEN in DIRECTION.
 Point has to be exactly at the beginning of TOKEN, e.g. with | being point
 
-  {{ }|}  -- (lua-find-matching-token-word \"}\" 'backward) will return
+  {{ }|}  -- (lua-find-matching-token-word \"}\" \\='backward) will return
           -- the first {
-  {{ |}}  -- (lua-find-matching-token-word \"}\" 'backward) will find
+  {{ |}}  -- (lua-find-matching-token-word \"}\" \\='backward) will find
           -- the second {.
 
-DIRECTION has to be either 'forward or 'backward."
+DIRECTION has to be either \\='forward or \\='backward."
   (let* ((token-info (lua-get-block-token-info token))
          (match-type (lua-get-token-type token-info))
          ;; If we are on a middle token, go backwards. If it is a middle or open,
@@ -1180,7 +1186,7 @@ at the current point.  Returns the point position of the first character of
 the matching token if successful, nil otherwise.
 
 Optional PARSE-START is a position to which the point should be moved first.
-DIRECTION has to be 'forward or 'backward ('forward by default)."
+DIRECTION has to be \\='forward or \\='backward (\\='forward by default)."
   (if parse-start (goto-char parse-start))
   (let ((case-fold-search nil))
     (if (looking-at lua-indentation-modifier-regexp)
@@ -1288,9 +1294,10 @@ Returns final value of point as integer or nil if operation failed."
      "\\s *\\="))
   "Regexp that matches the ending of a line that needs continuation.
 
-This regexp starts from eol and looks for a binary operator or an unclosed
-block intro (i.e. 'for' without 'do' or 'if' without 'then') followed by
-an optional whitespace till the end of the line.")
+This regexp starts from eol and looks for a binary operator or an
+unclosed block intro (i.e. \\='for\\=' without \\='do\\=' or
+\\='if\\=' without \\='then\\=') followed by an optional
+whitespace till the end of the line.")
 
 (defconst lua-cont-bol-regexp
   (eval-when-compile
@@ -1444,14 +1451,14 @@ The criteria for a continuing statement are:
 
 
 (defun lua-is-continuing-statement-p (&optional parse-start)
-  "Returns non-nil if the line at PARSE-START should be indented as continuation line.
+  "Return non-nil if the line at PARSE-START should be indented continuously.
 
-This true is when the line :
+This is true when the line:
 
 * is continuing a statement itself
 
-* starts with a 1+ block-closer tokens, an top-most block opener is on a continuation line
-"
+* starts with a 1+ block-closer tokens, an top-most block opener
+  is on a continuation line."
   (save-excursion
     (if parse-start (goto-char parse-start))
 
@@ -1580,7 +1587,7 @@ Don't use standalone."
                       ;; end of a block matched
                       (- lua-indent-level))))))
 
-(defun  lua-add-indentation-info-pair (pair info-list)
+(defun lua-add-indentation-info-pair (pair info-list)
   "Add the given indentation info PAIR to the list of indentation INFO-LIST.
 This function has special case handling for two tokens: remove-matching,
 and replace-matching.  These two tokens are cleanup tokens that remove or
@@ -1592,8 +1599,8 @@ block opening statement when it is closed.
 
 When a replace-matching token is seen, the last recorded info is removed,
 and the cdr of the replace-matching info is added in its place.  This is used
-when a middle-of the block (the only case is 'else') is seen on the same line
-the block is opened."
+when a middle-of the block (the only case is \\='else\\=') is seen on the
+same line the block is opened."
   (cond
    ( (eq 'multiple (car pair))
      (let ((info-pair-elts (cdr pair)))
@@ -1758,8 +1765,8 @@ token should be indented relative to left-shifter expression
 indentation rather then to block-open token.
 
 For example:
-   -- 'local a = ' is a left-shifter expression
-   -- 'function' is a block-open token
+   -- \\='local a = \\=' is a left-shifter expression
+   -- \\='function\\=' is a block-open token
    local a = function()
       -- block contents is indented relative to left-shifter
       foobarbaz()
