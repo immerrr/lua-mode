@@ -330,8 +330,9 @@ Should be a list of strings."
   :type 'string
   :group 'lua
   :set 'lua--customize-set-prefix-key
-  :get '(lambda (sym)
-          (let ((val (eval sym))) (if val (single-key-description (eval sym)) ""))))
+  :get (lambda (sym)
+         (let ((val (eval sym)))
+           (if val (single-key-description (eval sym)) ""))))
 
 (defvar lua-mode-menu (make-sparse-keymap "Lua")
   "Keymap for lua-mode's menu.")
