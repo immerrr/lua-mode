@@ -396,10 +396,7 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
   "Buffer-local flag saying if this is a Lua REPL buffer.")
 (make-variable-buffer-local 'lua--repl-buffer-p)
 
-
-(defadvice compilation-find-file (around lua--repl-find-file
-                                         (marker filename directory &rest formats)
-                                         activate)
+(defun lua--compilation-find-file (fn marker filename directory &rest formats)
   "Return Lua REPL buffer when looking for \"stdin\" file in it."
   (if (and
        lua--repl-buffer-p
@@ -409,13 +406,12 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
        (not (file-exists-p (expand-file-name
                             filename
                             (when directory (expand-file-name directory))))))
-      (setq ad-return-value (current-buffer))
-    ad-do-it))
+      (current-buffer)
+    (apply fn marker filename directory formats)))
 
+(advice-add 'compilation-find-file :around #'lua--compilation-find-file)
 
-(defadvice compilation-goto-locus (around lua--repl-goto-locus
-                                          (msg mk end-mk)
-                                          activate)
+(defun lua--compilation-goto-locus (fn msg mk end-mk)
   "When message points to Lua REPL buffer, go to the message itself.
 Usually, stdin:XX line number points to nowhere."
   (let ((errmsg-buf (marker-buffer msg))
@@ -425,8 +421,9 @@ Usually, stdin:XX line number points to nowhere."
         (progn
           (compilation-set-window (display-buffer (marker-buffer msg)) msg)
           (goto-char msg))
-      ad-do-it)))
+      (funcall fn msg mk end-mk))))
 
+(advice-add 'compilation-goto-locus :around #'lua--compilation-goto-locus)
 
 (defcustom lua-indent-string-contents nil
   "If non-nil, contents of multiline string will be indented.
