@@ -994,7 +994,7 @@ placed before the string."
 (defun lua-find-regexp (direction regexp &optional limit)
   "Searches for a regular expression in the direction specified.
 
-Direction is one of 'forward and 'backward.
+Direction is one of \\='forward and \\='backward.
 
 Matches in comments and strings are ignored. If the regexp is
 found, returns point position, nil otherwise."
@@ -1097,12 +1097,12 @@ TOKEN-TYPE determines where the token occurs on a statement. open indicates that
   "Find matching open- or close-token for TOKEN in DIRECTION.
 Point has to be exactly at the beginning of TOKEN, e.g. with | being point
 
-  {{ }|}  -- (lua-find-matching-token-word \"}\" 'backward) will return
+  {{ }|}  -- (lua-find-matching-token-word \"}\" \\='backward) will return
           -- the first {
-  {{ |}}  -- (lua-find-matching-token-word \"}\" 'backward) will find
+  {{ |}}  -- (lua-find-matching-token-word \"}\" \\='backward) will find
           -- the second {.
 
-DIRECTION has to be either 'forward or 'backward."
+DIRECTION has to be either \\='forward or \\='backward."
   (let* ((token-info (lua-get-block-token-info token))
          (match-type (lua-get-token-type token-info))
          ;; If we are on a middle token, go backwards. If it is a middle or open,
@@ -1177,7 +1177,7 @@ at the current point.  Returns the point position of the first character of
 the matching token if successful, nil otherwise.
 
 Optional PARSE-START is a position to which the point should be moved first.
-DIRECTION has to be 'forward or 'backward ('forward by default)."
+DIRECTION has to be \\='forward or \\='backward (\\='forward by default)."
   (if parse-start (goto-char parse-start))
   (let ((case-fold-search nil))
     (if (looking-at lua-indentation-modifier-regexp)
@@ -1286,7 +1286,7 @@ Returns final value of point as integer or nil if operation failed."
   "Regexp that matches the ending of a line that needs continuation.
 
 This regexp starts from eol and looks for a binary operator or an unclosed
-block intro (i.e. 'for' without 'do' or 'if' without 'then') followed by
+block intro (i.e. `for' without `do' or `if' without `then') followed by
 an optional whitespace till the end of the line.")
 
 (defconst lua-cont-bol-regexp
@@ -1589,7 +1589,7 @@ block opening statement when it is closed.
 
 When a replace-matching token is seen, the last recorded info is removed,
 and the cdr of the replace-matching info is added in its place.  This is used
-when a middle-of the block (the only case is 'else') is seen on the same line
+when a middle-of the block (the only case is `else') is seen on the same line
 the block is opened."
   (cond
    ( (eq 'multiple (car pair))
@@ -1755,8 +1755,8 @@ token should be indented relative to left-shifter expression
 indentation rather then to block-open token.
 
 For example:
-   -- 'local a = ' is a left-shifter expression
-   -- 'function' is a block-open token
+   -- `local a = ' is a left-shifter expression
+   -- `function' is a block-open token
    local a = function()
       -- block contents is indented relative to left-shifter
       foobarbaz()
