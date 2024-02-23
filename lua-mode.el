@@ -261,6 +261,15 @@ element is itself expanded with `lua-rx-to-string'. "
   :group 'lua
   :safe #'integerp)
 
+(defcustom lua-hanging-indent-level 3
+  "Amount by which Lua line continuations are indented. This
+affects multi-line statements in general, including lines
+following an (, [ or { character at the end of the line, but not
+those with an opening paren followed by non-whitespace characters
+on the same line."
+  :type 'integer
+  :group 'lua)
+
 (defcustom lua-comment-start "-- "
   "Default value of `comment-start'."
   :type 'string
@@ -1508,7 +1517,7 @@ Don't use standalone."
         (if (and (zerop (count-lines found-bol (line-beginning-position)))
                  (not (looking-at lua-indentation-modifier-regexp)))
             (cons 'absolute (current-column))
-          (cons 'relative lua-indent-level)))))
+          (cons 'relative lua-hanging-indent-level)))))
 
    ;; These are not really block starters. They should not add to indentation.
    ;; The corresponding "then" and "do" handle the indentation.
@@ -1658,7 +1667,8 @@ and relative each, and the shift/column to indent to."
       (if (lua-is-continuing-statement-p)
           ;; if it's the first continuation line, add one level
           (unless (eq (car (car indentation-info)) 'continued-line)
-            (push (cons 'continued-line lua-indent-level) indentation-info))
+            (push (cons 'continued-line lua-hanging-indent-level)
+                  indentation-info))
 
         ;; if it's the first non-continued line, subtract one level
         (when (eq (car (car indentation-info)) 'continued-line)
