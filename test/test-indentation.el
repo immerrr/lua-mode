@@ -46,7 +46,7 @@
                                          (list (car alist-cons) (cdr alist-cons)))
                                        ;; cl-caddr here is to support Emacs<26 that don't have caddr.
                                        (cl-caddr x)))
-                         (expect lua-code :to-be-reindented-the-same-way))))))
+                         (expect lua-code :to-be-reindented-the-same-way))) t)))
 
 (let* ((current-path (or load-file-name (buffer-file-name) default-directory))
        (indentation-tests-dir (concat (file-name-directory current-path) "indentation-tests"))
