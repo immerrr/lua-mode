@@ -376,8 +376,8 @@ If the latter is nil, the keymap translates into `lua-mode-map' verbatim.")
   "Keymap used in lua-mode buffers.")
 
 (defvar lua-electric-flag t
-  "If t, electric actions (like automatic reindentation) will happen when an electric
- key like `{' is pressed")
+  "Non-nil means electric actions will happen when an key like `{' is pressed.
+Electric actions such as automatic reindentation.")
 (make-variable-buffer-local 'lua-electric-flag)
 
 (defcustom lua-prompt-regexp "[^\n]*\\(>[\t ]+\\)+$"
@@ -1053,10 +1053,19 @@ found, returns point position, nil otherwise."
   "This is a list of block token information blocks.
 Each token information entry is of the form:
   KEYWORD FORWARD-MATCH-REGEXP BACKWARDS-MATCH-REGEXP TOKEN-TYPE
+
 KEYWORD is the token.
-FORWARD-MATCH-REGEXP is a regexp that matches all possible tokens when going forward.
-BACKWARDS-MATCH-REGEXP is a regexp that matches all possible tokens when going backwards.
-TOKEN-TYPE determines where the token occurs on a statement. open indicates that the token appears at start, close indicates that it appears at end, middle indicates that it is a middle type token, and middle-or-open indicates that it can appear both as a middle or an open type.")
+
+FORWARD-MATCH-REGEXP is a regexp that matches all possible tokens when going
+forward.
+
+BACKWARDS-MATCH-REGEXP is a regexp that matches all possible tokens when going
+backwards.
+
+TOKEN-TYPE determines where the token occurs on a statement. open indicates that
+the token appears at start, close indicates that it appears at end, middle
+indicates that it is a middle type token, and middle-or-open indicates that it
+can appear both as a middle or an open type.")
 
 (defconst lua-indentation-modifier-regexp
   ;; The absence of else is deliberate, since it does not modify the
@@ -1442,14 +1451,15 @@ The criteria for a continuing statement are:
 
 
 (defun lua-is-continuing-statement-p (&optional parse-start)
-  "Returns non-nil if the line at PARSE-START should be indented as continuation line.
+  "Return non-nil if the PARSE-START line is a continuation line.
+This function returns non-nil if the line at PARSE-START is a continuation.
 
 This true is when the line :
 
 * is continuing a statement itself
 
-* starts with a 1+ block-closer tokens, an top-most block opener is on a continuation line
-"
+* starts with a 1+ block-closer tokens, an top-most block opener is on a
+  continuation line."
   (save-excursion
     (if parse-start (goto-char parse-start))
 
