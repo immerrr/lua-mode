@@ -293,6 +293,11 @@ Should be a list of strings."
   :type 'boolean
   :group 'lua)
 
+(defcustom lua-send-string-max-size (if (string-equal system-type "darwin") 512 nil)
+  "Maximum size of string that can be sent to inferior shell."
+  :type '(choice nil string)
+  :group 'lua)
+
 (defcustom lua-documentation-function 'browse-url
   "Function used to fetch the Lua reference manual."
   :type `(radio (function-item browse-url)
@@ -1959,8 +1964,13 @@ This function just searches for a `end' at the beginning of a line."
      "end")
    " "))
 
+(defun lua--send-process-init-code ()
+  "Send initialization code to REPL."
+  ;; XXX: send in chunks if initialization code exceeds send-string-max-size
+  (lua-send-string lua-process-init-code))
+
 (defun lua-make-lua-string (str)
-  "Convert string to Lua literal."
+  "Convert string STR to Lua literal."
   (save-match-data
     (with-temp-buffer
       (insert str)
@@ -2042,6 +2052,8 @@ When called interactively, switch to the process buffer."
   "Send STR plus a newline to the Lua process.
 
 If `lua-process' is nil or dead, start a new process first."
+  (when (and lua-send-string-max-size (> (length str) lua-send-string-max-size))
+    (error (format "Cannot send string of length %s (max length=%s)" (length str) lua-send-string-max-size)))
   (unless (string-equal (substring str -1) "\n")
     (setq str (concat str "\n")))
   (process-send-string (lua-get-create-process) str))
@@ -2103,8 +2115,44 @@ Otherwise, return START."
                   (lua-make-lua-string region-str)
                   (lua-make-lua-string lua-file)
                   lineno)))
-    (lua-send-string command)
+    (if (or (null lua-send-string-max-size) (<= (length command) lua-send-string-max-size))
+        (lua-send-string command)
+      (lua-send-region-chunked region-str lua-file lineno lua-send-string-max-size))
     (when lua-always-show (lua-show-process-buffer))))
+
+(defun lua--split-string-into-lua-literals (str literal-max-length &optional func)
+  (let* (lua-literals
+         (func (or func (lambda (s) (setq lua-literals (cons s lua-literals)))))
+         chunk-begin chunk-end chunk chunk-as-lua-string)
+    (with-temp-buffer
+      (insert str)
+      (goto-char (point-min))
+      (while (< (point) (point-max))
+        (setq chunk-begin (point)
+              chunk-end (+ (point) literal-max-length))
+        ;; For every special character that has to be quoted with a backslash,
+        ;; decrease payload to account for the extra character.
+        (while (and (< (point) (min (point-max) chunk-end))
+                    (re-search-forward "[\"'\\\t\\\n]" chunk-end 'noerror))
+          (setq chunk-end (1- chunk-end)))
+        (goto-char chunk-end)
+        (setq chunk (buffer-substring-no-properties chunk-begin (point)))
+        (funcall func (lua-make-lua-string chunk))))
+    (nreverse lua-literals)))
+
+(defun lua-send-region-chunked (region-str lua-file lineno max-size)
+  "Send REGION-STR from LUA-FILE at LINENO in chunks of no more than MAX-SIZE."
+  ;; XXX: make enable/disable-prompt-commands customizable
+  (let* ((disable-prompt-command "_PROMPT = ''; _PROMPT2 = ''")
+         (enable-prompt-command "_PROMPT = nil; _PROMPT2 = nil")
+         (between-quotes-max-size (- max-size 4)))
+    (lua-send-string disable-prompt-command)
+    (lua-send-string "print(''); luamode_loadstring(\"\"")
+    (lua--split-string-into-lua-literals
+     region-str between-quotes-max-size
+     (lambda (s) (lua-send-string (format "..%s" s))))
+    (lua-send-string (format ",%s,%d)" (lua-make-lua-string lua-file) lineno))
+    (lua-send-string enable-prompt-command)))
 
 (defun lua-prompt-line ()
   (save-excursion

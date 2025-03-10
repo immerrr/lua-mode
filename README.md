@@ -107,3 +107,4 @@ The following variables are available for customization (see more via `M-x custo
 - Cmd `lua-send-defun`: send current top-level function
 - Cmd `lua-send-region`: send active region
 - Cmd `lua-restart-with-whole-file`: restart REPL and send whole buffer
+- Var `lua-send-string-max-size` (default `512` for Mac OS, `nil` for other platforms): maximum size of string that can be sent to subprocess in one operation, because some platforms are implicitly limiting the buffer size and the data arrives incomplete
